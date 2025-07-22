@@ -251,20 +251,6 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
-# KMS key for RDS encryption
-resource "aws_kms_key" "rds" {
-  description             = "KMS key for RDS encryption"
-  deletion_window_in_days = 7
-
-  tags = {
-    Name = "${var.project_name}-rds-kms-key"
-  }
-}
-
-resource "aws_kms_alias" "rds" {
-  name          = "alias/${var.project_name}-rds"
-  target_key_id = aws_kms_key.rds.key_id
-}
 
 # RDS PostgreSQL instance with encryption and automated backups
 resource "aws_db_instance" "postgresql" {
@@ -290,7 +276,6 @@ resource "aws_db_instance" "postgresql" {
 
   # Security Configuration
   storage_encrypted = true
-  kms_key_id        = aws_kms_key.rds.arn
 
   # Backup Configuration
   backup_retention_period = var.db_backup_retention_period
@@ -298,10 +283,9 @@ resource "aws_db_instance" "postgresql" {
   maintenance_window      = var.db_maintenance_window
 
   # Monitoring and Performance
-  monitoring_interval             = 60
-  monitoring_role_arn             = aws_iam_role.rds_monitoring.arn
-  performance_insights_enabled    = true
-  performance_insights_kms_key_id = aws_kms_key.rds.arn
+  monitoring_interval          = 60
+  monitoring_role_arn          = aws_iam_role.rds_monitoring.arn
+  performance_insights_enabled = true
 
   # Operational Configuration
   auto_minor_version_upgrade = true
@@ -315,9 +299,6 @@ resource "aws_db_instance" "postgresql" {
   tags = {
     Name = "${var.project_name}-postgresql"
   }
-
-  # Ensure KMS key is created before RDS
-  depends_on = [aws_kms_key.rds]
 }
 
 # IAM role for RDS monitoring

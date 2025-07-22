@@ -203,15 +203,6 @@ output "ezpass_credentials_secret_name" {
 
 # KMS Key Outputs
 # -----------------------------------------------------------------------------
-output "rds_kms_key_id" {
-  description = "ID of the RDS KMS key"
-  value       = aws_kms_key.rds.key_id
-}
-
-output "rds_kms_key_arn" {
-  description = "ARN of the RDS KMS key"
-  value       = aws_kms_key.rds.arn
-}
 
 output "s3_kms_key_id" {
   description = "ID of the S3 KMS key"
