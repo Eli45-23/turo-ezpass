@@ -1,0 +1,113 @@
+# Docker Compose for Turo EZPass Backend Development
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: turo-ezpass-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: turoezpass
+      POSTGRES_USER: dbadmin
+      POSTGRES_PASSWORD: localpassword
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - turo-ezpass-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d turoezpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (for caching and session storage)
+  redis:
+    image: redis:7-alpine
+    container_name: turo-ezpass-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - turo-ezpass-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: turo-ezpass-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=turoezpass
+      - DB_USER=dbadmin
+      - DB_PASSWORD=localpassword
+      - DB_SSL=false
+      - INIT_DB=true
+      - JWT_SECRET=your_local_jwt_secret_key_minimum_32_characters
+      - LOG_LEVEL=debug
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - ./logs:/usr/src/app/logs
+    networks:
+      - turo-ezpass-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # pgAdmin (Database Administration)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: turo-ezpass-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@turo-ezpass.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - turo-ezpass-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  turo-ezpass-network:
+    driver: bridge
