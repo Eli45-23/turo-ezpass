@@ -238,17 +238,17 @@ output "secrets_kms_key_arn" {
 output "application_config" {
   description = "Configuration values for the application"
   value = {
-    region              = var.aws_region
-    vpc_id              = aws_vpc.main.id
-    private_subnet_ids  = [aws_subnet.private.id, aws_subnet.private_secondary.id]
-    s3_bucket          = aws_s3_bucket.storage.id
+    region               = var.aws_region
+    vpc_id               = aws_vpc.main.id
+    private_subnet_ids   = [aws_subnet.private.id, aws_subnet.private_secondary.id]
+    s3_bucket            = aws_s3_bucket.storage.id
     cognito_user_pool_id = aws_cognito_user_pool.hosts.id
-    cognito_client_id   = aws_cognito_user_pool_client.web_client.id
-    eventbridge_rule    = aws_cloudwatch_event_rule.daily_trigger.name
+    cognito_client_id    = aws_cognito_user_pool_client.web_client.id
+    eventbridge_rule     = aws_cloudwatch_event_rule.daily_trigger.name
     # Secret ARNs for runtime retrieval
-    db_secret_arn      = aws_secretsmanager_secret.db_credentials.arn
-    oauth_secret_arn   = aws_secretsmanager_secret.oauth_secrets.arn
-    ezpass_secret_arn  = aws_secretsmanager_secret.ezpass_credentials.arn
+    db_secret_arn     = aws_secretsmanager_secret.db_credentials.arn
+    oauth_secret_arn  = aws_secretsmanager_secret.oauth_secrets.arn
+    ezpass_secret_arn = aws_secretsmanager_secret.ezpass_credentials.arn
   }
   sensitive = true
 }
@@ -258,16 +258,16 @@ output "application_config" {
 output "infrastructure_summary" {
   description = "Summary of deployed infrastructure"
   value = {
-    project_name        = var.project_name
-    environment        = var.environment
-    region             = var.aws_region
-    vpc_cidr           = var.vpc_cidr
-    database_engine    = "postgresql-${var.db_engine_version}"
-    s3_bucket_name     = aws_s3_bucket.storage.id
-    cognito_domain     = aws_cognito_user_pool_domain.main.domain
-    resources_created  = [
+    project_name    = var.project_name
+    environment     = var.environment
+    region          = var.aws_region
+    vpc_cidr        = var.vpc_cidr
+    database_engine = "postgresql-${var.db_engine_version}"
+    s3_bucket_name  = aws_s3_bucket.storage.id
+    cognito_domain  = aws_cognito_user_pool_domain.main.domain
+    resources_created = [
       "VPC with public/private subnets",
-      "Encrypted RDS PostgreSQL instance", 
+      "Encrypted RDS PostgreSQL instance",
       "Cognito User Pool for authentication",
       "S3 bucket with encryption and lifecycle policies",
       "EventBridge rule for daily Lambda triggers",

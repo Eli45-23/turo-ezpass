@@ -101,7 +101,7 @@ resource "aws_subnet" "private_secondary" {
 
 # Elastic IP for NAT Gateway
 resource "aws_eip" "nat" {
-  domain = "vpc"
+  domain     = "vpc"
   depends_on = [aws_internet_gateway.main]
 
   tags = {
@@ -265,14 +265,14 @@ resource "aws_kms_alias" "rds" {
 # RDS PostgreSQL instance with encryption and automated backups
 resource "aws_db_instance" "postgresql" {
   # Basic Configuration
-  identifier             = "${var.project_name}-db"
-  allocated_storage      = var.db_allocated_storage
-  max_allocated_storage  = var.db_max_allocated_storage
-  storage_type           = "gp3"
-  engine                 = "postgres"
-  engine_version         = var.db_engine_version
-  instance_class         = var.db_instance_class
-  
+  identifier            = "${var.project_name}-db"
+  allocated_storage     = var.db_allocated_storage
+  max_allocated_storage = var.db_max_allocated_storage
+  storage_type          = "gp3"
+  engine                = "postgres"
+  engine_version        = "15"
+  instance_class        = var.db_instance_class
+
   # Database Configuration
   db_name  = var.db_name
   username = var.db_username
@@ -286,24 +286,24 @@ resource "aws_db_instance" "postgresql" {
 
   # Security Configuration
   storage_encrypted = true
-  kms_key_id       = aws_kms_key.rds.arn
+  kms_key_id        = aws_kms_key.rds.arn
 
   # Backup Configuration
   backup_retention_period = var.db_backup_retention_period
-  backup_window          = var.db_backup_window
-  maintenance_window     = var.db_maintenance_window
-  
+  backup_window           = var.db_backup_window
+  maintenance_window      = var.db_maintenance_window
+
   # Monitoring and Performance
   monitoring_interval             = 60
-  monitoring_role_arn            = aws_iam_role.rds_monitoring.arn
-  performance_insights_enabled   = true
+  monitoring_role_arn             = aws_iam_role.rds_monitoring.arn
+  performance_insights_enabled    = true
   performance_insights_kms_key_id = aws_kms_key.rds.arn
-  
+
   # Operational Configuration
   auto_minor_version_upgrade = true
-  deletion_protection       = true
-  skip_final_snapshot      = false
-  final_snapshot_identifier = "${var.project_name}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  deletion_protection        = true
+  skip_final_snapshot        = false
+  final_snapshot_identifier  = "${var.project_name}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 
   # Enable automated backups
   copy_tags_to_snapshot = true
@@ -352,7 +352,7 @@ resource "aws_cognito_user_pool" "hosts" {
   name = "${var.project_name}-hosts"
 
   # User attributes
-  alias_attributes = ["email"]
+  alias_attributes         = ["email"]
   auto_verified_attributes = ["email"]
 
   # Password policy
@@ -387,10 +387,10 @@ resource "aws_cognito_user_pool" "hosts" {
   # Schema - required attributes
   schema {
     attribute_data_type = "String"
-    name               = "email"
-    required           = true
-    mutable            = true
-    
+    name                = "email"
+    required            = true
+    mutable             = true
+
     string_attribute_constraints {
       min_length = 1
       max_length = 256
@@ -399,10 +399,10 @@ resource "aws_cognito_user_pool" "hosts" {
 
   schema {
     attribute_data_type = "String"
-    name               = "name"
-    required           = true
-    mutable            = true
-    
+    name                = "name"
+    required            = true
+    mutable             = true
+
     string_attribute_constraints {
       min_length = 1
       max_length = 256
@@ -412,10 +412,10 @@ resource "aws_cognito_user_pool" "hosts" {
   # Custom attributes for Turo host data
   schema {
     attribute_data_type = "String"
-    name               = "turo_host_id"
-    required           = false
-    mutable            = true
-    
+    name                = "turo_host_id"
+    required            = false
+    mutable             = true
+
     string_attribute_constraints {
       min_length = 1
       max_length = 256
@@ -429,24 +429,24 @@ resource "aws_cognito_user_pool" "hosts" {
 
 # User pool client for web application
 resource "aws_cognito_user_pool_client" "web_client" {
-  name                                 = "${var.project_name}-web-client"
-  user_pool_id                        = aws_cognito_user_pool.hosts.id
-  generate_secret                     = true
-  prevent_user_existence_errors       = "ENABLED"
-  enable_token_revocation            = true
+  name                                          = "${var.project_name}-web-client"
+  user_pool_id                                  = aws_cognito_user_pool.hosts.id
+  generate_secret                               = true
+  prevent_user_existence_errors                 = "ENABLED"
+  enable_token_revocation                       = true
   enable_propagate_additional_user_context_data = false
 
   # OAuth configuration
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_scopes                = ["email", "openid", "profile"]
-  callback_urls                       = ["https://localhost:3000/callback", "https://localhost:8080/callback"]
-  logout_urls                         = ["https://localhost:3000/logout", "https://localhost:8080/logout"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+  callback_urls                        = ["https://localhost:3000/callback", "https://localhost:8080/callback"]
+  logout_urls                          = ["https://localhost:3000/logout", "https://localhost:8080/logout"]
 
   # Token validity
-  access_token_validity  = 60  # 1 hour
-  id_token_validity     = 60  # 1 hour
-  refresh_token_validity = 30  # 30 days
+  access_token_validity  = 60 # 1 hour
+  id_token_validity      = 60 # 1 hour
+  refresh_token_validity = 30 # 30 days
 
   token_validity_units {
     access_token  = "minutes"
@@ -486,21 +486,6 @@ resource "random_string" "domain_suffix" {
 resource "aws_kms_key" "s3" {
   description             = "KMS key for S3 bucket encryption"
   deletion_window_in_days = 7
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "Enable IAM User Permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-        Action   = "kms:*"
-        Resource = "*"
-      }
-    ]
-  })
 
   tags = {
     Name = "${var.project_name}-s3-kms-key"
@@ -569,7 +554,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "storage" {
   rule {
     id     = "lifecycle_rule"
     status = "Enabled"
-    
+
     filter {
       prefix = ""
     }
@@ -713,36 +698,6 @@ resource "aws_kms_key" "secrets" {
   description             = "KMS key for Secrets Manager encryption"
   deletion_window_in_days = 7
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "Enable IAM User Permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-        Action   = "kms:*"
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow Secrets Manager"
-        Effect = "Allow"
-        Principal = {
-          Service = "secretsmanager.amazonaws.com"
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          "kms:Encrypt",
-          "kms:GenerateDataKey*",
-          "kms:ReEncrypt*"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-
   tags = {
     Name = "${var.project_name}-secrets-kms-key"
   }
@@ -795,8 +750,8 @@ resource "aws_secretsmanager_secret_version" "oauth_secrets" {
     cognito_user_pool_id  = aws_cognito_user_pool.hosts.id
     cognito_domain        = aws_cognito_user_pool_domain.main.domain
     # Placeholder for Turo API credentials (to be added later)
-    turo_client_id        = "PLACEHOLDER_TURO_CLIENT_ID"
-    turo_client_secret    = "PLACEHOLDER_TURO_CLIENT_SECRET"
+    turo_client_id     = "PLACEHOLDER_TURO_CLIENT_ID"
+    turo_client_secret = "PLACEHOLDER_TURO_CLIENT_SECRET"
   })
 }
 

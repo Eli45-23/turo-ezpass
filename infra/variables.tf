@@ -143,7 +143,7 @@ variable "s3_lifecycle_expiration_days" {
 variable "lambda_schedule_expression" {
   description = "EventBridge schedule expression for Lambda trigger"
   type        = string
-  default     = "cron(0 2 * * ? *)"  # Daily at 2 AM UTC
+  default     = "cron(0 2 * * ? *)" # Daily at 2 AM UTC
 }
 
 variable "lambda_timeout" {
