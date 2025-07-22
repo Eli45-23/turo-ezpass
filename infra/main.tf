@@ -464,20 +464,12 @@ resource "aws_cognito_user_pool_client" "web_client" {
   # Read and write attributes
   read_attributes  = ["email", "name", "custom:turo_host_id"]
   write_attributes = ["email", "name", "custom:turo_host_id"]
-
-  tags = {
-    Name = "${var.project_name}-web-client"
-  }
 }
 
 # User pool domain for hosted UI
 resource "aws_cognito_user_pool_domain" "main" {
   domain       = "${var.project_name}-auth-${random_string.domain_suffix.result}"
   user_pool_id = aws_cognito_user_pool.hosts.id
-
-  tags = {
-    Name = "${var.project_name}-auth-domain"
-  }
 }
 
 resource "random_string" "domain_suffix" {
@@ -577,7 +569,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "storage" {
   rule {
     id     = "lifecycle_rule"
     status = "Enabled"
-    prefix = ""
+    
+    filter {
+      prefix = ""
+    }
 
     # Transition to IA storage class
     transition {
