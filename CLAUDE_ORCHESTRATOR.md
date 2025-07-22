@@ -102,6 +102,19 @@ Scaffold Express.js application with the following routes:
 Include middleware for authentication, validation, and error handling.
 ```
 
+### Backend Scaffolding
+```
+@Backend-Agent:
+Scaffold a Node.js/Express service under `/app/backend/` with:
+1. Cognito-backed auth routes (`/auth/signup`, `/auth/login`)
+2. `GET /jobs?status=pending` returning pending toll jobs from PostgreSQL
+3. `POST /submit/:jobId` stub for invoking the TuroBot flow
+4. Empty scraper modules in `/scripts/` (`ezpass.js`, `turo.js`)
+5. A Dockerfile, `package.json`, and an `.env.example` listing required env vars
+
+Then commit the updated `CLAUDE_ORCHESTRATOR.md` to the `main` branch.
+```
+
 ### iOS Enhancements  
 ```
 @iOS-Agent:
