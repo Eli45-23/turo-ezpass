@@ -1,0 +1,455 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A0B1FE82C7E2F3A00123456 /* TuroTollHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FE72C7E2F3A00123456 /* TuroTollHostApp.swift */; };
+		1A0B1FEA2C7E2F3A00123456 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FE92C7E2F3A00123456 /* ContentView.swift */; };
+		1A0B1FEC2C7E2F3C00123456 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A0B1FEB2C7E2F3C00123456 /* Assets.xcassets */; };
+		1A0B1FEF2C7E2F3C00123456 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A0B1FEE2C7E2F3C00123456 /* Preview Assets.xcassets */; };
+		1A0B1FF62C7E2F5000123456 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FF52C7E2F5000123456 /* LoginView.swift */; };
+		1A0B1FF82C7E2F6000123456 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FF72C7E2F6000123456 /* DashboardView.swift */; };
+		1A0B1FFA2C7E2F7000123456 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FF92C7E2F7000123456 /* JobDetailView.swift */; };
+		1A0B1FFC2C7E2F8000123456 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FFB2C7E2F8000123456 /* AuthViewModel.swift */; };
+		1A0B1FFE2C7E2F9000123456 /* JobsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FFD2C7E2F9000123456 /* JobsViewModel.swift */; };
+		1A0B20002C7E2FA000123456 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B1FFF2C7E2FA000123456 /* NetworkService.swift */; };
+		1A0B20022C7E2FB000123456 /* CognitoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B20012C7E2FB000123456 /* CognitoService.swift */; };
+		1A0B20042C7E2FC000123456 /* Job.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B20032C7E2FC000123456 /* Job.swift */; };
+		1A0B20062C7E2FD000123456 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B20052C7E2FD000123456 /* User.swift */; };
+		1A0B20082C7E2FE000123456 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B20072C7E2FE000123456 /* Constants.swift */; };
+		1A0B200A2C7E2FF000123456 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0B20092C7E2FF000123456 /* Extensions.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1A0B1FE42C7E2F3A00123456 /* TuroTollHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TuroTollHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A0B1FE72C7E2F3A00123456 /* TuroTollHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuroTollHostApp.swift; sourceTree = "<group>"; };
+		1A0B1FE92C7E2F3A00123456 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1A0B1FEB2C7E2F3C00123456 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A0B1FEE2C7E2F3C00123456 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		1A0B1FF52C7E2F5000123456 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		1A0B1FF72C7E2F6000123456 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		1A0B1FF92C7E2F7000123456 /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
+		1A0B1FFB2C7E2F8000123456 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		1A0B1FFD2C7E2F9000123456 /* JobsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsViewModel.swift; sourceTree = "<group>"; };
+		1A0B1FFF2C7E2FA000123456 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		1A0B20012C7E2FB000123456 /* CognitoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CognitoService.swift; sourceTree = "<group>"; };
+		1A0B20032C7E2FC000123456 /* Job.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Job.swift; sourceTree = "<group>"; };
+		1A0B20052C7E2FD000123456 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		1A0B20072C7E2FE000123456 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		1A0B20092C7E2FF000123456 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		1A0B200B2C7E300000123456 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1A0B1FE12C7E2F3A00123456 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1A0B1FDB2C7E2F3A00123456 = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FE62C7E2F3A00123456 /* TuroTollHost */,
+				1A0B1FE52C7E2F3A00123456 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1A0B1FE52C7E2F3A00123456 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FE42C7E2F3A00123456 /* TuroTollHost.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1A0B1FE62C7E2F3A00123456 /* TuroTollHost */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B200B2C7E300000123456 /* Info.plist */,
+				1A0B1FE72C7E2F3A00123456 /* TuroTollHostApp.swift */,
+				1A0B1FE92C7E2F3A00123456 /* ContentView.swift */,
+				1A0B200C2C7E301000123456 /* Views */,
+				1A0B200D2C7E302000123456 /* ViewModels */,
+				1A0B200E2C7E303000123456 /* Services */,
+				1A0B200F2C7E304000123456 /* Models */,
+				1A0B20102C7E305000123456 /* Utilities */,
+				1A0B20112C7E306000123456 /* Resources */,
+				1A0B1FED2C7E2F3C00123456 /* Preview Content */,
+			);
+			path = TuroTollHost;
+			sourceTree = "<group>";
+		};
+		1A0B1FED2C7E2F3C00123456 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FEE2C7E2F3C00123456 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		1A0B200C2C7E301000123456 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FF52C7E2F5000123456 /* LoginView.swift */,
+				1A0B1FF72C7E2F6000123456 /* DashboardView.swift */,
+				1A0B1FF92C7E2F7000123456 /* JobDetailView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		1A0B200D2C7E302000123456 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FFB2C7E2F8000123456 /* AuthViewModel.swift */,
+				1A0B1FFD2C7E2F9000123456 /* JobsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		1A0B200E2C7E303000123456 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FFF2C7E2FA000123456 /* NetworkService.swift */,
+				1A0B20012C7E2FB000123456 /* CognitoService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		1A0B200F2C7E304000123456 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B20032C7E2FC000123456 /* Job.swift */,
+				1A0B20052C7E2FD000123456 /* User.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		1A0B20102C7E305000123456 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B20072C7E2FE000123456 /* Constants.swift */,
+				1A0B20092C7E2FF000123456 /* Extensions.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		1A0B20112C7E306000123456 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				1A0B1FEB2C7E2F3C00123456 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1A0B1FE32C7E2F3A00123456 /* TuroTollHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A0B1FF22C7E2F3C00123456 /* Build configuration list for PBXNativeTarget "TuroTollHost" */;
+			buildPhases = (
+				1A0B1FE02C7E2F3A00123456 /* Sources */,
+				1A0B1FE12C7E2F3A00123456 /* Frameworks */,
+				1A0B1FE22C7E2F3A00123456 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TuroTollHost;
+			productName = TuroTollHost;
+			productReference = 1A0B1FE42C7E2F3A00123456 /* TuroTollHost.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1A0B1FDC2C7E2F3A00123456 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					1A0B1FE32C7E2F3A00123456 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 1A0B1FDF2C7E2F3A00123456 /* Build configuration list for PBXProject "TuroTollHost" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1A0B1FDB2C7E2F3A00123456;
+			productRefGroup = 1A0B1FE52C7E2F3A00123456 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1A0B1FE32C7E2F3A00123456 /* TuroTollHost */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A0B1FE22C7E2F3A00123456 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0B1FEF2C7E2F3C00123456 /* Preview Assets.xcassets in Resources */,
+				1A0B1FEC2C7E2F3C00123456 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1A0B1FE02C7E2F3A00123456 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0B1FEA2C7E2F3A00123456 /* ContentView.swift in Sources */,
+				1A0B20042C7E2FC000123456 /* Job.swift in Sources */,
+				1A0B1FE82C7E2F3A00123456 /* TuroTollHostApp.swift in Sources */,
+				1A0B20022C7E2FB000123456 /* CognitoService.swift in Sources */,
+				1A0B1FF62C7E2F5000123456 /* LoginView.swift in Sources */,
+				1A0B20002C7E2FA000123456 /* NetworkService.swift in Sources */,
+				1A0B20062C7E2FD000123456 /* User.swift in Sources */,
+				1A0B1FFC2C7E2F8000123456 /* AuthViewModel.swift in Sources */,
+				1A0B1FFA2C7E2F7000123456 /* JobDetailView.swift in Sources */,
+				1A0B200A2C7E2FF000123456 /* Extensions.swift in Sources */,
+				1A0B1FFE2C7E2F9000123456 /* JobsViewModel.swift in Sources */,
+				1A0B20082C7E2FE000123456 /* Constants.swift in Sources */,
+				1A0B1FF82C7E2F6000123456 /* DashboardView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1A0B1FF02C7E2F3C00123456 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		1A0B1FF12C7E2F3C00123456 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		1A0B1FF32C7E2F3C00123456 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"TuroTollHost/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TuroTollHost/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Turo Toll Host";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.turoezpass.TuroTollHost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1A0B1FF42C7E2F3C00123456 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"TuroTollHost/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TuroTollHost/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Turo Toll Host";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.turoezpass.TuroTollHost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A0B1FDF2C7E2F3A00123456 /* Build configuration list for PBXProject "TuroTollHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A0B1FF02C7E2F3C00123456 /* Debug */,
+				1A0B1FF12C7E2F3C00123456 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1A0B1FF22C7E2F3C00123456 /* Build configuration list for PBXNativeTarget "TuroTollHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A0B1FF32C7E2F3C00123456 /* Debug */,
+				1A0B1FF42C7E2F3C00123456 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1A0B1FDC2C7E2F3A00123456 /* Project object */;
+}
