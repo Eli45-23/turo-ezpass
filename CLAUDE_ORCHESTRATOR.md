@@ -71,6 +71,25 @@ Add CloudWatch monitoring and alerting for the Lambda functions. Include metrics
 Create SNS topics for critical alerts.
 ```
 
+### Infrastructure Provisioning
+```
+@Infra-Agent:
+Generate Terraform HCL (with comments) that will:
+1. Create a VPC with one public and one private subnet in us-east-1.
+2. Provision an encrypted Amazon RDS PostgreSQL instance.
+3. Set up a Cognito User Pool for host authentication.
+4. Create an S3 bucket for screenshots and logs.
+5. Define an EventBridge rule to trigger a Lambda daily at 2 AM UTC.
+6. Store DB credentials and OAuth secrets in AWS Secrets Manager.
+
+Output three files under `/infra/`:
+- `main.tf`
+- `variables.tf`
+- `outputs.tf`
+
+Then commit the updated `CLAUDE_ORCHESTRATOR.md` to the `main` branch.
+```
+
 ### Backend Development
 ```
 @Backend-Agent:
