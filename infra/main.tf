@@ -34,8 +34,12 @@ data "aws_availability_zones" "available" {
 
 # Generate random password for RDS master user
 resource "random_password" "db_password" {
-  length  = 16
-  special = true
+  length           = 16
+  override_special = "_-+=!#%&*"
+  upper            = true
+  lower            = true
+  numeric          = true
+  special          = true
 }
 
 # =============================================================================
@@ -659,8 +663,7 @@ resource "aws_iam_role_policy" "lambda_custom_policy" {
           "kms:Decrypt"
         ]
         Resource = [
-          aws_kms_key.s3.arn,
-          aws_kms_key.secrets.arn
+          aws_kms_key.s3.arn
         ]
       }
     ]
@@ -693,26 +696,11 @@ resource "aws_cloudwatch_event_target" "lambda_target" {
 # AWS SECRETS MANAGER
 # =============================================================================
 
-# KMS key for Secrets Manager encryption
-resource "aws_kms_key" "secrets" {
-  description             = "KMS key for Secrets Manager encryption"
-  deletion_window_in_days = 7
-
-  tags = {
-    Name = "${var.project_name}-secrets-kms-key"
-  }
-}
-
-resource "aws_kms_alias" "secrets" {
-  name          = "alias/${var.project_name}-secrets"
-  target_key_id = aws_kms_key.secrets.key_id
-}
 
 # Database credentials in Secrets Manager
 resource "aws_secretsmanager_secret" "db_credentials" {
   name        = "${var.project_name}/database/credentials"
   description = "Database credentials for Turo EZPass application"
-  kms_key_id  = aws_kms_key.secrets.arn
 
   tags = {
     Name = "${var.project_name}-db-credentials"
@@ -735,7 +723,6 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
 resource "aws_secretsmanager_secret" "oauth_secrets" {
   name        = "${var.project_name}/oauth/secrets"
   description = "OAuth client secrets and configuration"
-  kms_key_id  = aws_kms_key.secrets.arn
 
   tags = {
     Name = "${var.project_name}-oauth-secrets"
@@ -759,7 +746,6 @@ resource "aws_secretsmanager_secret_version" "oauth_secrets" {
 resource "aws_secretsmanager_secret" "ezpass_credentials" {
   name        = "${var.project_name}/ezpass/credentials"
   description = "E-ZPass account credentials and API configuration"
-  kms_key_id  = aws_kms_key.secrets.arn
 
   tags = {
     Name = "${var.project_name}-ezpass-credentials"
