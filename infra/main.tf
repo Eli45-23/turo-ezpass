@@ -365,17 +365,6 @@ resource "aws_cognito_user_pool" "hosts" {
     temporary_password_validity_days = var.cognito_temporary_password_validity_days
   }
 
-  # User pool policies
-  policies {
-    password_policy {
-      minimum_length                   = var.cognito_password_minimum_length
-      require_lowercase                = true
-      require_numbers                  = true
-      require_symbols                  = true
-      require_uppercase                = true
-      temporary_password_validity_days = var.cognito_temporary_password_validity_days
-    }
-  }
 
   # Email configuration
   email_configuration {
@@ -588,6 +577,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "storage" {
   rule {
     id     = "lifecycle_rule"
     status = "Enabled"
+    prefix = ""
 
     # Transition to IA storage class
     transition {
