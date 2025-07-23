@@ -121,127 +121,76 @@ class TuroScraper {
         timeout: 30000
       });
 
-      console.log('Login page loaded, filling credentials...');
+      console.log('Login page loaded, waiting for form elements...');
 
-      // Wait for login form elements
-      await this.page.waitForSelector('input[type="email"], input[name="email"], #email', {
-        timeout: 10000
-      });
+      // Wait for login form elements with expanded selectors and longer timeout
+      console.log('Waiting for email input field...');
+      await this.page.waitForSelector(
+        'input[name="email"], input[type="email"], input[name="username"], #login_email, #username',
+        { timeout: 20000 }
+      );
 
-      // Find and fill email field
-      const emailSelectors = [
-        'input[type="email"]',
-        'input[name="email"]',
-        '#email',
-        'input[placeholder*="email" i]',
-        'input[autocomplete="email"]'
-      ];
+      console.log('Email field found, filling credentials...');
 
-      let emailField = null;
-      for (const selector of emailSelectors) {
-        emailField = await this.page.$(selector);
-        if (emailField) {
-          console.log(`Found email field with selector: ${selector}`);
-          break;
-        }
-      }
+      // Fill email field using expanded selectors
+      await this.page.fill(
+        'input[name="email"], input[type="email"], input[name="username"], #login_email',
+        credentials.email
+      );
 
-      if (!emailField) {
-        throw new Error('Could not locate email input field');
-      }
-
-      await emailField.fill(credentials.email);
+      console.log('Email filled, waiting for password field...');
       await this.page.waitForTimeout(1000); // Human-like delay
 
-      // Find and fill password field
-      const passwordField = await this.page.waitForSelector('input[type="password"]', {
-        timeout: 5000
-      });
+      // Fill password field using expanded selectors
+      console.log('Filling password field...');
+      await this.page.fill(
+        'input[name="password"], #login_password, input[type="password"]',
+        credentials.password
+      );
 
-      await passwordField.fill(credentials.password);
+      console.log('Password filled, waiting for submit button...');
       await this.page.waitForTimeout(1000);
 
-      // Find and click login button
-      const loginButtonSelectors = [
-        'button[type="submit"]',
-        'button:has-text("Log in")',
-        'button:has-text("Sign in")',
-        'button:has-text("Login")',
-        'input[type="submit"]',
-        '.login-button',
-        '#login-button'
-      ];
+      // Wait for and click the submit button with expanded selectors
+      console.log('Waiting for login submit button...');
+      await this.page.waitForSelector(
+        'button[type="submit"], button[data-testid="login-button"], button:has-text("Log in"), button:has-text("Sign in")',
+        { timeout: 10000 }
+      );
 
-      let loginButton = null;
-      for (const selector of loginButtonSelectors) {
-        try {
-          loginButton = await this.page.$(selector);
-          if (loginButton) {
-            console.log(`Found login button with selector: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          // Continue to next selector
-        }
-      }
+      console.log('Submit button found, clicking to login...');
+      await this.page.click(
+        'button[type="submit"], button[data-testid="login-button"], button:has-text("Log in"), button:has-text("Sign in")'
+      );
 
-      if (!loginButton) {
-        throw new Error('Could not locate login button');
-      }
+      console.log('Login form submitted, waiting for dashboard...');
 
-      console.log('Submitting login form...');
+      // Wait for post-login dashboard elements to confirm success
+      console.log('Waiting for dashboard elements to appear...');
+      await this.page.waitForSelector(
+        '.host-dashboard, a[href*="/trips"], .dashboard, [class*="host"]',
+        { timeout: 20000 }
+      );
 
-      // Submit login form and wait for navigation
-      await Promise.all([
-        this.page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
-        loginButton.click()
-      ]);
-
-      // Verify successful login by checking for host dashboard elements
-      const dashboardSelectors = [
-        '.host-dashboard',
-        '.dashboard',
-        '[class*="host"]',
-        'a[href*="/your/trips"]',
-        'a[href*="/host"]',
-        '.nav-link:has-text("Trips")'
-      ];
-
-      let dashboardFound = false;
-      for (const selector of dashboardSelectors) {
-        try {
-          const element = await this.page.$(selector);
-          if (element) {
-            dashboardFound = true;
-            console.log(`Login successful - found dashboard element: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          // Continue checking
-        }
-      }
-
-      if (!dashboardFound) {
-        // Check if we're still on login page (login failed)
-        const currentUrl = this.page.url();
-        if (currentUrl.includes('login') || currentUrl.includes('sign-in')) {
-          throw new Error('Login failed - still on login page');
-        }
-        
-        console.log('Login appears successful, proceeding to trips page...');
-      }
-
+      console.log('Dashboard elements found - login successful!');
       return true;
+
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Login failed with error:', error.message);
       
       // Take screenshot for debugging
-      await this.page.screenshot({
-        path: path.join(this.screenshotsDir, `turo_login_error_${Date.now()}.png`),
-        fullPage: true
-      });
+      try {
+        const screenshotPath = path.join(this.screenshotsDir, `turo_login_error_${Date.now()}.png`);
+        await this.page.screenshot({
+          path: screenshotPath,
+          fullPage: true
+        });
+        console.log(`Debug screenshot saved: ${screenshotPath}`);
+      } catch (screenshotError) {
+        console.error('Failed to take error screenshot:', screenshotError.message);
+      }
       
-      throw error;
+      throw new Error('Login failed: ' + error.message);
     }
   }
 
