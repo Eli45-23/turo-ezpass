@@ -1,0 +1,33 @@
+{
+  "name": "turo-ezpass-scrapers",
+  "version": "1.0.0",
+  "description": "Playwright-based scrapers for E-ZPass and Turo data extraction",
+  "main": "match.js",
+  "scripts": {
+    "scrape-ezpass": "node scrapers/ezpass.js",
+    "scrape-turo": "node scrapers/turo.js",
+    "match": "node match.js",
+    "scrape-all": "npm run scrape-ezpass && npm run scrape-turo && npm run match",
+    "install-browsers": "npx playwright install"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "aws-sdk": "^2.1500.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "playwright",
+    "scraping",
+    "automation",
+    "turo",
+    "ezpass",
+    "toll-automation"
+  ],
+  "author": "Turo EZPass Automation Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

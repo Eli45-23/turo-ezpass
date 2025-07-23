@@ -1,0 +1,15 @@
+{
+  "matchedAt": "2025-01-23T10:30:00.000Z",
+  "summary": {
+    "totalMatches": 0,
+    "highConfidenceMatches": 0,
+    "mediumConfidenceMatches": 0,
+    "lowConfidenceMatches": 0,
+    "unmatchedTolls": 0,
+    "unmatchedTrips": 0,
+    "totalTollAmount": 0
+  },
+  "matches": [],
+  "unmatchedTolls": [],
+  "unmatchedTrips": []
+}
