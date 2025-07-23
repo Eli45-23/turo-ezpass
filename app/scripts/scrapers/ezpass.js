@@ -111,139 +111,90 @@ class EZPassScraper {
    * Login to E-ZPass NY portal
    */
   async login(credentials) {
+    const { page } = this;
+    const loginUrl = 'https://www.e-zpassny.com/isp/home.do';  // Updated URL based on your research
+
     try {
-      console.log('Navigating to E-ZPass NY login page...');
-      
-      // Navigate to login page
-      await this.page.goto('https://www.e-zpassny.com/ezpass/sign-in', {
-        waitUntil: 'networkidle',
-        timeout: 30000
-      });
+      console.log(`↗️ Navigating to E-ZPass login page: ${loginUrl}`);
+      await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
 
-      console.log('Login page loaded, filling credentials...');
-
-      // Wait for login form elements
-      await this.page.waitForSelector('input#userIdentifier, input[name="userIdentifier"]', {
-        timeout: 10000
-      });
-
-      // Find and fill username/email field
-      const usernameSelectors = [
+      // Fallback selectors for username & password
+      const USER_SELECTORS = [
         'input#userIdentifier',
         'input[name="userIdentifier"]',
-        'input[name="username"]',
-        'input[id="username"]',
-        'input[type="text"]'
+        'input#username',
+        'input[name="email"]'
+      ];
+      const PASS_SELECTORS = [
+        'input#password',
+        'input[name="password"]',
+        'input[type="password"]'
       ];
 
-      let usernameField = null;
-      for (const selector of usernameSelectors) {
-        usernameField = await this.page.$(selector);
-        if (usernameField) {
-          console.log(`Found username field with selector: ${selector}`);
-          break;
-        }
-      }
-
-      if (!usernameField) {
-        throw new Error('Could not locate username/email input field');
-      }
-
-      await usernameField.fill(credentials.username);
-      await this.page.waitForTimeout(1000); // Human-like delay
-
-      // Find and fill password field
-      const passwordField = await this.page.waitForSelector('input[type="password"]', {
-        timeout: 5000
-      });
-
-      await passwordField.fill(credentials.password);
-      await this.page.waitForTimeout(1000);
-
-      // Check for CAPTCHA
-      const captchaElement = await this.page.$('.captcha, .recaptcha, #captcha, [class*="captcha"]');
-      if (captchaElement) {
-        console.warn('CAPTCHA detected - manual intervention may be required');
-        // Take screenshot for manual review
-        await this.page.screenshot({
-          path: path.join(this.screenshotsDir, `captcha_${Date.now()}.png`),
-          fullPage: true
-        });
-      }
-
-      // Find and click login button
-      const loginButtonSelectors = [
-        'button[type="submit"]',
-        'input[type="submit"]',
-        'button:has-text("Sign In")',
-        'button:has-text("Login")',
-        '#login-submit',
-        '.login-button'
-      ];
-
-      let loginButton = null;
-      for (const selector of loginButtonSelectors) {
+      // Try each selector in turn
+      let userSel, passSel;
+      for (const sel of USER_SELECTORS) {
         try {
-          loginButton = await this.page.$(selector);
-          if (loginButton) {
-            console.log(`Found login button with selector: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          // Continue to next selector
-        }
+          await page.waitForSelector(sel, { timeout: 2000, state: 'visible' });
+          userSel = sel;
+          break;
+        } catch (e) { /* try next */ }
+      }
+      for (const sel of PASS_SELECTORS) {
+        try {
+          await page.waitForSelector(sel, { timeout: 2000, state: 'visible' });
+          passSel = sel;
+          break;
+        } catch (e) { /* try next */ }
       }
 
-      if (!loginButton) {
-        throw new Error('Could not locate login button');
+      if (!userSel || !passSel) {
+        console.error(`❌ Login fields not found on page. Check selectors!`);
+        console.error(`URL: ${page.url()}, title: "${await page.title()}"`);
+        await page.screenshot({ path: path.join(this.screenshotsDir, `ezpass_login_fields_missing_${Date.now()}.png`) });
+        throw new Error('Login fields not found, aborting.');
       }
 
+      console.log(`✏️ Filling credentials using ${userSel} & ${passSel}`);
+      await page.fill(userSel, credentials.username);
+      await page.fill(passSel, credentials.password);
+      await page.waitForTimeout(500 + Math.random() * 500);  // human-like pause
+
+      // Detect CAPTCHA
+      if (await page.$('div.recaptcha, iframe[src*="recaptcha"]')) {
+        console.warn('⚠️ CAPTCHA detected on E-ZPass login page.');
+        await page.screenshot({ path: path.join(this.screenshotsDir, `ezpass_captcha_${Date.now()}.png`) });
+      }
+
+      // Submit
       console.log('Submitting login form...');
-
-      // Submit login form and wait for navigation
       await Promise.all([
-        this.page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
-        loginButton.click()
+        page.waitForNavigation({ timeout: 10000, waitUntil: 'networkidle' }),
+        page.click('button[type="submit"], input[type="submit"]'),
       ]);
 
-      // Verify successful login by checking for dashboard elements
-      const dashboardSelectors = [
-        '.dashboard',
-        '.account-overview',
-        '.account-summary',
-        '[class*="dashboard"]',
-        '[class*="account"]'
-      ];
-
-      let dashboardFound = false;
-      for (const selector of dashboardSelectors) {
-        const element = await this.page.$(selector);
-        if (element) {
-          dashboardFound = true;
-          console.log(`Login successful - found dashboard element: ${selector}`);
-          break;
-        }
+      // Verify success
+      if (page.url().includes('loginError')) {
+        console.error('❌ Login failed, bad credentials or page structure changed.');
+        await page.screenshot({ path: path.join(this.screenshotsDir, `ezpass_login_failed_${Date.now()}.png`) });
+        throw new Error('E-ZPass login failed after submit.');
       }
 
-      if (!dashboardFound) {
-        // Check if we're still on login page (login failed)
-        const currentUrl = this.page.url();
-        if (currentUrl.includes('sign-in') || currentUrl.includes('login')) {
-          throw new Error('Login failed - still on login page');
-        }
-        
-        console.log('Login appears successful, proceeding to account history...');
-      }
-
+      console.log('✅ E-ZPass login succeeded.');
       return true;
+
     } catch (error) {
       console.error('Login failed:', error);
       
       // Take screenshot for debugging
-      await this.page.screenshot({
-        path: path.join(this.screenshotsDir, `login_error_${Date.now()}.png`),
-        fullPage: true
-      });
+      try {
+        await this.page.screenshot({
+          path: path.join(this.screenshotsDir, `ezpass_login_error_${Date.now()}.png`),
+          fullPage: true
+        });
+      } catch (screenshotError) {
+        console.error('Failed to take error screenshot:', screenshotError);
+      }
       
       throw error;
     }
