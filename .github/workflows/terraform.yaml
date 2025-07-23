@@ -17,6 +17,11 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: app/scripts/terraform
+        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,6 +60,11 @@ jobs:
     needs: lint
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: app/scripts/terraform
+        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,6 +131,11 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
+    
+    defaults:
+      run:
+        working-directory: app/scripts/terraform
+        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

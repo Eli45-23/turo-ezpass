@@ -23,6 +23,10 @@ jobs:
     
     runs-on: ubuntu-latest
     
+    defaults:
+      run:
+        working-directory: app/scripts
+    
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       image-tags: ${{ steps.meta.outputs.tags }}
@@ -116,6 +120,10 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: success()
+    
+    defaults:
+      run:
+        working-directory: app/scripts
     
     steps:
       - name: Configure AWS credentials for scanning
