@@ -28,6 +28,7 @@ const secretsManager = new AWS.SecretsManager();
 class TuroScraper {
   constructor() {
     this.browser = null;
+    this.context = null;
     this.page = null;
     this.tripData = [];
     this.screenshotsDir = path.join(__dirname, 'screenshots');
@@ -78,6 +79,7 @@ class TuroScraper {
   async initializeBrowser() {
     console.log('Initializing browser with stealth settings...');
     
+    // Launch browser
     this.browser = await chromium.launch({
       headless: process.env.NODE_ENV === 'production',
       args: [
@@ -94,20 +96,19 @@ class TuroScraper {
       ]
     });
 
-    this.page = await this.browser.newPage();
-
-    // Set realistic browser characteristics
-    await this.page.setViewportSize({ width: 1280, height: 800 });
-    await this.page.setUserAgent(
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-    );
-
-    // Set extra headers
-    await this.page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    // Create browser context with stealth settings
+    this.context = await this.browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      extraHTTPHeaders: {
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+      }
     });
+
+    // Create new page from context
+    this.page = await this.context.newPage();
 
     console.log('Browser initialized successfully');
   }
@@ -633,6 +634,9 @@ class TuroScraper {
     try {
       if (this.page) {
         await this.page.close();
+      }
+      if (this.context) {
+        await this.context.close();
       }
       if (this.browser) {
         await this.browser.close();
