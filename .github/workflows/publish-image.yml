@@ -1,0 +1,167 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: turo-ezpass
+  AWS_ACCOUNT_ID: 486365525776
+
+permissions:
+  id-token: write   # Required for OIDC token generation
+  contents: read    # Required to checkout code
+
+jobs:
+  build-and-push:
+    # Only run on pushes to main or when PR is merged to main
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true))
+    
+    runs-on: ubuntu-latest
+    
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tags: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: app/scripts/package-lock.json
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/turo-ezpass-github-actions-role
+          role-session-name: GitHubActions-ECR-Push
+          aws-region: ${{ env.AWS_REGION }}
+          # Add additional security with role duration and external ID if needed
+          role-duration-seconds: 3600
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value={{sha}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: app/scripts
+          file: app/scripts/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.title=Turo EZPass Scraper
+            org.opencontainers.image.description=Automated scraper for Turo and EZPass data
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false  # Disable provenance for compatibility
+
+      - name: Display image information
+        run: |
+          echo "🐳 Docker image pushed successfully!"
+          echo "📋 Image digest: ${{ steps.build.outputs.digest }}"
+          echo "🏷️  Image tags:"
+          echo "  - ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest"
+          echo "  - ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+          echo "🔗 ECR Repository: https://${{ env.AWS_REGION }}.console.aws.amazon.com/ecr/repositories/private/${{ env.AWS_ACCOUNT_ID }}/${{ env.ECR_REPOSITORY }}"
+
+      - name: Clean up local Docker resources
+        if: always()
+        run: |
+          echo "🧹 Cleaning up Docker resources..."
+          docker system prune -f --volumes
+          docker image prune -a -f
+
+      - name: Update deployment status
+        run: |
+          echo "✅ Deployment completed successfully"
+          echo "Image is ready for ECS deployment with tag: latest or ${{ github.sha }}"
+
+  # Optional: Security scan job
+  security-scan:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Configure AWS credentials for scanning
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/turo-ezpass-github-actions-role
+          role-session-name: GitHubActions-ECR-Scan
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Trigger ECR vulnerability scan
+        run: |
+          echo "🔍 Triggering ECR vulnerability scan..."
+          aws ecr start-image-scan \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-id imageTag=latest \
+            --region ${{ env.AWS_REGION }} || echo "Scan already in progress or completed"
+
+      - name: Wait for scan completion
+        run: |
+          echo "⏳ Waiting for vulnerability scan to complete..."
+          for i in {1..10}; do
+            SCAN_STATUS=$(aws ecr describe-image-scan-findings \
+              --repository-name ${{ env.ECR_REPOSITORY }} \
+              --image-id imageTag=latest \
+              --region ${{ env.AWS_REGION }} \
+              --query 'imageScanStatus.status' \
+              --output text 2>/dev/null || echo "IN_PROGRESS")
+            
+            if [ "$SCAN_STATUS" = "COMPLETE" ]; then
+              echo "✅ Vulnerability scan completed"
+              break
+            elif [ "$SCAN_STATUS" = "FAILED" ]; then
+              echo "❌ Vulnerability scan failed"
+              exit 1
+            else
+              echo "🔄 Scan status: $SCAN_STATUS (attempt $i/10)"
+              sleep 30
+            fi
+          done
+
+      - name: Get scan results
+        run: |
+          echo "📊 Vulnerability scan results:"
+          aws ecr describe-image-scan-findings \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-id imageTag=latest \
+            --region ${{ env.AWS_REGION }} \
+            --query 'imageScanFindingsSummary.findingCounts' \
+            --output table || echo "No scan results available yet"

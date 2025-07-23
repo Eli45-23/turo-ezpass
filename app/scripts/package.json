@@ -13,10 +13,11 @@
     "install-browsers": "npx playwright install"
   },
   "dependencies": {
-    "playwright": "^1.40.0",
-    "aws-sdk": "^2.1500.0"
+    "aws-sdk": "^2.1500.0",
+    "playwright": "^1.40.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.1",
     "@types/node": "^20.0.0"
   },
   "keywords": [

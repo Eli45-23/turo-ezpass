@@ -1,0 +1,29 @@
+{
+    "Targets": [
+        {
+            "Id": "turo-ezpass-manual-ecs-target",
+            "Arn": "arn:aws:ecs:us-east-1:486365525776:cluster/turo-ezpass-cluster",
+            "RoleArn": "arn:aws:iam::486365525776:role/turo-ezpass-eventbridge-role",
+            "EcsParameters": {
+                "TaskDefinitionArn": "arn:aws:ecs:us-east-1:486365525776:task-definition/turo-ezpass-scraper:3",
+                "TaskCount": 1,
+                "LaunchType": "FARGATE",
+                "NetworkConfiguration": {
+                    "awsvpcConfiguration": {
+                        "Subnets": [
+                            "subnet-0b9b9caceeb3cefe7",
+                            "subnet-054e62a3b912bf88d"
+                        ],
+                        "SecurityGroups": [
+                            "sg-094b52fa7b5fd845e"
+                        ],
+                        "AssignPublicIp": "ENABLED"
+                    }
+                },
+                "PlatformVersion": "LATEST",
+                "EnableECSManagedTags": false,
+                "EnableExecuteCommand": false
+            }
+        }
+    ]
+}

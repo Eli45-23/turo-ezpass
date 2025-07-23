@@ -1,0 +1,156 @@
+name: Nightly Scraper Schedule
+
+on:
+  schedule:
+    # Run nightly at 2 AM ET (6 AM UTC during standard time, 5 AM UTC during daylight time)
+    # This uses 6 AM UTC for consistency - adjust as needed for daylight saving time
+    - cron: '0 6 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  AWS_REGION: us-east-1
+  
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: app/scripts/package-lock.json
+          
+      - name: Install dependencies
+        run: |
+          cd app/scripts
+          npm ci
+          
+      - name: Install Playwright browsers
+        run: |
+          cd app/scripts
+          npx playwright install chromium
+          npx playwright install-deps
+          
+      - name: Run scrapers
+        id: scraper
+        run: |
+          cd app/scripts
+          echo "Starting scraper run at $(date)"
+          
+          # Set timeout and error handling
+          timeout 25m npm start || exit_code=$?
+          
+          if [ ${exit_code:-0} -eq 124 ]; then
+            echo "ERROR: Scraper timed out after 25 minutes"
+            exit 1
+          elif [ ${exit_code:-0} -ne 0 ]; then
+            echo "ERROR: Scraper failed with exit code: ${exit_code:-0}"
+            exit 1
+          fi
+          
+          echo "Scraper completed successfully at $(date)"
+          
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshots-${{ github.run_number }}
+          path: |
+            app/scripts/scrapers/screenshots/
+            app/scripts/failure-screenshots/
+          retention-days: 7
+          
+      - name: Upload scraper results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-results-${{ github.run_number }}
+          path: |
+            app/scripts/matches.json
+            app/scripts/submission-report.json
+            app/scripts/scrapers/*.json
+          retention-days: 30
+          
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Scraper Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `
+              ## Scraper Failure Alert
+              
+              **Run ID:** ${{ github.run_id }}
+              **Run Number:** ${{ github.run_number }}
+              **Timestamp:** ${new Date().toISOString()}
+              **Workflow:** ${{ github.workflow }}
+              
+              ### Details
+              The nightly scraper run has failed. Please check the logs and screenshots.
+              
+              ### Action Items
+              - [ ] Review the workflow logs: [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              - [ ] Check uploaded failure screenshots
+              - [ ] Investigate login field changes or timeouts
+              - [ ] Update selectors if needed
+              
+              ### Quick Links
+              - [Screenshots Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              - [Results Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              
+              ---
+              *This issue was automatically created by the GitHub Actions workflow.*
+              `,
+              labels: ['bug', 'scraper-failure', 'automated']
+            };
+            
+            // Check if there's already an open issue for today
+            const today = new Date().toISOString().split('T')[0];
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'scraper-failure',
+              per_page: 5
+            });
+            
+            const todayIssue = existingIssues.data.find(issue => 
+              issue.title.includes(today)
+            );
+            
+            if (!todayIssue) {
+              await github.rest.issues.create(issue);
+              console.log('Created new failure issue');
+            } else {
+              console.log('Issue already exists for today:', todayIssue.html_url);
+              // Add a comment to the existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: todayIssue.number,
+                body: `Another failure occurred at ${new Date().toISOString()}. [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+              });
+            }
+            
+      - name: Report success
+        if: success()
+        run: |
+          echo "✅ Scraper completed successfully"
+          echo "📊 Results uploaded as artifacts"
+          echo "🕐 Completed at: $(date)"
