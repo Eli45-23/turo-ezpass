@@ -62,7 +62,13 @@
       "Bash(docker tag:*)",
       "Bash(docker push:*)",
       "Bash(aws ecr describe-repositories:*)",
-      "Bash(aws:*)"
+      "Bash(aws:*)",
+      "Bash(git push:*)",
+      "Bash(docker system:*)",
+      "Bash(docker:*)",
+      "Bash(DOCKER_BUILDKIT=0 docker push 486365525776.dkr.ecr.us-east-1.amazonaws.com/turo-ezpass:staging)",
+      "Bash(DOCKER_CLI_EXPERIMENTAL=disabled docker push 486365525776.dkr.ecr.us-east-1.amazonaws.com/turo-ezpass:simple-test)",
+      "Bash(DOCKER_BUILDKIT=0 docker build --no-cache -t turo-ezpass:legacy-staging .)"
     ],
     "deny": []
   }

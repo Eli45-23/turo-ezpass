@@ -1,7 +1,7 @@
 {
   "name": "turo-ezpass-scrapers",
   "version": "1.0.0",
-  "description": "Playwright-based scrapers for E-ZPass and Turo data extraction",
+  "description": "Playwright-based scrapers for E-ZPass and Turo data extraction with automated CI/CD",
   "main": "match.js",
   "scripts": {
     "scrape-ezpass": "node scrapers/ezpass.js",
