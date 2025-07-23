@@ -4,11 +4,12 @@ Playwright-based automation scripts for extracting toll data from E-ZPass NY por
 
 ## Overview
 
-This package contains three main components:
+This package contains four main components:
 
 1. **E-ZPass Scraper** (`scrapers/ezpass.js`) - Extracts toll records from E-ZPass NY portal
 2. **Turo Scraper** (`scrapers/turo.js`) - Extracts trip data from Turo host dashboard  
 3. **Matching Engine** (`match.js`) - Matches toll records to trips based on time and location
+4. **TuroBot** (`turobot.js`) - Automated toll reimbursement submission system
 
 ## Prerequisites
 
@@ -85,10 +86,27 @@ node scrapers/turo.js VEHICLE_ID_123
 # Run all scrapers and matching in sequence
 npm run scrape-all
 
+# Submit matched tolls to Turo (automated reimbursement)
+npm run submit
+
+# Complete end-to-end automation (scrape + match + submit)
+npm run full-automation
+
 # Or run individually
 npm run scrape-ezpass
 npm run scrape-turo
 npm run match
+npm run submit
+```
+
+### TuroBot Automated Submission
+
+```bash
+# Submit all high/medium confidence matches automatically
+npm run submit
+
+# Run in development mode (non-headless browser)
+NODE_ENV=development npm run submit
 ```
 
 ## Output Files
@@ -179,6 +197,40 @@ npm run match
       "trip": { /* trip details */ }
     }
   ]
+}
+```
+
+### TuroBot Submission Report (`submission-report.json`)
+
+```json
+{
+  "submissionDate": "2025-01-23T12:30:00.000Z",
+  "summary": {
+    "totalMatches": 3,
+    "successfulSubmissions": 2,
+    "failedSubmissions": 1,
+    "totalAmount": 32.00,
+    "averageProcessingTime": 15234
+  },
+  "submissions": [
+    {
+      "tripId": "TRIP123456789",
+      "tollId": "TXN123456789",
+      "amount": 16.00,
+      "status": "success",
+      "message": "Reimbursement request submitted successfully",
+      "confirmationId": "REQ123456",
+      "uploadSuccess": true,
+      "confidence": "high",
+      "processingTime": 12500,
+      "timestamp": "2025-01-23T12:30:15.000Z"
+    }
+  ],
+  "configuration": {
+    "requestDelay": 3000,
+    "submissionDelay": 5000,
+    "maxRetries": 3
+  }
 }
 ```
 

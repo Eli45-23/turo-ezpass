@@ -1,0 +1,16 @@
+{
+  "submissionDate": "2025-01-23T12:30:00.000Z",
+  "summary": {
+    "totalMatches": 0,
+    "successfulSubmissions": 0,
+    "failedSubmissions": 0,
+    "totalAmount": 0,
+    "averageProcessingTime": 0
+  },
+  "submissions": [],
+  "configuration": {
+    "requestDelay": 3000,
+    "submissionDelay": 5000,
+    "maxRetries": 3
+  }
+}

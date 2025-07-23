@@ -7,7 +7,9 @@
     "scrape-ezpass": "node scrapers/ezpass.js",
     "scrape-turo": "node scrapers/turo.js",
     "match": "node match.js",
+    "submit": "node turobot.js",
     "scrape-all": "npm run scrape-ezpass && npm run scrape-turo && npm run match",
+    "full-automation": "npm run scrape-all && npm run submit",
     "install-browsers": "npx playwright install"
   },
   "dependencies": {
