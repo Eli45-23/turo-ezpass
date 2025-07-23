@@ -113,67 +113,77 @@ class TuroScraper {
    * Login to Turo host dashboard
    */
   async login(credentials) {
+    const { page } = this;
+    const loginUrl = 'https://turo.com/login';
+
     try {
-      console.log('Navigating to Turo login page...');
-      
-      // Navigate to login page
-      await this.page.goto('https://turo.com/login', {
-        waitUntil: 'networkidle',
-        timeout: 30000
-      });
+      console.log(`↗️ Navigating to Turo login page: ${loginUrl}`);
+      await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
 
-      console.log('Login page loaded, waiting for form elements...');
+      // Fallback selectors for email & password
+      const EMAIL_SELECTORS = [
+        'input#emailAddress',
+        'input[name="emailAddress"]',
+        'input[type="email"]',
+        'input[name="username"]'
+      ];
+      const PASS_SELECTORS = [
+        'input#password',
+        'input[name="password"]',
+        'input[type="password"]'
+      ];
 
-      // Wait for login form elements with expanded selectors and longer timeout
-      console.log('Waiting for email input field...');
-      await this.page.waitForSelector(
-        'input#emailAddress, input[name="emailAddress"], input[type="email"]',
-        { timeout: 20000 }
-      );
+      let emailSel, passSel;
+      for (const sel of EMAIL_SELECTORS) {
+        try {
+          await page.waitForSelector(sel, { timeout: 3000, state: 'visible' });
+          emailSel = sel;
+          break;
+        } catch (e) { /* next */ }
+      }
+      for (const sel of PASS_SELECTORS) {
+        try {
+          await page.waitForSelector(sel, { timeout: 3000, state: 'visible' });
+          passSel = sel;
+          break;
+        } catch (e) { /* next */ }
+      }
 
-      console.log('Email field found, filling credentials...');
+      if (!emailSel || !passSel) {
+        console.error('❌ Login fields not found on Turo. Check selectors!');
+        console.error(`URL: ${page.url()}, title: "${await page.title()}"`);
+        await page.screenshot({ path: path.join(this.screenshotsDir, `turo_login_fields_missing_${Date.now()}.png`) });
+        throw new Error('Turo login fields missing, abort.');
+      }
 
-      // Fill email field using expanded selectors
-      await this.page.fill(
-        'input#emailAddress, input[name="emailAddress"], input[type="email"]',
-        credentials.email
-      );
+      console.log(`✏️ Filling Turo credentials (${emailSel} & ${passSel})`);
+      await page.fill(emailSel, credentials.email);
+      await page.fill(passSel, credentials.password);
+      await page.waitForTimeout(500 + Math.random() * 500);
 
-      console.log('Email filled, waiting for password field...');
-      await this.page.waitForTimeout(1000); // Human-like delay
+      // Submit form
+      console.log('Submitting login form...');
+      await Promise.all([
+        page.waitForNavigation({ timeout: 20000, waitUntil: 'networkidle' }),
+        page.click('button[type="submit"], button[data-automation="login-button"]'),
+      ]);
 
-      // Fill password field using expanded selectors
-      console.log('Filling password field...');
-      await this.page.fill(
-        'input[name="password"], #login_password, input[type="password"]',
-        credentials.password
-      );
+      // Detect 2FA
+      if (await page.$('input[name="otp"], input[type="tel"]')) {
+        console.warn('⚠️ Detected 2FA prompt on Turo.');
+        await page.screenshot({ path: path.join(this.screenshotsDir, `turo_2fa_required_${Date.now()}.png`) });
+      }
 
-      console.log('Password filled, waiting for submit button...');
-      await this.page.waitForTimeout(1000);
+      // Verify success
+      const successUrlPatterns = [/dashboard/, /account/, /host/, /trips/];
+      const currentUrl = page.url();
+      if (!successUrlPatterns.some(rx => rx.test(currentUrl)) && !currentUrl.includes('turo.com/us/en')) {
+        console.error('❌ Turo login looks unsuccessful.');
+        await page.screenshot({ path: path.join(this.screenshotsDir, `turo_login_failed_${Date.now()}.png`) });
+        throw new Error('Turo login failed after submit.');
+      }
 
-      // Wait for and click the submit button with expanded selectors
-      console.log('Waiting for login submit button...');
-      await this.page.waitForSelector(
-        'button[type="submit"], button[data-testid="login-button"], button:has-text("Log in"), button:has-text("Sign in")',
-        { timeout: 10000 }
-      );
-
-      console.log('Submit button found, clicking to login...');
-      await this.page.click(
-        'button[type="submit"], button[data-testid="login-button"], button:has-text("Log in"), button:has-text("Sign in")'
-      );
-
-      console.log('Login form submitted, waiting for dashboard...');
-
-      // Wait for post-login dashboard elements to confirm success
-      console.log('Waiting for dashboard elements to appear...');
-      await this.page.waitForSelector(
-        '.host-dashboard, a[href*="/trips"], .dashboard, [class*="host"]',
-        { timeout: 20000 }
-      );
-
-      console.log('Dashboard elements found - login successful!');
+      console.log('✅ Turo login succeeded.');
       return true;
 
     } catch (error) {
