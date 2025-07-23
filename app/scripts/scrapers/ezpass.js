@@ -84,17 +84,11 @@ class EZPassScraper {
     // Launch browser with simplified configuration
     this.browser = await chromium.launch({
       headless: true,
+      slowMo: 0,
       args: [
         '--disable-gpu',
         '--no-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
+        '--disable-dev-shm-usage'
       ]
     });
 
@@ -129,18 +123,17 @@ class EZPassScraper {
       console.log('Login page loaded, filling credentials...');
 
       // Wait for login form elements
-      await this.page.waitForSelector('input[name="username"], input[name="email"], input[id="username"], input[id="email"]', {
+      await this.page.waitForSelector('input#userIdentifier, input[name="userIdentifier"]', {
         timeout: 10000
       });
 
       // Find and fill username/email field
       const usernameSelectors = [
+        'input#userIdentifier',
+        'input[name="userIdentifier"]',
         'input[name="username"]',
-        'input[name="email"]', 
         'input[id="username"]',
-        'input[id="email"]',
-        'input[type="text"]',
-        'input[type="email"]'
+        'input[type="text"]'
       ];
 
       let usernameField = null;

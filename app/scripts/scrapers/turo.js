@@ -82,6 +82,7 @@ class TuroScraper {
     // Launch browser with simplified configuration
     const browser = await chromium.launch({
       headless: true,
+      slowMo: 0,
       args: [
         '--disable-gpu',
         '--no-sandbox',
@@ -126,7 +127,7 @@ class TuroScraper {
       // Wait for login form elements with expanded selectors and longer timeout
       console.log('Waiting for email input field...');
       await this.page.waitForSelector(
-        'input[name="email"], input[type="email"], input[name="username"], #login_email, #username',
+        'input#emailAddress, input[name="emailAddress"], input[type="email"]',
         { timeout: 20000 }
       );
 
@@ -134,7 +135,7 @@ class TuroScraper {
 
       // Fill email field using expanded selectors
       await this.page.fill(
-        'input[name="email"], input[type="email"], input[name="username"], #login_email',
+        'input#emailAddress, input[name="emailAddress"], input[type="email"]',
         credentials.email
       );
 
