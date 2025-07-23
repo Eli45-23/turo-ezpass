@@ -39,7 +39,7 @@ resource "aws_iam_role" "github_actions" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:eli/turo-ezpass:*"
+            "token.actions.githubusercontent.com:sub" = "repo:Eli45-23/turo-ezpass:*"
           }
         }
       }
