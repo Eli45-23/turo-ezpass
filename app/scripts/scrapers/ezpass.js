@@ -28,6 +28,7 @@ const secretsManager = new AWS.SecretsManager();
 class EZPassScraper {
   constructor() {
     this.browser = null;
+    this.context = null;
     this.page = null;
     this.tollRecords = [];
     this.screenshotsDir = path.join(__dirname, 'screenshots');
@@ -80,29 +81,31 @@ class EZPassScraper {
   async initializeBrowser() {
     console.log('Initializing browser with stealth settings...');
     
+    // Launch browser with simplified configuration
     this.browser = await chromium.launch({
-      headless: process.env.NODE_ENV === 'production',
+      headless: true,
       args: [
+        '--disable-gpu',
         '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
         '--single-process',
-        '--disable-gpu',
         '--disable-web-security',
         '--disable-features=VizDisplayCompositor'
       ]
     });
 
-    this.page = await this.browser.newPage();
+    // Create browser context with stealth settings
+    this.context = await this.browser.newContext({
+      viewport: { width: 1280, height: 720 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    });
 
-    // Set realistic browser characteristics
-    await this.page.setViewport({ width: 1366, height: 768 });
-    await this.page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-    );
+    // Create new page from context
+    this.page = await this.context.newPage();
 
     // Block images and fonts to speed up loading
     await this.page.route('**/*.{png,jpg,jpeg,gif,svg,woff,woff2,ttf}', route => route.abort());
@@ -627,6 +630,9 @@ class EZPassScraper {
     try {
       if (this.page) {
         await this.page.close();
+      }
+      if (this.context) {
+        await this.context.close();
       }
       if (this.browser) {
         await this.browser.close();
