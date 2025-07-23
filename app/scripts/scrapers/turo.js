@@ -97,7 +97,7 @@ class TuroScraper {
     this.page = await this.browser.newPage();
 
     // Set realistic browser characteristics
-    await this.page.setViewport({ width: 1440, height: 900 });
+    await this.page.setViewportSize({ width: 1280, height: 800 });
     await this.page.setUserAgent(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
     );
