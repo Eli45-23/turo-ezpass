@@ -183,6 +183,23 @@ Create Turo host interface automation to:
 - Track submission status and confirmation numbers
 ```
 
+### Secrets Management
+```
+@Infra-Agent:
+Generate a shell script named `create-turo-secret.sh` in `/app/scripts/` that:
+1. Prompts the user for their Turo email and password.
+2. Writes those credentials to a temporary file `turo-creds.json`.
+3. Executes the AWS CLI command to create the secret:
+   ```bash
+   aws secretsmanager create-secret \
+     --name turo-ezpass/turo/credentials \
+     --description "Turo host dashboard login creds" \
+     --secret-string file://turo-creds.json
+   ```
+4. Deletes turo-creds.json after the secret is created.
+5. Runs chmod +x create-turo-secret.sh so the script is executable.
+```
+
 ## Multi-Agent Workflows
 
 ### Complete Feature Development
