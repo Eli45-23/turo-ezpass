@@ -113,48 +113,105 @@ class EZPassScraper {
   async login(credentials) {
     const { page } = this;
     const loginUrl = 'https://www.e-zpassny.com/isp/home.do';
+    const startTime = Date.now();
 
     try {
       // Navigate to login page
       console.log(`↗️ Navigating to E-ZPass login page: ${loginUrl}`);
-      await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+      await page.goto(loginUrl, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 10000 
+      });
       
       // Wait a bit for page to fully render
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1500);
 
-      // Define selectors to try
+      // Comprehensive selectors for username field
       const USER_SELECTORS = [
+        // ID-based
         'input#userIdentifier',
-        'input[name="userIdentifier"]'
+        'input#username',
+        'input#user',
+        'input#login',
+        'input#userid',
+        'input#accountNumber',
+        // Name attribute
+        'input[name="userIdentifier"]',
+        'input[name="username"]',
+        'input[name="user"]',
+        'input[name="login"]',
+        'input[name="userid"]',
+        'input[name="accountNumber"]',
+        // Placeholder-based
+        'input[placeholder*="username" i]',
+        'input[placeholder*="user" i]',
+        'input[placeholder*="account" i]',
+        'input[placeholder*="login" i]',
+        'input[placeholder*="id" i]',
+        // Aria labels
+        'input[aria-label*="username" i]',
+        'input[aria-label*="user" i]',
+        'input[aria-label*="account" i]',
+        // Type-based fallbacks
+        'input[type="text"]:not([type="password"])',
+        'input:not([type="password"]):not([type="submit"]):not([type="button"])'
       ];
       
       const PASS_SELECTORS = [
+        // ID-based
         'input#password',
-        'input[name="password"]'
+        'input#pass',
+        'input#pwd',
+        'input#userPassword',
+        // Name attribute
+        'input[name="password"]',
+        'input[name="pass"]',
+        'input[name="pwd"]',
+        'input[name="userPassword"]',
+        // Type-based (most reliable)
+        'input[type="password"]',
+        // Placeholder-based
+        'input[placeholder*="password" i]',
+        'input[placeholder*="pass" i]',
+        // Aria labels
+        'input[aria-label*="password" i]'
       ];
 
-      // Find username field
+      // Find username field with timeout per selector
       console.log('🔍 Looking for username field...');
       let usernameField = null;
       let foundUserSelector = null;
       
       for (const selector of USER_SELECTORS) {
+        if (Date.now() - startTime > 8000) break; // Leave time for other operations
+        
         console.log(`  Trying selector: ${selector}`);
-        usernameField = await page.$(selector);
-        if (usernameField) {
-          foundUserSelector = selector;
-          console.log(`  ✅ Found username field with: ${selector}`);
-          break;
+        try {
+          // Try with a short wait to ensure element is interactable
+          await page.waitForSelector(selector, { 
+            timeout: 2000, 
+            state: 'visible' 
+          });
+          usernameField = await page.$(selector);
+          if (usernameField && await usernameField.isVisible()) {
+            foundUserSelector = selector;
+            console.log(`  ✅ Found username field with: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Selector not found, continue
         }
       }
       
       if (!usernameField) {
-        const errorMsg = `Username field not found. Tried selectors: ${USER_SELECTORS.join(', ')}`;
+        const errorMsg = `Username field not found. Tried ${USER_SELECTORS.length} selectors`;
         console.error(`❌ ${errorMsg}`);
         console.error(`Current URL: ${page.url()}`);
         console.error(`Page title: "${await page.title()}"`);
+        console.error(`Tried selectors: ${USER_SELECTORS.slice(0, 5).join(', ')}... (and ${USER_SELECTORS.length - 5} more)`);
+        
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `ezpass_username_field_missing_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `ezpass_username_not_found_${Date.now()}.png`) 
         });
         throw new Error(errorMsg);
       }
@@ -165,51 +222,118 @@ class EZPassScraper {
       let foundPassSelector = null;
       
       for (const selector of PASS_SELECTORS) {
+        if (Date.now() - startTime > 9000) break;
+        
         console.log(`  Trying selector: ${selector}`);
-        passwordField = await page.$(selector);
-        if (passwordField) {
-          foundPassSelector = selector;
-          console.log(`  ✅ Found password field with: ${selector}`);
-          break;
+        try {
+          await page.waitForSelector(selector, { 
+            timeout: 2000, 
+            state: 'visible' 
+          });
+          passwordField = await page.$(selector);
+          if (passwordField && await passwordField.isVisible()) {
+            foundPassSelector = selector;
+            console.log(`  ✅ Found password field with: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Continue to next selector
         }
       }
       
       if (!passwordField) {
-        const errorMsg = `Password field not found. Tried selectors: ${PASS_SELECTORS.join(', ')}`;
+        const errorMsg = `Password field not found. Tried ${PASS_SELECTORS.length} selectors`;
         console.error(`❌ ${errorMsg}`);
         console.error(`Current URL: ${page.url()}`);
         console.error(`Page title: "${await page.title()}"`);
+        console.error(`Tried selectors: ${PASS_SELECTORS.slice(0, 5).join(', ')}... (and ${PASS_SELECTORS.length - 5} more)`);
+        
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `ezpass_password_field_missing_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `ezpass_password_not_found_${Date.now()}.png`) 
         });
         throw new Error(errorMsg);
       }
 
-      // Type credentials with small delay for more human-like behavior
+      // Type credentials with human-like delays
       console.log('✏️ Filling in credentials...');
-      await usernameField.type(credentials.username, { delay: 100 });
-      await page.waitForTimeout(500); // Small pause between fields
-      await passwordField.type(credentials.password, { delay: 100 });
+      await usernameField.click();
+      await page.waitForTimeout(200);
+      await usernameField.type(credentials.username, { delay: 150 });
+      
+      await page.waitForTimeout(300 + Math.random() * 200); // Random pause between fields
+      
+      await passwordField.click();
+      await page.waitForTimeout(200);
+      await passwordField.type(credentials.password, { delay: 150 });
+      
       await page.waitForTimeout(500);
 
-      // Check for CAPTCHA before submitting
-      const captchaPresent = await page.$('div.recaptcha, iframe[src*="recaptcha"], .g-recaptcha');
-      if (captchaPresent) {
-        console.warn('⚠️ CAPTCHA detected on E-ZPass login page.');
-        await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `ezpass_captcha_detected_${Date.now()}.png`) 
-        });
+      // Check for CAPTCHA
+      const captchaSelectors = [
+        'div.recaptcha',
+        'iframe[src*="recaptcha"]',
+        '.g-recaptcha',
+        '[class*="captcha"]',
+        '#captcha'
+      ];
+      
+      for (const selector of captchaSelectors) {
+        const captcha = await page.$(selector);
+        if (captcha) {
+          console.warn('⚠️ CAPTCHA detected on E-ZPass login page.');
+          await page.screenshot({ 
+            path: path.join(this.screenshotsDir, `ezpass_captcha_present_${Date.now()}.png`) 
+          });
+          break;
+        }
       }
 
       // Find and click submit button
       console.log('🔍 Looking for submit button...');
-      const submitButton = await page.$('button[type="submit"], input[type="submit"]');
+      const SUBMIT_SELECTORS = [
+        // Type-based
+        'button[type="submit"]',
+        'input[type="submit"]',
+        // Text-based
+        'button:has-text("Sign In")',
+        'button:has-text("Log In")',
+        'button:has-text("Login")',
+        'button:has-text("Submit")',
+        // Value attribute
+        'input[value="Sign In" i]',
+        'input[value="Log In" i]',
+        'input[value="Login" i]',
+        // Aria labels
+        'button[aria-label*="sign in" i]',
+        'button[aria-label*="log in" i]',
+        // ID/class based
+        '#loginButton',
+        '#submitButton',
+        '.login-button',
+        '.submit-button',
+        // Form button fallback
+        'form button:not([type="button"])',
+        'form input[type="button"]'
+      ];
+      
+      let submitButton = null;
+      for (const selector of SUBMIT_SELECTORS) {
+        try {
+          submitButton = await page.$(selector);
+          if (submitButton && await submitButton.isVisible()) {
+            console.log(`  ✅ Found submit button: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Continue
+        }
+      }
       
       if (!submitButton) {
-        const errorMsg = 'Submit button not found. Tried: button[type="submit"], input[type="submit"]';
+        const errorMsg = `Submit button not found. Tried ${SUBMIT_SELECTORS.length} selectors`;
         console.error(`❌ ${errorMsg}`);
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `ezpass_submit_button_missing_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `ezpass_submit_not_found_${Date.now()}.png`) 
         });
         throw new Error(errorMsg);
       }
@@ -217,34 +341,49 @@ class EZPassScraper {
       // Submit the form
       console.log('📤 Submitting login form...');
       await Promise.all([
-        page.waitForNavigation({ timeout: 10000, waitUntil: 'networkidle' }),
+        page.waitForNavigation({ 
+          timeout: Math.max(10000 - (Date.now() - startTime), 2000), 
+          waitUntil: 'networkidle' 
+        }).catch(() => null), // Don't fail if navigation doesn't happen
         submitButton.click()
       ]);
 
+      // Wait a bit for page to load
+      await page.waitForTimeout(1000);
+
       // Verify login success
       const currentUrl = page.url();
-      if (currentUrl.includes('loginError') || currentUrl.includes('error')) {
-        console.error('❌ Login failed - error in URL');
+      const pageContent = await page.content();
+      
+      if (currentUrl.includes('error') || currentUrl.includes('fail') || 
+          pageContent.includes('Invalid') || pageContent.includes('incorrect')) {
+        console.error('❌ Login failed - error detected');
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `ezpass_login_failed_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `ezpass_login_error_${Date.now()}.png`) 
         });
-        throw new Error('E-ZPass login failed - credentials may be incorrect');
+        throw new Error('E-ZPass login failed - check credentials');
       }
 
-      console.log('✅ E-ZPass login succeeded!');
+      console.log('✅ E-ZPass login completed!');
+      console.log(`   Final URL: ${currentUrl}`);
       return true;
 
     } catch (error) {
-      console.error('❌ Login process failed:', error.message);
+      const elapsed = Date.now() - startTime;
+      console.error(`❌ Login failed after ${elapsed}ms:`, error.message);
       
       // Take final error screenshot
       try {
+        const screenshotPath = path.join(this.screenshotsDir, 
+          `ezpass_error_${error.message.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}_${Date.now()}.png`
+        );
         await page.screenshot({
-          path: path.join(this.screenshotsDir, `ezpass_login_error_${Date.now()}.png`),
+          path: screenshotPath,
           fullPage: true
         });
+        console.log(`   Screenshot saved: ${screenshotPath}`);
       } catch (screenshotError) {
-        console.error('Failed to take error screenshot:', screenshotError.message);
+        console.error('   Failed to capture screenshot:', screenshotError.message);
       }
       
       throw error;

@@ -115,50 +115,124 @@ class TuroScraper {
   async login(credentials) {
     const { page } = this;
     const loginUrl = 'https://turo.com/login';
+    const startTime = Date.now();
 
     try {
       // Navigate to login page
       console.log(`↗️ Navigating to Turo login page: ${loginUrl}`);
-      await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+      await page.goto(loginUrl, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 20000 
+      });
       
-      // Wait a bit for page to fully render
-      await page.waitForTimeout(1000);
+      // Wait for page to fully render
+      await page.waitForTimeout(2000);
 
-      // Define selectors to try
+      // Comprehensive selectors for email field
       const EMAIL_SELECTORS = [
+        // ID-based
+        'input#email',
+        'input#emailAddress',
+        'input#username',
+        'input#loginEmail',
+        'input#userEmail',
+        // Name attribute
         'input[name="email"]',
+        'input[name="emailAddress"]',
+        'input[name="username"]',
+        'input[name="loginEmail"]',
+        'input[name="userEmail"]',
+        // Type-based
         'input[type="email"]',
-        'input#emailAddress'
+        // Placeholder-based
+        'input[placeholder*="email" i]',
+        'input[placeholder*="e-mail" i]',
+        'input[placeholder*="username" i]',
+        'input[placeholder*="address" i]',
+        // Aria labels
+        'input[aria-label*="email" i]',
+        'input[aria-label*="e-mail" i]',
+        'input[aria-label*="username" i]',
+        // Data attributes
+        'input[data-testid*="email" i]',
+        'input[data-testid*="username" i]',
+        'input[data-automation*="email" i]',
+        // Autocomplete
+        'input[autocomplete="email"]',
+        'input[autocomplete="username"]',
+        // Class-based
+        'input[class*="email" i]',
+        'input[class*="username" i]',
+        // Generic text input in login form
+        'form input[type="text"]:not([type="password"])',
+        '#loginForm input[type="text"]',
+        '.login-form input[type="text"]'
       ];
       
       const PASS_SELECTORS = [
+        // ID-based
+        'input#password',
+        'input#pass',
+        'input#pwd',
+        'input#loginPassword',
+        'input#userPassword',
+        // Name attribute
         'input[name="password"]',
+        'input[name="pass"]',
+        'input[name="pwd"]',
+        'input[name="loginPassword"]',
+        'input[name="userPassword"]',
+        // Type-based (most reliable)
         'input[type="password"]',
-        'input#password'
+        // Placeholder-based
+        'input[placeholder*="password" i]',
+        'input[placeholder*="pass" i]',
+        // Aria labels
+        'input[aria-label*="password" i]',
+        // Data attributes
+        'input[data-testid*="password" i]',
+        'input[data-automation*="password" i]',
+        // Autocomplete
+        'input[autocomplete="current-password"]',
+        'input[autocomplete="password"]',
+        // Class-based
+        'input[class*="password" i]'
       ];
 
-      // Find email field
+      // Find email field with timeout per selector
       console.log('🔍 Looking for email field...');
       let emailField = null;
       let foundEmailSelector = null;
       
       for (const selector of EMAIL_SELECTORS) {
+        if (Date.now() - startTime > 15000) break; // Leave time for other operations
+        
         console.log(`  Trying selector: ${selector}`);
-        emailField = await page.$(selector);
-        if (emailField) {
-          foundEmailSelector = selector;
-          console.log(`  ✅ Found email field with: ${selector}`);
-          break;
+        try {
+          await page.waitForSelector(selector, { 
+            timeout: 3000, 
+            state: 'visible' 
+          });
+          emailField = await page.$(selector);
+          if (emailField && await emailField.isVisible()) {
+            foundEmailSelector = selector;
+            console.log(`  ✅ Found email field with: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Selector not found, continue
         }
       }
       
       if (!emailField) {
-        const errorMsg = `Email field not found. Tried selectors: ${EMAIL_SELECTORS.join(', ')}`;
+        const errorMsg = `Email field not found. Tried ${EMAIL_SELECTORS.length} selectors`;
         console.error(`❌ ${errorMsg}`);
         console.error(`Current URL: ${page.url()}`);
         console.error(`Page title: "${await page.title()}"`);
+        console.error(`Tried selectors: ${EMAIL_SELECTORS.slice(0, 5).join(', ')}... (and ${EMAIL_SELECTORS.length - 5} more)`);
+        
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `turo_email_field_missing_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `turo_email_not_found_${Date.now()}.png`) 
         });
         throw new Error(errorMsg);
       }
@@ -169,42 +243,105 @@ class TuroScraper {
       let foundPassSelector = null;
       
       for (const selector of PASS_SELECTORS) {
+        if (Date.now() - startTime > 17000) break;
+        
         console.log(`  Trying selector: ${selector}`);
-        passwordField = await page.$(selector);
-        if (passwordField) {
-          foundPassSelector = selector;
-          console.log(`  ✅ Found password field with: ${selector}`);
-          break;
+        try {
+          await page.waitForSelector(selector, { 
+            timeout: 2000, 
+            state: 'visible' 
+          });
+          passwordField = await page.$(selector);
+          if (passwordField && await passwordField.isVisible()) {
+            foundPassSelector = selector;
+            console.log(`  ✅ Found password field with: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Continue to next selector
         }
       }
       
       if (!passwordField) {
-        const errorMsg = `Password field not found. Tried selectors: ${PASS_SELECTORS.join(', ')}`;
+        const errorMsg = `Password field not found. Tried ${PASS_SELECTORS.length} selectors`;
         console.error(`❌ ${errorMsg}`);
         console.error(`Current URL: ${page.url()}`);
         console.error(`Page title: "${await page.title()}"`);
+        console.error(`Tried selectors: ${PASS_SELECTORS.slice(0, 5).join(', ')}... (and ${PASS_SELECTORS.length - 5} more)`);
+        
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `turo_password_field_missing_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `turo_password_not_found_${Date.now()}.png`) 
         });
         throw new Error(errorMsg);
       }
 
-      // Type credentials with small delay for more human-like behavior
+      // Type credentials with human-like delays
       console.log('✏️ Filling in credentials...');
-      await emailField.type(credentials.email, { delay: 100 });
-      await page.waitForTimeout(500); // Small pause between fields
-      await passwordField.type(credentials.password, { delay: 100 });
-      await page.waitForTimeout(500);
+      await emailField.click();
+      await page.waitForTimeout(200);
+      await emailField.type(credentials.email, { delay: 120 });
+      
+      await page.waitForTimeout(400 + Math.random() * 300); // Random pause between fields
+      
+      await passwordField.click();
+      await page.waitForTimeout(200);
+      await passwordField.type(credentials.password, { delay: 120 });
+      
+      await page.waitForTimeout(600);
 
       // Find and click submit button
       console.log('🔍 Looking for submit button...');
-      const submitButton = await page.$('button[type="submit"]');
+      const SUBMIT_SELECTORS = [
+        // Type-based
+        'button[type="submit"]',
+        'input[type="submit"]',
+        // Text-based
+        'button:has-text("Log in")',
+        'button:has-text("Sign in")',
+        'button:has-text("Login")',
+        'button:has-text("Continue")',
+        'button:has-text("Submit")',
+        // Aria labels
+        'button[aria-label*="log in" i]',
+        'button[aria-label*="sign in" i]',
+        'button[aria-label*="login" i]',
+        'button[aria-label*="submit" i]',
+        // Data attributes
+        'button[data-testid*="login" i]',
+        'button[data-testid*="submit" i]',
+        'button[data-automation*="login" i]',
+        // ID/class based
+        '#loginButton',
+        '#submitButton',
+        '#loginSubmit',
+        '.login-button',
+        '.submit-button',
+        '.btn-login',
+        '.btn-primary:has-text("Log")',
+        // Form buttons
+        'form button:not([type="button"])',
+        '#loginForm button',
+        '.login-form button'
+      ];
+      
+      let submitButton = null;
+      for (const selector of SUBMIT_SELECTORS) {
+        try {
+          submitButton = await page.$(selector);
+          if (submitButton && await submitButton.isVisible()) {
+            console.log(`  ✅ Found submit button: ${selector}`);
+            break;
+          }
+        } catch (e) {
+          // Continue
+        }
+      }
       
       if (!submitButton) {
-        const errorMsg = 'Submit button not found. Tried: button[type="submit"]';
+        const errorMsg = `Submit button not found. Tried ${SUBMIT_SELECTORS.length} selectors`;
         console.error(`❌ ${errorMsg}`);
         await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `turo_submit_button_missing_${Date.now()}.png`) 
+          path: path.join(this.screenshotsDir, `turo_submit_not_found_${Date.now()}.png`) 
         });
         throw new Error(errorMsg);
       }
@@ -212,57 +349,92 @@ class TuroScraper {
       // Submit the form
       console.log('📤 Submitting login form...');
       await Promise.all([
-        page.waitForNavigation({ timeout: 20000, waitUntil: 'networkidle' }),
+        page.waitForNavigation({ 
+          timeout: Math.max(20000 - (Date.now() - startTime), 3000), 
+          waitUntil: 'networkidle' 
+        }).catch(() => null), // Don't fail if navigation doesn't happen
         submitButton.click()
       ]);
 
-      // Check for 2FA
-      const twoFactorField = await page.$('input[name="otp"], input[type="tel"], input[name="code"]');
-      if (twoFactorField) {
-        console.warn('⚠️ 2FA/MFA detected on Turo login.');
-        await page.screenshot({ 
-          path: path.join(this.screenshotsDir, `turo_2fa_required_${Date.now()}.png`) 
-        });
-        // Don't throw error, just warn - user may need to handle 2FA manually
+      // Wait for page to settle
+      await page.waitForTimeout(1500);
+
+      // Check for 2FA/MFA
+      const twoFactorSelectors = [
+        'input[name="otp"]',
+        'input[name="code"]',
+        'input[name="verificationCode"]',
+        'input[type="tel"][maxlength="6"]',
+        'input[placeholder*="code" i]',
+        'input[placeholder*="verification" i]',
+        'input[aria-label*="code" i]',
+        'input[aria-label*="verification" i]'
+      ];
+      
+      for (const selector of twoFactorSelectors) {
+        const twoFactorField = await page.$(selector);
+        if (twoFactorField && await twoFactorField.isVisible()) {
+          console.warn('⚠️ 2FA/MFA detected on Turo login.');
+          await page.screenshot({ 
+            path: path.join(this.screenshotsDir, `turo_2fa_detected_${Date.now()}.png`) 
+          });
+          console.log('   2FA field found - manual intervention may be required');
+          break;
+        }
       }
 
       // Verify login success
       const currentUrl = page.url();
+      const pageContent = await page.content();
+      
       const successIndicators = [
         'dashboard',
         'account',
         'host',
         'trips',
         'vehicles',
-        'earnings'
+        'earnings',
+        'messages',
+        'calendar'
       ];
       
       const urlHasSuccess = successIndicators.some(indicator => 
         currentUrl.toLowerCase().includes(indicator)
       );
       
-      if (!urlHasSuccess && currentUrl.includes('login')) {
+      const contentHasSuccess = successIndicators.some(indicator =>
+        pageContent.toLowerCase().includes(indicator)
+      );
+      
+      if (!urlHasSuccess && !contentHasSuccess && 
+          (currentUrl.includes('login') || currentUrl.includes('signin'))) {
         console.error('❌ Login failed - still on login page');
         await page.screenshot({ 
           path: path.join(this.screenshotsDir, `turo_login_failed_${Date.now()}.png`) 
         });
-        throw new Error('Turo login failed - credentials may be incorrect');
+        throw new Error('Turo login failed - check credentials');
       }
 
-      console.log('✅ Turo login succeeded!');
+      console.log('✅ Turo login completed!');
+      console.log(`   Final URL: ${currentUrl}`);
       return true;
 
     } catch (error) {
-      console.error('❌ Login process failed:', error.message);
+      const elapsed = Date.now() - startTime;
+      console.error(`❌ Login failed after ${elapsed}ms:`, error.message);
       
       // Take final error screenshot
       try {
+        const screenshotPath = path.join(this.screenshotsDir, 
+          `turo_error_${error.message.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}_${Date.now()}.png`
+        );
         await page.screenshot({
-          path: path.join(this.screenshotsDir, `turo_login_error_${Date.now()}.png`),
+          path: screenshotPath,
           fullPage: true
         });
+        console.log(`   Screenshot saved: ${screenshotPath}`);
       } catch (screenshotError) {
-        console.error('Failed to take error screenshot:', screenshotError.message);
+        console.error('   Failed to capture screenshot:', screenshotError.message);
       }
       
       throw error;
