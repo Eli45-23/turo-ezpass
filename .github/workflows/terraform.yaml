@@ -20,7 +20,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: app/scripts/terraform
+        working-directory: .
         
     steps:
       - name: Checkout code
@@ -63,7 +63,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: app/scripts/terraform
+        working-directory: .
         
     steps:
       - name: Checkout code
@@ -134,7 +134,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: app/scripts/terraform
+        working-directory: .
         
     steps:
       - name: Checkout code
