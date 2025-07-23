@@ -40,7 +40,10 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: app/scripts/package-lock.json
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
