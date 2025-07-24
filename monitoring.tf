@@ -99,13 +99,6 @@ resource "aws_cloudwatch_dashboard" "turo_ezpass" {
       }
     ]
   })
-
-  tags = {
-    Name        = "turo-ezpass-dashboard"
-    Project     = "turo-ezpass"
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }
 }
 
 # SNS Topic for alerts
