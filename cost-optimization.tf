@@ -6,7 +6,7 @@ variable "task_cpu_optimized" {
   
   validation {
     condition     = contains([256, 512, 1024, 2048, 4096], var.task_cpu_optimized)
-    error_message = "task_cpu_optimized must be a valid Fargate CPU value: 256, 512, 1024, 2048, or 4096"
+    error_message = "Task CPU optimized must be a valid Fargate CPU value: 256, 512, 1024, 2048, or 4096."
   }
 }
 
@@ -17,7 +17,7 @@ variable "task_memory_optimized" {
   
   validation {
     condition = var.task_memory_optimized >= 512 && var.task_memory_optimized <= 8192
-    error_message = "task_memory_optimized must be between 512 and 8192 MiB"
+    error_message = "Task memory optimized must be between 512 and 8192 MiB."
   }
 }
 

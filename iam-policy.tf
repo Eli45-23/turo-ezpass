@@ -182,9 +182,6 @@ resource "aws_iam_policy" "ecs_task_secrets" {
   }
 }
 
-# Get current AWS account ID
-data "aws_caller_identity" "current" {}
-
 # S3 bucket for proof images and reports
 resource "aws_s3_bucket" "proofs" {
   bucket = "turo-ezpass-proofs-${data.aws_caller_identity.current.account_id}"

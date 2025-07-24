@@ -7,7 +7,7 @@ variable "aws_account_id" {
   
   validation {
     condition     = can(regex("^[0-9]{12}$", var.aws_account_id))
-    error_message = "aws_account_id must be a 12-digit AWS account ID"
+    error_message = "AWS account ID must be a 12-digit number."
   }
 }
 
@@ -22,7 +22,7 @@ variable "aws_region" {
       "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1",
       "ap-southeast-2", "ap-northeast-1"
     ], var.aws_region)
-    error_message = "aws_region must be a valid AWS region"
+    error_message = "AWS region must be a valid AWS region code."
   }
 }
 
@@ -33,7 +33,7 @@ variable "environment" {
   
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "environment must be one of: dev, staging, prod"
+    error_message = "Environment must be one of: dev, staging, or prod."
   }
 }
 
@@ -45,7 +45,7 @@ variable "external_id" {
   
   validation {
     condition     = length(var.external_id) >= 8 && length(var.external_id) <= 128
-    error_message = "external_id must be between 8 and 128 characters long"
+    error_message = "External ID must be between 8 and 128 characters long."
   }
 }
 
@@ -55,6 +55,6 @@ variable "alert_email" {
   
   validation {
     condition     = can(regex("^\\S+@\\S+\\.\\S+$", var.alert_email))
-    error_message = "alert_email must be a valid email address"
+    error_message = "Alert email must be a valid email address."
   }
 }
