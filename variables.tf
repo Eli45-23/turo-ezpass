@@ -52,6 +52,7 @@ variable "external_id" {
 variable "alert_email" {
   type        = string
   description = "Email to receive SNS alerts"
+  default     = "alerts@example.com"
   
   validation {
     condition     = can(regex("^\\S+@\\S+\\.\\S+$", var.alert_email))

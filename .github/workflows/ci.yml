@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
     - name: Checkout code
@@ -33,20 +40,19 @@ jobs:
       working-directory: ./app/scripts
       run: npm test
       
-    - name: Run E-ZPass scraper with mock credentials
+    - name: Configure AWS credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::486365525776:role/turo-ezpass-github-actions-role
+        aws-region: us-east-1
+        role-session-name: GitHubActions-CI-Test
+      
+    - name: Run E-ZPass scraper
       working-directory: ./app/scripts
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DUMMY_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DUMMY_AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: us-east-1
       run: npm run scrape-ezpass
       
-    - name: Run Turo scraper with mock credentials
+    - name: Run Turo scraper
       working-directory: ./app/scripts
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DUMMY_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DUMMY_AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: us-east-1
       run: npm run scrape-turo
       
     - name: Upload debug screenshots
