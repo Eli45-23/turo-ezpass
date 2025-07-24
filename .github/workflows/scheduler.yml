@@ -1,5 +1,9 @@
 name: Nightly Scraper Schedule
 
+permissions:
+  id-token: write
+  contents: read
+
 on:
   schedule:
     # Run nightly at 2 AM ET (6 AM UTC during standard time, 5 AM UTC during daylight time)
@@ -9,80 +13,106 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 486365525776
   
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/turo-ezpass-github-actions-role
+          role-session-name: GitHubActions-Scheduler
           aws-region: ${{ env.AWS_REGION }}
           
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: app/scripts/package-lock.json
-          
-      - name: Install dependencies
+      - name: Trigger scraper via EventBridge
+        id: trigger
         run: |
-          cd app/scripts
-          npm ci
+          echo "Triggering scraper via EventBridge at $(date)"
           
-      - name: Install Playwright browsers
+          # Send event to trigger the ECS task
+          aws events put-events --entries '[{
+            "Source": "github.scheduler",
+            "DetailType": "Scraper Trigger",
+            "Detail": "{\"trigger\": \"scheduled\", \"run_id\": \"${{ github.run_id }}\", \"run_number\": \"${{ github.run_number }}\"}"
+          }]'
+          
+          echo "✅ Scraper trigger sent successfully"
+          
+      - name: Wait for scraper completion
+        id: wait
         run: |
-          cd app/scripts
-          npx playwright install chromium
-          npx playwright install-deps
+          echo "Waiting for scraper task to complete..."
           
-      - name: Run scrapers
-        id: scraper
-        run: |
-          cd app/scripts
-          echo "Starting scraper run at $(date)"
+          # Poll ECS for task status (adjust task definition name as needed)
+          TASK_FAMILY="turo-ezpass-scraper"
+          MAX_WAIT_TIME=1800  # 30 minutes
+          POLL_INTERVAL=30    # 30 seconds
+          ELAPSED=0
           
-          # Set timeout and error handling
-          timeout 25m npm start || exit_code=$?
+          while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
+            # Get the latest task ARN
+            TASK_ARN=$(aws ecs list-tasks --cluster default --family $TASK_FAMILY --desired-status RUNNING --query 'taskArns[0]' --output text)
+            
+            if [ "$TASK_ARN" != "None" ] && [ -n "$TASK_ARN" ]; then
+              echo "Task running: $TASK_ARN"
+              
+              # Check task status
+              TASK_STATUS=$(aws ecs describe-tasks --cluster default --tasks $TASK_ARN --query 'tasks[0].lastStatus' --output text)
+              
+              if [ "$TASK_STATUS" = "STOPPED" ]; then
+                EXIT_CODE=$(aws ecs describe-tasks --cluster default --tasks $TASK_ARN --query 'tasks[0].containers[0].exitCode' --output text)
+                if [ "$EXIT_CODE" = "0" ]; then
+                  echo "✅ Scraper completed successfully"
+                  exit 0
+                else
+                  echo "❌ Scraper failed with exit code: $EXIT_CODE"
+                  exit 1
+                fi
+              fi
+            else
+              echo "No running task found, checking for recently stopped tasks..."
+              
+              # Check for recently stopped tasks
+              STOPPED_TASK=$(aws ecs list-tasks --cluster default --family $TASK_FAMILY --desired-status STOPPED --query 'taskArns[0]' --output text)
+              
+              if [ "$STOPPED_TASK" != "None" ] && [ -n "$STOPPED_TASK" ]; then
+                EXIT_CODE=$(aws ecs describe-tasks --cluster default --tasks $STOPPED_TASK --query 'tasks[0].containers[0].exitCode' --output text)
+                STOPPED_AT=$(aws ecs describe-tasks --cluster default --tasks $STOPPED_TASK --query 'tasks[0].stoppedAt' --output text)
+                
+                # Check if task stopped recently (within last 5 minutes)
+                CURRENT_TIME=$(date +%s)
+                STOPPED_TIME=$(date -d "$STOPPED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$STOPPED_AT" +%s 2>/dev/null || echo 0)
+                TIME_DIFF=$((CURRENT_TIME - STOPPED_TIME))
+                
+                if [ $TIME_DIFF -lt 300 ]; then
+                  if [ "$EXIT_CODE" = "0" ]; then
+                    echo "✅ Scraper completed successfully"
+                    exit 0
+                  else
+                    echo "❌ Scraper failed with exit code: $EXIT_CODE"
+                    exit 1
+                  fi
+                fi
+              fi
+            fi
+            
+            sleep $POLL_INTERVAL
+            ELAPSED=$((ELAPSED + POLL_INTERVAL))
+            echo "Waiting... ($ELAPSED seconds elapsed)"
+          done
           
-          if [ ${exit_code:-0} -eq 124 ]; then
-            echo "ERROR: Scraper timed out after 25 minutes"
-            exit 1
-          elif [ ${exit_code:-0} -ne 0 ]; then
-            echo "ERROR: Scraper failed with exit code: ${exit_code:-0}"
-            exit 1
-          fi
-          
-          echo "Scraper completed successfully at $(date)"
-          
-      - name: Upload screenshots on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: failure-screenshots-${{ github.run_number }}
-          path: |
-            app/scripts/scrapers/screenshots/
-            app/scripts/failure-screenshots/
-          retention-days: 7
-          
-      - name: Upload scraper results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: scraper-results-${{ github.run_number }}
-          path: |
-            app/scripts/matches.json
-            app/scripts/submission-report.json
-            app/scripts/scrapers/*.json
-          retention-days: 30
+          echo "❌ Timeout waiting for scraper to complete"
+          exit 1
           
       - name: Notify on failure
         if: failure()
@@ -102,17 +132,18 @@ jobs:
               **Workflow:** ${{ github.workflow }}
               
               ### Details
-              The nightly scraper run has failed. Please check the logs and screenshots.
+              The nightly scraper ECS task has failed or timed out. Please check the ECS logs and CloudWatch.
               
               ### Action Items
               - [ ] Review the workflow logs: [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-              - [ ] Check uploaded failure screenshots
+              - [ ] Check ECS task logs in CloudWatch
+              - [ ] Review any error screenshots in S3
               - [ ] Investigate login field changes or timeouts
               - [ ] Update selectors if needed
               
               ### Quick Links
-              - [Screenshots Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-              - [Results Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              - [ECS Console](https://console.aws.amazon.com/ecs/home?region=${{ env.AWS_REGION }}#/clusters/default/tasks)
+              - [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/home?region=${{ env.AWS_REGION }}#logsV2:log-groups)
               
               ---
               *This issue was automatically created by the GitHub Actions workflow.*
@@ -151,6 +182,6 @@ jobs:
       - name: Report success
         if: success()
         run: |
-          echo "✅ Scraper completed successfully"
-          echo "📊 Results uploaded as artifacts"
+          echo "✅ Scraper ECS task completed successfully"
+          echo "📊 Results should be available in S3/CloudWatch"
           echo "🕐 Completed at: $(date)"
