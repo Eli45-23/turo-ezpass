@@ -13,8 +13,9 @@ env:
   AWS_ACCOUNT_ID: 486365525776
 
 permissions:
-  id-token: write   # Required for OIDC token generation
-  contents: read    # Required to checkout code
+  id-token: write        # Required for OIDC token generation
+  contents: read         # Required to checkout code
+  security-events: write # Required for CodeQL/SARIF upload
 
 jobs:
   build-and-push:
