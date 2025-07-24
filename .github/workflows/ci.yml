@@ -43,9 +43,15 @@ jobs:
     - name: Configure AWS credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: arn:aws:iam::486365525776:role/turo-ezpass-github-actions-role
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN || 'arn:aws:iam::486365525776:role/turo-ezpass-github-actions-role' }}
         aws-region: us-east-1
         role-session-name: GitHubActions-CI-Test
+      
+    - name: Verify AWS credentials
+      run: |
+        echo "Testing AWS credentials..."
+        aws sts get-caller-identity
+        echo "AWS credentials configured successfully"
       
     - name: Run E-ZPass scraper
       working-directory: ./app/scripts
