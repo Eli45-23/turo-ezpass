@@ -10,7 +10,8 @@
     "submit": "node turobot.js",
     "scrape-all": "npm run scrape-ezpass && npm run scrape-turo && npm run match",
     "full-automation": "npm run scrape-all && npm run submit",
-    "install-browsers": "npx playwright install"
+    "install-browsers": "npx playwright install",
+    "test": "echo \"No tests configured yet\" && exit 0"
   },
   "dependencies": {
     "aws-sdk": "^2.1500.0",

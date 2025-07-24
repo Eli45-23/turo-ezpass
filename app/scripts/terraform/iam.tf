@@ -58,5 +58,3 @@ resource "aws_iam_role_policy_attachment" "eventbridge_ecs_policy_attachment" {
   role       = aws_iam_role.eventbridge_role.name
   policy_arn = aws_iam_policy.eventbridge_ecs_policy.arn
 }
-
-data "aws_caller_identity" "current" {}
