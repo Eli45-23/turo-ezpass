@@ -51,10 +51,10 @@ resource "aws_cloudwatch_dashboard" "turo_ezpass" {
         height = 6
 
         properties = {
-          query   = "SOURCE '/ecs/${var.project_name}'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
-          region  = var.aws_region
-          title   = "Recent Error Logs"
-          view    = "table"
+          query  = "SOURCE '/ecs/${var.project_name}'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
+          region = var.aws_region
+          title  = "Recent Error Logs"
+          view   = "table"
         }
       },
       {

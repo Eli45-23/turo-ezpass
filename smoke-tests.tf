@@ -2,24 +2,24 @@
 
 # Lambda function for smoke testing
 resource "aws_lambda_function" "smoke_test" {
-  filename         = "smoke-test.zip"
-  function_name    = "turo-ezpass-smoke-test"
-  role            = aws_iam_role.smoke_test.arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 900  # 15 minutes for full test
+  filename      = "smoke-test.zip"
+  function_name = "turo-ezpass-smoke-test"
+  role          = aws_iam_role.smoke_test.arn
+  handler       = "index.handler"
+  runtime       = "python3.9"
+  timeout       = 900 # 15 minutes for full test
 
   source_code_hash = data.archive_file.smoke_test_zip.output_base64sha256
 
   environment {
     variables = {
-      ECS_CLUSTER_NAME        = "${var.project_name}-cluster"
-      ECS_TASK_DEFINITION     = "${var.project_name}-scraper"
-      S3_BUCKET               = aws_s3_bucket.proofs.id
-      SNS_TOPIC_ARN          = aws_sns_topic.alerts.arn
-      EZPASS_SECRET_NAME     = "turo-ezpass/ezpass/credentials"
-      TURO_SECRET_NAME       = "turo-ezpass/turo/credentials"
-      REGION                 = var.aws_region
+      ECS_CLUSTER_NAME    = "${var.project_name}-cluster"
+      ECS_TASK_DEFINITION = "${var.project_name}-scraper"
+      S3_BUCKET           = aws_s3_bucket.proofs.id
+      SNS_TOPIC_ARN       = aws_sns_topic.alerts.arn
+      EZPASS_SECRET_NAME  = "turo-ezpass/ezpass/credentials"
+      TURO_SECRET_NAME    = "turo-ezpass/turo/credentials"
+      REGION              = var.aws_region
     }
   }
 
@@ -130,9 +130,9 @@ resource "aws_iam_role_policy" "smoke_test" {
 data "archive_file" "smoke_test_zip" {
   type        = "zip"
   output_path = "smoke-test.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 import time
@@ -330,7 +330,7 @@ EOF
 resource "aws_cloudwatch_event_rule" "smoke_test_schedule" {
   name                = "turo-ezpass-smoke-test"
   description         = "Run smoke tests daily"
-  schedule_expression = "cron(0 6 * * ? *)"  # Daily at 6 AM UTC
+  schedule_expression = "cron(0 6 * * ? *)" # Daily at 6 AM UTC
 
   tags = {
     Name        = "turo-ezpass-smoke-test"
@@ -347,7 +347,7 @@ resource "aws_cloudwatch_event_target" "smoke_test" {
   arn       = aws_lambda_function.smoke_test.arn
 
   input = jsonencode({
-    run_ecs_test = false  # Set to true for full ECS testing
+    run_ecs_test = false # Set to true for full ECS testing
   })
 }
 

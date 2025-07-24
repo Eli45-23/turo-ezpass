@@ -159,13 +159,13 @@ resource "aws_iam_policy" "turo_ezpass_automation_policy" {
 resource "aws_iam_policy" "ecs_task_secrets" {
   name        = "turo-ezpass-ecs-task-secrets"
   description = "Allow ECS tasks to read only the two scraper secrets"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+        Effect = "Allow"
+        Action = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
         Resource = [
           "arn:aws:secretsmanager:${var.aws_region}:${var.aws_account_id}:secret:turo-ezpass/ezpass/credentials*",
           "arn:aws:secretsmanager:${var.aws_region}:${var.aws_account_id}:secret:turo-ezpass/turo/credentials*"

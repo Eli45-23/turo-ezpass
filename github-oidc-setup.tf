@@ -6,11 +6,11 @@ data "aws_caller_identity" "current" {}
 # OIDC Provider for GitHub Actions
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
-  
+
   client_id_list = [
     "sts.amazonaws.com"
   ]
-  
+
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1"
   ]
@@ -27,7 +27,7 @@ resource "aws_iam_openid_connect_provider" "github" {
 # IAM Role for GitHub Actions to push to ECR
 resource "aws_iam_role" "github_actions" {
   name = "turo-ezpass-github-actions-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -59,7 +59,7 @@ resource "aws_iam_role" "github_actions" {
 resource "aws_iam_policy" "github_actions_ecr_policy" {
   name        = "github-actions-ecr-policy"
   description = "Policy for GitHub Actions to push images to ECR"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -151,10 +151,10 @@ resource "aws_ecr_lifecycle_policy" "turo_ezpass_lifecycle" {
         rulePriority = 1
         description  = "Keep last 10 latest images"
         selection = {
-          tagStatus   = "tagged"
+          tagStatus     = "tagged"
           tagPrefixList = ["latest"]
-          countType   = "imageCountMoreThan"
-          countNumber = 1
+          countType     = "imageCountMoreThan"
+          countNumber   = 1
         }
         action = {
           type = "expire"
@@ -164,9 +164,9 @@ resource "aws_ecr_lifecycle_policy" "turo_ezpass_lifecycle" {
         rulePriority = 2
         description  = "Keep last 20 SHA-tagged images"
         selection = {
-          tagStatus     = "tagged"
-          countType     = "imageCountMoreThan"
-          countNumber   = 20
+          tagStatus   = "tagged"
+          countType   = "imageCountMoreThan"
+          countNumber = 20
         }
         action = {
           type = "expire"

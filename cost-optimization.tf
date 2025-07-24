@@ -2,8 +2,8 @@
 variable "task_cpu_optimized" {
   description = "Optimized CPU allocation for ECS tasks (in CPU units)"
   type        = number
-  default     = 256  # 0.25 vCPU - reduced from typical 512
-  
+  default     = 256 # 0.25 vCPU - reduced from typical 512
+
   validation {
     condition     = contains([256, 512, 1024, 2048, 4096], var.task_cpu_optimized)
     error_message = "Task CPU optimized must be a valid Fargate CPU value: 256, 512, 1024, 2048, or 4096."
@@ -13,10 +13,10 @@ variable "task_cpu_optimized" {
 variable "task_memory_optimized" {
   description = "Optimized memory allocation for ECS tasks (in MiB)"
   type        = number
-  default     = 512  # 0.5 GB - reduced from typical 1024
-  
+  default     = 512 # 0.5 GB - reduced from typical 1024
+
   validation {
-    condition = var.task_memory_optimized >= 512 && var.task_memory_optimized <= 8192
+    condition     = var.task_memory_optimized >= 512 && var.task_memory_optimized <= 8192
     error_message = "Task memory optimized must be between 512 and 8192 MiB."
   }
 }
@@ -102,7 +102,7 @@ resource "aws_cloudwatch_metric_alarm" "high_costs" {
   namespace           = "AWS/Billing"
   period              = "86400"
   statistic           = "Maximum"
-  threshold           = "50"  # Alert if monthly costs exceed $50
+  threshold           = "50" # Alert if monthly costs exceed $50
   alarm_description   = "High AWS costs detected for Turo-EZPass"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
@@ -121,7 +121,7 @@ resource "aws_cloudwatch_metric_alarm" "high_costs" {
 # CloudWatch Log Group with shorter retention for cost savings
 resource "aws_cloudwatch_log_group" "ecs_logs_cost_optimized" {
   name              = "/ecs/${var.project_name}-cost-optimized"
-  retention_in_days = 14  # Reduced from 30 days
+  retention_in_days = 14 # Reduced from 30 days
 
   tags = {
     Name        = "turo-ezpass-logs-optimized"
@@ -134,12 +134,12 @@ resource "aws_cloudwatch_log_group" "ecs_logs_cost_optimized" {
 
 # Cost optimization Lambda for cleanup
 resource "aws_lambda_function" "cost_optimizer" {
-  filename         = "cost-optimizer.zip"
-  function_name    = "turo-ezpass-cost-optimizer"
-  role            = aws_iam_role.cost_optimizer.arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 300
+  filename      = "cost-optimizer.zip"
+  function_name = "turo-ezpass-cost-optimizer"
+  role          = aws_iam_role.cost_optimizer.arn
+  handler       = "index.handler"
+  runtime       = "python3.9"
+  timeout       = 300
 
   source_code_hash = data.archive_file.cost_optimizer_zip.output_base64sha256
 
@@ -238,9 +238,9 @@ resource "aws_iam_role_policy" "cost_optimizer" {
 data "archive_file" "cost_optimizer_zip" {
   type        = "zip"
   output_path = "cost-optimizer.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 import logging
@@ -301,7 +301,7 @@ EOF
 resource "aws_cloudwatch_event_rule" "cost_optimizer_schedule" {
   name                = "turo-ezpass-cost-optimizer"
   description         = "Run cost optimization weekly"
-  schedule_expression = "cron(0 2 ? * SUN *)"  # Sundays at 2 AM
+  schedule_expression = "cron(0 2 ? * SUN *)" # Sundays at 2 AM
 
   tags = {
     Name        = "turo-ezpass-cost-optimizer"

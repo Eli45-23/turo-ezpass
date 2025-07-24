@@ -59,12 +59,12 @@ resource "aws_iam_role_policy" "secrets_rotation" {
 
 # Lambda function for secret rotation (placeholder - would need actual rotation logic)
 resource "aws_lambda_function" "rotate_secrets" {
-  filename         = "rotate-secrets.zip"
-  function_name    = "turo-ezpass-rotate-secrets"
-  role            = aws_iam_role.secrets_rotation.arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 300
+  filename      = "rotate-secrets.zip"
+  function_name = "turo-ezpass-rotate-secrets"
+  role          = aws_iam_role.secrets_rotation.arn
+  handler       = "index.handler"
+  runtime       = "python3.9"
+  timeout       = 300
 
   # This would need to be created with actual rotation logic
   source_code_hash = data.archive_file.rotate_secrets_zip.output_base64sha256
@@ -87,9 +87,9 @@ resource "aws_lambda_function" "rotate_secrets" {
 data "archive_file" "rotate_secrets_zip" {
   type        = "zip"
   output_path = "rotate-secrets.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 import logging
@@ -161,7 +161,7 @@ resource "aws_cloudwatch_metric_alarm" "rotation_failures" {
 resource "aws_cloudwatch_event_rule" "security_review" {
   name                = "turo-ezpass-security-review"
   description         = "Trigger monthly security review"
-  schedule_expression = "cron(0 9 1 * ? *)"  # First day of month at 9 AM
+  schedule_expression = "cron(0 9 1 * ? *)" # First day of month at 9 AM
 
   tags = {
     Name        = "turo-ezpass-security-review"
@@ -183,8 +183,8 @@ resource "aws_cloudwatch_event_target" "security_review_notification" {
     }
     input_template = jsonencode({
       "alert_type" = "security_review"
-      "message" = "Monthly security review reminder for Turo-EZPass infrastructure"
-      "timestamp" = "<time>"
+      "message"    = "Monthly security review reminder for Turo-EZPass infrastructure"
+      "timestamp"  = "<time>"
       "action_items" = [
         "Review IAM policies for any overly broad permissions",
         "Check for unused resources and cleanup",
