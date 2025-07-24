@@ -10,7 +10,7 @@ LOG_GROUP="/ecs/turo-ezpass"
 
 while true; do
   # get current epoch ms minus WINDOW
-  START_TIME=$(( $(date +%s%3N) - WINDOW ))
+  START_TIME=$(( $(date +%s)000 - WINDOW ))
 
   /opt/homebrew/opt/awscli@2/bin/aws logs filter-log-events \
     --log-group-name "$LOG_GROUP" \

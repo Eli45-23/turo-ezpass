@@ -121,7 +121,7 @@ resource "aws_cloudwatch_metric_alarm" "high_costs" {
 # CloudWatch Log Group with shorter retention for cost savings
 resource "aws_cloudwatch_log_group" "ecs_logs_cost_optimized" {
   name              = "/ecs/${var.project_name}-cost-optimized"
-  retention_in_days = 14 # Reduced from 30 days
+  retention_in_days = 365 # Minimum 1 year for compliance
 
   tags = {
     Name        = "turo-ezpass-logs-optimized"

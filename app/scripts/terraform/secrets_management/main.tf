@@ -15,11 +15,28 @@ terraform {
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+# KMS key for Secrets Manager encryption
+resource "aws_kms_key" "secrets_key" {
+  description             = "KMS key for ${var.project_name} Secrets Manager"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-secrets-key"
+  })
+}
+
+resource "aws_kms_alias" "secrets_key_alias" {
+  name          = "alias/${var.project_name}-secrets"
+  target_key_id = aws_kms_key.secrets_key.key_id
+}
+
 # E-ZPass credentials secret - create only if it doesn't exist
 resource "aws_secretsmanager_secret" "ezpass_credentials" {
   name                    = var.ezpass_secret_name
   description             = "E-ZPass NY portal login credentials for automated scraping"
   recovery_window_in_days = var.recovery_window_days
+  kms_key_id              = aws_kms_key.secrets_key.arn
 
   tags = merge(var.common_tags, {
     Name       = "E-ZPass Credentials"
@@ -51,6 +68,7 @@ resource "aws_secretsmanager_secret" "turo_credentials" {
   name                    = var.turo_secret_name
   description             = "Turo host dashboard login credentials for automated scraping"
   recovery_window_in_days = var.recovery_window_days
+  kms_key_id              = aws_kms_key.secrets_key.arn
 
   tags = merge(var.common_tags, {
     Name       = "Turo Credentials"

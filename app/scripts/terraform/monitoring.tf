@@ -1,6 +1,23 @@
+# KMS key for SNS encryption
+resource "aws_kms_key" "sns_key" {
+  description             = "KMS key for ${var.project_name} SNS topic encryption"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "${var.project_name}-sns-key"
+  }
+}
+
+resource "aws_kms_alias" "sns_key_alias" {
+  name          = "alias/${var.project_name}-sns"
+  target_key_id = aws_kms_key.sns_key.key_id
+}
+
 # SNS Topic for Alerts
 resource "aws_sns_topic" "alerts" {
-  name = "${var.project_name}-alerts"
+  name              = "${var.project_name}-alerts"
+  kms_master_key_id = aws_kms_key.sns_key.arn
 
   tags = {
     Name = "${var.project_name}-alerts"

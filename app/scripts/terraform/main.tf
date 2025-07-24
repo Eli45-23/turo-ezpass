@@ -75,7 +75,7 @@ resource "aws_subnet" "public" {
   cidr_block        = "10.0.${count.index + 1}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false # Security best practice - assign IPs explicitly when needed
 
   tags = {
     Name = "${var.project_name}-public-${count.index + 1}"
@@ -108,18 +108,43 @@ data "aws_availability_zones" "available" {
 # Security Group
 resource "aws_security_group" "ecs_task" {
   name_prefix = "${var.project_name}-ecs-"
+  description = "Security group for ECS tasks to allow outbound internet access"
   vpc_id      = aws_vpc.main.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   tags = {
     Name = "${var.project_name}-ecs-sg"
   }
+}
+
+# Separate egress rules for better security
+resource "aws_security_group_rule" "ecs_https_egress" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ecs_task.id
+  description       = "Allow HTTPS outbound for API calls"
+}
+
+resource "aws_security_group_rule" "ecs_http_egress" {
+  type              = "egress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ecs_task.id
+  description       = "Allow HTTP outbound for web scraping"
+}
+
+resource "aws_security_group_rule" "ecs_dns_egress" {
+  type              = "egress"
+  from_port         = 53
+  to_port           = 53
+  protocol          = "udp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ecs_task.id
+  description       = "Allow DNS resolution"
 }
 
 # ECS Cluster
@@ -139,11 +164,28 @@ resource "aws_ecs_cluster" "main" {
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/${var.project_name}"
-  retention_in_days = 7
+  retention_in_days = 365 # Minimum 1 year for compliance
+  kms_key_id        = aws_kms_key.logs_key.arn
 
   tags = {
     Name = var.project_name
   }
+}
+
+# KMS key for CloudWatch Logs encryption
+resource "aws_kms_key" "logs_key" {
+  description             = "KMS key for ${var.project_name} CloudWatch Logs"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "${var.project_name}-logs-key"
+  }
+}
+
+resource "aws_kms_alias" "logs_key_alias" {
+  name          = "alias/${var.project_name}-logs"
+  target_key_id = aws_kms_key.logs_key.key_id
 }
 
 # ECS Task Definition
