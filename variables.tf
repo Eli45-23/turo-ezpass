@@ -59,3 +59,9 @@ variable "alert_email" {
     error_message = "Alert email must be a valid email address."
   }
 }
+
+variable "project_name" {
+  description = "The name prefix for all ECS resources (cluster, service, log-group, etc.)"
+  type        = string
+  default     = "turo-ezpass"
+}

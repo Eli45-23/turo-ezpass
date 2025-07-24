@@ -18,4 +18,5 @@ output "turo_ezpass_automation_policy_arn" {
 output "assume_role_command" {
   description = "AWS CLI command to assume the automation role"
   value       = "aws sts assume-role --role-arn ${aws_iam_role.turo_ezpass_automation_role.arn} --role-session-name turo-ezpass-automation --external-id ${var.external_id}"
+  sensitive   = true
 }
