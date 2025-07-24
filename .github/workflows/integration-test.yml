@@ -1,0 +1,112 @@
+name: Integration Tests
+
+on:
+  # Run on manual dispatch
+  workflow_dispatch:
+  # Run after successful CI on main branch
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches: [main]
+  # Run on schedule (optional - uncomment if needed)
+  # schedule:
+  #   - cron: '0 0 * * *'  # Daily at midnight
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  scraper-tests:
+    runs-on: ubuntu-latest
+    # Only run if CI passed or manual trigger
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js 18
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'app/scripts/package-lock.json'
+        
+    - name: Install dependencies
+      working-directory: ./app/scripts
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      working-directory: ./app/scripts
+      run: npx playwright install --with-deps
+      
+    - name: Configure AWS credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN || 'arn:aws:iam::486365525776:role/turo-ezpass-github-actions-role' }}
+        aws-region: us-east-1
+        role-session-name: GitHubActions-Integration-Test
+      
+    - name: Verify AWS credentials
+      run: |
+        echo "Testing AWS credentials..."
+        aws sts get-caller-identity
+        echo "AWS credentials configured successfully"
+      
+    - name: Run E-ZPass scraper
+      working-directory: ./app/scripts
+      run: npm run scrape-ezpass
+      continue-on-error: true
+      id: ezpass-scraper
+      
+    - name: Run Turo scraper
+      working-directory: ./app/scripts
+      run: npm run scrape-turo
+      continue-on-error: true
+      id: turo-scraper
+      
+    - name: Run matcher
+      if: steps.ezpass-scraper.outcome == 'success' && steps.turo-scraper.outcome == 'success'
+      working-directory: ./app/scripts
+      run: npm run match
+      
+    - name: Upload screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: scraper-screenshots-${{ github.run_number }}
+        path: |
+          app/scripts/scrapers/screenshots/
+          app/scripts/failure-screenshots/
+        retention-days: 7
+        
+    - name: Upload scraper results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: scraper-results-${{ github.run_number }}
+        path: |
+          app/scripts/matches.json
+          app/scripts/submission-report.json
+          app/scripts/scrapers/*.json
+        retention-days: 30
+        
+    - name: Report status
+      if: always()
+      run: |
+        echo "## Scraper Test Results"
+        echo "E-ZPass Scraper: ${{ steps.ezpass-scraper.outcome }}"
+        echo "Turo Scraper: ${{ steps.turo-scraper.outcome }}"
+        
+        if [[ "${{ steps.ezpass-scraper.outcome }}" == "failure" ]] || [[ "${{ steps.turo-scraper.outcome }}" == "failure" ]]; then
+          echo "⚠️ One or more scrapers failed. Check the logs and screenshots."
+          exit 1
+        else
+          echo "✅ All scrapers completed successfully"
+        fi

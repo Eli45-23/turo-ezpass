@@ -6,16 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     
     steps:
     - name: Checkout code
@@ -32,41 +25,11 @@ jobs:
       working-directory: ./app/scripts
       run: npm ci
       
-    - name: Install Playwright browsers
-      working-directory: ./app/scripts
-      run: npx playwright install --with-deps
-      
     - name: Run tests
       working-directory: ./app/scripts
       run: npm test
       
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN || 'arn:aws:iam::486365525776:role/turo-ezpass-github-actions-role' }}
-        aws-region: us-east-1
-        role-session-name: GitHubActions-CI-Test
-      
-    - name: Verify AWS credentials
-      run: |
-        echo "Testing AWS credentials..."
-        aws sts get-caller-identity
-        echo "AWS credentials configured successfully"
-      
-    - name: Run E-ZPass scraper
-      working-directory: ./app/scripts
-      run: npm run scrape-ezpass
-      
-    - name: Run Turo scraper
-      working-directory: ./app/scripts
-      run: npm run scrape-turo
-      
-    - name: Upload debug screenshots
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-screenshots
-        path: |
-          app/scripts/scrapers/screenshots/
-          app/scripts/failure-screenshots/
-        retention-days: 30
+    # TODO: Add linting, type checking, or other static analysis here
+    # - name: Run linter
+    #   working-directory: ./app/scripts
+    #   run: npm run lint
