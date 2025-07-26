@@ -197,6 +197,29 @@ terraform apply tfplan
 3. Test API endpoints with Postman or curl
 4. Verify Cognito authentication flow
 
+### Specialized Claude Code Subagents
+
+The project includes 6 specialized subagents for enhanced development workflows:
+
+**Infrastructure & DevOps**:
+- `terraform-expert`: Terraform/AWS specialist for infrastructure management
+- `security-auditor`: Security and code quality auditing
+
+**Backend Development**:
+- `api-specialist`: Lambda/API Gateway/DynamoDB expert
+- `scraper-specialist`: Web scraping and automation specialist
+
+**Frontend & Analytics**:
+- `frontend-specialist`: React/TypeScript/deployment expert
+- `analytics-specialist`: CloudWatch/monitoring/data analysis
+
+**Usage**: These subagents automatically activate based on context or can be explicitly requested:
+```
+> Use the terraform-expert to optimize our Lambda functions
+> Have the security-auditor review recent changes
+> Ask the scraper-specialist to debug the EZPass automation
+```
+
 ### Updating Documentation
 The project includes automatic documentation updates:
 - Git hook: `.git/hooks/post-commit` 
