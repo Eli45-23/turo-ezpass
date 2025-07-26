@@ -1,0 +1,265 @@
+# ──────────────────────────────────────────────────────
+# Turo-EZPass API Infrastructure Configuration
+# ──────────────────────────────────────────────────────
+# Copy this to terraform.tfvars and fill in your values
+
+# ═══════════════════════════════════════════════════════
+# REQUIRED VARIABLES - You must provide these
+# ═══════════════════════════════════════════════════════
+
+# DynamoDB table name where scraper stores trip data
+dynamodb_table_name = "turo_ezpass_trips"
+
+# Email address for receiving alerts (critical errors, system health)
+alert_email = "your-email@example.com"
+
+# ═══════════════════════════════════════════════════════
+# BASIC CONFIGURATION - Commonly customized
+# ═══════════════════════════════════════════════════════
+
+# Project and environment settings
+project_name = "turo-ezpass"
+environment  = "prod"           # prod, staging, dev
+aws_region   = "us-east-1"      # AWS region for all resources
+
+# ═══════════════════════════════════════════════════════
+# DOMAIN AND DNS CONFIGURATION - For custom domains
+# ═══════════════════════════════════════════════════════
+
+# Custom domain name (optional - leave empty to use CloudFront/API Gateway URLs)
+# domain_name = "example.com"
+# dashboard_subdomain = "dashboard"    # dashboard.example.com
+# api_subdomain = "api"               # api.example.com
+
+# DNS configuration
+# create_dns_records = true          # Create Route53 records automatically
+# dns_zone_id = "Z1D633PJN98FT9"     # Route53 hosted zone ID (if you have one)
+
+# ═══════════════════════════════════════════════════════
+# AUTHENTICATION - AWS Cognito (optional)
+# ═══════════════════════════════════════════════════════
+
+# Enable Cognito authentication (requires additional setup)
+# enable_cognito_auth = false
+
+# If enabling Cognito, configure these:
+# cognito_user_pool_name = "turo-ezpass-users"
+# cognito_callback_urls = ["https://dashboard.example.com"]
+# cognito_logout_urls = ["https://dashboard.example.com"]
+
+# ═══════════════════════════════════════════════════════
+# SECURITY CONFIGURATION
+# ═══════════════════════════════════════════════════════
+
+# CORS settings for API Gateway
+cors_allowed_origins = ["*"]  # Restrict to your domain in production: ["https://dashboard.example.com"]
+
+# Enable additional security features
+# enable_api_key = false              # Require API key for requests
+# enable_waf = false                  # Enable AWS WAF protection
+
+# ═══════════════════════════════════════════════════════
+# LAMBDA CONFIGURATION
+# ═══════════════════════════════════════════════════════
+
+# Lambda function settings
+lambda_timeout     = 30        # Timeout in seconds (max 900)
+lambda_memory_size = 256       # Memory in MB (128-10240)
+
+# Lambda environment variables (optional)
+# lambda_env_vars = {
+#   LOG_LEVEL = "INFO"
+#   NODE_ENV  = "production"
+# }
+
+# ═══════════════════════════════════════════════════════
+# MONITORING AND ALERTING
+# ═══════════════════════════════════════════════════════
+
+# CloudWatch log retention
+log_retention_days = 14        # Days to keep logs (1, 3, 5, 7, 14, 30, 60, 90, etc.)
+
+# Additional alert recipients
+# alert_emails = [
+#   "team@example.com",
+#   "oncall@example.com"
+# ]
+
+# Slack integration (optional)
+# slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# PagerDuty integration (optional)
+# pagerduty_integration_key = "your-pagerduty-integration-key"
+
+# Microsoft Teams integration (optional)
+# teams_webhook_url = "https://outlook.office.com/webhook/YOUR/TEAMS/WEBHOOK"
+
+# ═══════════════════════════════════════════════════════
+# PERFORMANCE AND SCALING
+# ═══════════════════════════════════════════════════════
+
+# API Gateway throttling
+# api_throttle_rate_limit  = 1000    # Requests per second
+# api_throttle_burst_limit = 2000    # Burst capacity
+
+# DynamoDB performance settings (if you're creating the table)
+# dynamodb_read_capacity  = 5        # Read capacity units
+# dynamodb_write_capacity = 5        # Write capacity units
+
+# ═══════════════════════════════════════════════════════
+# BACKUP AND DISASTER RECOVERY
+# ═══════════════════════════════════════════════════════
+
+# Enable automated backups
+# enable_dynamodb_backup = true
+# backup_retention_days = 30
+
+# Cross-region replication (advanced)
+# enable_cross_region_backup = false
+# backup_region = "us-west-2"
+
+# ═══════════════════════════════════════════════════════
+# COST OPTIMIZATION
+# ═══════════════════════════════════════════════════════
+
+# S3 lifecycle policies
+# s3_lifecycle_enabled = true
+# s3_transition_to_ia_days = 30      # Transition to Infrequent Access
+# s3_transition_to_glacier_days = 90 # Transition to Glacier
+# s3_expiration_days = 365           # Delete after 1 year
+
+# CloudWatch cost controls
+# enable_cost_alerts = true
+# monthly_cost_budget = 50           # Alert when monthly costs exceed $50
+
+# ═══════════════════════════════════════════════════════
+# DEVELOPMENT AND TESTING
+# ═══════════════════════════════════════════════════════
+
+# Enable development features (disable in production)
+# enable_debug_logging = false
+# enable_api_documentation = true    # Generate OpenAPI/Swagger docs
+# enable_test_endpoints = false      # Include test/debug endpoints
+
+# ═══════════════════════════════════════════════════════
+# INTEGRATION SETTINGS
+# ═══════════════════════════════════════════════════════
+
+# EventBridge configuration for scraper integration
+# event_bus_name = "default"         # Use default event bus
+# enable_cross_account_events = false # Allow events from other AWS accounts
+
+# External API integrations
+# external_api_timeout = 30          # Timeout for external API calls
+
+# ═══════════════════════════════════════════════════════
+# ADVANCED CONFIGURATION
+# ═══════════════════════════════════════════════════════
+
+# VPC configuration (if using existing VPC)
+# vpc_id = "vpc-12345678"
+# subnet_ids = ["subnet-12345678", "subnet-87654321"]
+# security_group_ids = ["sg-12345678"]
+
+# Custom KMS key for encryption
+# kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+
+# Custom IAM role ARNs (if using existing roles)
+# lambda_execution_role_arn = "arn:aws:iam::123456789012:role/custom-lambda-role"
+
+# ═══════════════════════════════════════════════════════
+# TAGS - Applied to all resources
+# ═══════════════════════════════════════════════════════
+
+# additional_tags = {
+#   Owner       = "Platform Team"
+#   CostCenter  = "Infrastructure"
+#   Backup      = "Required"
+#   Compliance  = "SOC2"
+# }
+
+# ═══════════════════════════════════════════════════════
+# EXAMPLES FOR DIFFERENT ENVIRONMENTS
+# ═══════════════════════════════════════════════════════
+
+# Development Environment Example:
+# ─────────────────────────────────
+# project_name = "turo-ezpass"
+# environment = "dev"
+# lambda_memory_size = 128
+# log_retention_days = 7
+# enable_debug_logging = true
+# cors_allowed_origins = ["*"]
+
+# Staging Environment Example:
+# ──────────────────────────────
+# project_name = "turo-ezpass"
+# environment = "staging"
+# domain_name = "staging.example.com"
+# lambda_memory_size = 256
+# log_retention_days = 14
+# enable_cognito_auth = true
+
+# Production Environment Example:
+# ─────────────────────────────────
+# project_name = "turo-ezpass"
+# environment = "prod"
+# domain_name = "example.com"
+# dashboard_subdomain = "app"
+# api_subdomain = "api"
+# create_dns_records = true
+# enable_cognito_auth = true
+# lambda_memory_size = 512
+# log_retention_days = 30
+# cors_allowed_origins = ["https://app.example.com"]
+# slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+# enable_cost_alerts = true
+# monthly_cost_budget = 100
+# enable_waf = true
+# additional_tags = {
+#   Environment = "production"
+#   Criticality = "high"
+# }
+
+# ═══════════════════════════════════════════════════════
+# GETTING STARTED CHECKLIST
+# ═══════════════════════════════════════════════════════
+
+# □ 1. Set dynamodb_table_name to your DynamoDB table
+# □ 2. Set alert_email to receive notifications
+# □ 3. Configure domain_name if using custom domains
+# □ 4. Set up DNS records in Route53 (if create_dns_records = true)
+# □ 5. Configure Cognito if enable_cognito_auth = true
+# □ 6. Set up Slack webhook if using Slack notifications
+# □ 7. Review security settings (CORS, API keys, WAF)
+# □ 8. Configure cost alerts and budgets
+# □ 9. Test deployment with terraform plan
+# □ 10. Deploy with terraform apply
+
+# ═══════════════════════════════════════════════════════
+# TROUBLESHOOTING
+# ═══════════════════════════════════════════════════════
+
+# Common Issues:
+# 
+# 1. Domain validation fails:
+#    - Ensure you have access to the domain's DNS
+#    - Check Route53 hosted zone configuration
+#    
+# 2. Lambda timeout errors:
+#    - Increase lambda_timeout value
+#    - Check DynamoDB performance settings
+#    
+# 3. CORS errors in browser:
+#    - Update cors_allowed_origins to include your domain
+#    - Ensure API Gateway deployment completed
+#    
+# 4. High costs:
+#    - Review lambda_memory_size and execution frequency
+#    - Enable S3 lifecycle policies
+#    - Set up cost alerts
+
+# For more help, see:
+# - README.md
+# - OPERATIONS_RUNBOOK.md
+# - GitHub Issues: https://github.com/your-org/turo-ezpass/issues
