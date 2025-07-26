@@ -1,0 +1,20 @@
+# Claude Code Documentation Sync Configuration
+# This file controls automatic documentation updates
+
+# Automatically commit documentation updates after sync
+AUTO_COMMIT_DOCS=true
+
+# Enable automatic sync on commits
+SYNC_ON_COMMIT=true
+
+# Documentation detail level (basic|comprehensive|detailed)
+DOCUMENTATION_STYLE=comprehensive
+
+# File patterns that trigger documentation updates
+TRIGGER_PATTERNS="src/**/*.{js,ts,py} api/**/*.{js,ts,py} *.{json,yml,yaml,tf} components/**/*.{jsx,tsx}"
+
+# Documentation files to keep in sync
+DOCUMENTATION_FILES="README.md CLAUDE.md docs/**/*.md api/*/README.md"
+
+# Debug mode for troubleshooting
+CLAUDE_DOCS_DEBUG=false
