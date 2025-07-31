@@ -227,7 +227,7 @@ class DemoAuthService implements AuthService {
     return Promise.resolve({});
   }
 
-  async getCurrentUser(): Promise<CognitoUser | null> {
+  async getCurrentUser(): Promise<AuthUser | null> {
     if (this.currentUser) {
       return this.currentUser;
     }
