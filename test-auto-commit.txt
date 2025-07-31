@@ -1,0 +1,5 @@
+This is a test file to verify the auto-commit hook is working.
+
+Created at: 2025-07-29
+
+This file should be automatically committed by the Claude Code hook system when this Write tool completes successfully.

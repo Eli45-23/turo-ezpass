@@ -1,0 +1,329 @@
+name: Production Smoke Tests
+
+on:
+  # Run after successful deployment
+  workflow_run:
+    workflows: ["Production Deployment"]
+    types: [completed]
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - staging
+      api_url:
+        description: 'API URL (optional - will be retrieved from SSM if not provided)'
+        required: false
+        type: string
+      dashboard_url:
+        description: 'Dashboard URL (optional - will be retrieved from SSM if not provided)'
+        required: false
+        type: string
+
+  # Scheduled tests
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  smoke-tests:
+    name: Run Production Smoke Tests
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    
+    # Only run if deployment was successful or manual trigger
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-SmokeTest-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install required tools
+        run: |
+          # Install jq if not present
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+          
+          # Verify AWS CLI
+          aws --version
+
+      - name: Get Infrastructure URLs
+        id: get-urls
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'prod' }}"
+          
+          # Use provided URLs or fetch from SSM Parameter Store
+          if [ -n "${{ github.event.inputs.api_url }}" ]; then
+            API_URL="${{ github.event.inputs.api_url }}"
+          else
+            API_URL=$(aws ssm get-parameter \
+              --name "/turo-ezpass/$ENVIRONMENT/api/public-api-url" \
+              --query 'Parameter.Value' \
+              --output text 2>/dev/null || echo "")
+          fi
+          
+          if [ -n "${{ github.event.inputs.dashboard_url }}" ]; then
+            DASHBOARD_URL="${{ github.event.inputs.dashboard_url }}"
+          else
+            DASHBOARD_URL=$(aws ssm get-parameter \
+              --name "/turo-ezpass/$ENVIRONMENT/infrastructure/cloudfront-domain" \
+              --query 'Parameter.Value' \
+              --output text 2>/dev/null || echo "")
+            
+            # Prefix with https if not present
+            if [ -n "$DASHBOARD_URL" ] && [[ ! "$DASHBOARD_URL" =~ ^https?:// ]]; then
+              DASHBOARD_URL="https://$DASHBOARD_URL"
+            fi
+          fi
+          
+          # Get DynamoDB table name
+          DYNAMODB_TABLE=$(aws ssm get-parameter \
+            --name "/turo-ezpass/$ENVIRONMENT/config/dynamodb-table" \
+            --query 'Parameter.Value' \
+            --output text 2>/dev/null || echo "${{ secrets.DYNAMODB_TABLE_NAME }}")
+          
+          # Validate URLs
+          if [ -z "$API_URL" ]; then
+            echo "❌ Could not determine API URL"
+            exit 1
+          fi
+          
+          if [ -z "$DASHBOARD_URL" ]; then
+            echo "❌ Could not determine Dashboard URL"
+            exit 1
+          fi
+          
+          if [ -z "$DYNAMODB_TABLE" ]; then
+            echo "❌ Could not determine DynamoDB table name"
+            exit 1
+          fi
+          
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "dashboard_url=$DASHBOARD_URL" >> $GITHUB_OUTPUT
+          echo "dynamodb_table=$DYNAMODB_TABLE" >> $GITHUB_OUTPUT
+          
+          echo "🔍 Test Configuration:"
+          echo "  Environment: $ENVIRONMENT"
+          echo "  API URL: $API_URL"
+          echo "  Dashboard URL: $DASHBOARD_URL"
+          echo "  DynamoDB Table: $DYNAMODB_TABLE"
+
+      - name: Run Smoke Tests
+        id: smoke-tests
+        run: |
+          chmod +x scripts/production-smoke-test.sh
+          
+          echo "🧪 Starting production smoke tests..."
+          
+          # Run the smoke test script
+          if ./scripts/production-smoke-test.sh \
+            "${{ steps.get-urls.outputs.api_url }}" \
+            "${{ steps.get-urls.outputs.dashboard_url }}" \
+            "${{ steps.get-urls.outputs.dynamodb_table }}"; then
+            echo "test_result=success" >> $GITHUB_OUTPUT
+            echo "✅ Smoke tests completed successfully"
+          else
+            echo "test_result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Smoke tests failed"
+            exit 1
+          fi
+
+      - name: Upload Test Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-logs-${{ github.run_id }}
+          path: /tmp/turo-ezpass-smoke-test-*.log
+          retention-days: 30
+
+      - name: Create Test Report
+        if: always()
+        run: |
+          # Create a markdown report
+          cat > smoke-test-report.md << EOF
+          # Smoke Test Report
+          
+          **Environment:** ${{ github.event.inputs.environment || 'prod' }}
+          **Timestamp:** $(date)
+          **Result:** ${{ steps.smoke-tests.outputs.test_result == 'success' && '✅ PASSED' || '❌ FAILED' }}
+          
+          ## Test Configuration
+          - **API URL:** ${{ steps.get-urls.outputs.api_url }}
+          - **Dashboard URL:** ${{ steps.get-urls.outputs.dashboard_url }}
+          - **DynamoDB Table:** ${{ steps.get-urls.outputs.dynamodb_table }}
+          
+          ## Test Results
+          See attached log files for detailed results.
+          
+          ## Links
+          - [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [Dashboard](${{ steps.get-urls.outputs.dashboard_url }})
+          - [API Health](${{ steps.get-urls.outputs.api_url }}/trips?userId=health-check)
+          EOF
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report-${{ github.run_id }}
+          path: smoke-test-report.md
+          retention-days: 30
+
+      - name: Notify Slack on Success
+        if: success() && secrets.SLACK_WEBHOOK_URL
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "✅ Turo-EZPass smoke tests PASSED",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🧪 Smoke Tests PASSED*\n\n*Environment:* ${{ github.event.inputs.environment || 'prod' }}\n*Dashboard:* <${{ steps.get-urls.outputs.dashboard_url }}|View Dashboard>\n*API:* <${{ steps.get-urls.outputs.api_url }}|API Endpoint>\n*Commit:* `${{ github.sha }}`"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Workflow"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on Failure
+        if: failure() && secrets.SLACK_WEBHOOK_URL
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "❌ Turo-EZPass smoke tests FAILED",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🚨 Smoke Tests FAILED*\n\n*Environment:* ${{ github.event.inputs.environment || 'prod' }}\n*Dashboard:* <${{ steps.get-urls.outputs.dashboard_url }}|View Dashboard>\n*API:* <${{ steps.get-urls.outputs.api_url }}|API Endpoint>\n*Commit:* `${{ github.sha }}`\n\n⚠️ Please investigate immediately!"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Logs"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create GitHub Issue on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Production Smoke Tests Failed - ${new Date().toISOString().split('T')[0]}`;
+            const body = `
+            ## Smoke Test Failure Report
+            
+            **Environment:** ${{ github.event.inputs.environment || 'prod' }}
+            **Timestamp:** ${new Date().toISOString()}
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            ### Test Configuration
+            - **API URL:** ${{ steps.get-urls.outputs.api_url }}
+            - **Dashboard URL:** ${{ steps.get-urls.outputs.dashboard_url }}
+            - **DynamoDB Table:** ${{ steps.get-urls.outputs.dynamodb_table }}
+            
+            ### Investigation Steps
+            1. Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Verify infrastructure health in AWS Console
+            3. Check CloudWatch logs for errors
+            4. Test endpoints manually
+            
+            ### Related Links
+            - [Dashboard](${{ steps.get-urls.outputs.dashboard_url }})
+            - [API Health Check](${{ steps.get-urls.outputs.api_url }}/trips?userId=health-check)
+            - [CloudWatch Dashboard](https://console.aws.amazon.com/cloudwatch/)
+            
+            /cc @infrastructure-team @on-call
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'production', 'high-priority', 'infrastructure']
+            });
+
+  # Monitor test metrics
+  update-metrics:
+    name: Update Test Metrics
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    if: always()
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Metrics-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Publish Test Metrics
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'prod' }}"
+          TEST_RESULT="${{ needs.smoke-tests.result }}"
+          
+          # Convert result to numeric values
+          if [ "$TEST_RESULT" = "success" ]; then
+            SUCCESS_VALUE=1
+            FAILURE_VALUE=0
+          else
+            SUCCESS_VALUE=0
+            FAILURE_VALUE=1
+          fi
+          
+          # Publish metrics to CloudWatch
+          aws cloudwatch put-metric-data \
+            --namespace "TuroEZPass/SmokeTests" \
+            --metric-data \
+              MetricName=TestSuccess,Value=$SUCCESS_VALUE,Unit=Count,Dimensions=Environment=$ENVIRONMENT \
+              MetricName=TestFailure,Value=$FAILURE_VALUE,Unit=Count,Dimensions=Environment=$ENVIRONMENT \
+              MetricName=TestExecution,Value=1,Unit=Count,Dimensions=Environment=$ENVIRONMENT
+          
+          echo "📊 Test metrics published to CloudWatch"

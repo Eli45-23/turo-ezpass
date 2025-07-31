@@ -1,0 +1,236 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:ListTagsLogGroup",
+        "logs:TagLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource",
+        "logs:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:486365525776:log-group:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:CreatePolicy",
+        "iam:CreateOpenIDConnectProvider",
+        "iam:GetRole",
+        "iam:GetPolicy",
+        "iam:GetOpenIDConnectProvider",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:UpdateRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:PassRole",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:ListRoleTags",
+        "iam:TagPolicy",
+        "iam:UntagPolicy",
+        "iam:ListPolicyTags",
+        "iam:UpdateOpenIDConnectProviderThumbprint",
+        "iam:TagOpenIDConnectProvider",
+        "iam:UntagOpenIDConnectProvider",
+        "iam:ListOpenIDConnectProviderTags"
+      ],
+      "Resource": [
+        "arn:aws:iam::486365525776:role/*",
+        "arn:aws:iam::486365525776:policy/*",
+        "arn:aws:iam::486365525776:oidc-provider/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:GetBucket*",
+        "s3:ListBucket",
+        "s3:PutBucket*",
+        "s3:DeleteBucket*"
+      ],
+      "Resource": "arn:aws:s3:::turo-ezpass-*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:ListTagsForResource",
+        "sns:TagResource",
+        "sns:UntagResource",
+        "sns:Subscribe",
+        "sns:Unsubscribe",
+        "sns:ListSubscriptionsByTopic"
+      ],
+      "Resource": "arn:aws:sns:us-east-1:486365525776:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DescribeRepositories",
+        "ecr:GetRepositoryPolicy",
+        "ecr:SetRepositoryPolicy",
+        "ecr:PutLifecyclePolicy",
+        "ecr:GetLifecyclePolicy",
+        "ecr:ListTagsForResource",
+        "ecr:TagResource",
+        "ecr:UntagResource"
+      ],
+      "Resource": "arn:aws:ecr:us-east-1:486365525776:repository/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "events:PutRule",
+        "events:DescribeRule",
+        "events:ListRules",
+        "events:ListTagsForResource",
+        "events:TagResource",
+        "events:UntagResource",
+        "events:PutTargets",
+        "events:ListTargetsByRule"
+      ],
+      "Resource": "arn:aws:events:us-east-1:486365525776:rule/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateKey",
+        "kms:CreateAlias",
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListResourceTags",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:ScheduleKeyDeletion",
+        "kms:CancelKeyDeletion",
+        "kms:EnableKeyRotation",
+        "kms:DisableKeyRotation",
+        "kms:PutKeyPolicy",
+        "kms:UpdateAlias",
+        "kms:DeleteAlias",
+        "kms:ListAliases"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowKeyRotation",
+      "Effect": "Allow",
+      "Action": [
+        "kms:EnableKeyRotation",
+        "kms:DisableKeyRotation",
+        "kms:GetKeyRotationStatus"
+      ],
+      "Resource": [
+        "arn:aws:kms:us-east-1:486365525776:key/f580ff82-e09f-4fee-af69-931474a1403c"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecrets",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:TagResource",
+        "secretsmanager:UntagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:486365525776:secret:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:GetFunction",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:ListTags",
+        "lambda:TagResource",
+        "lambda:UntagResource",
+        "lambda:AddPermission",
+        "lambda:RemovePermission",
+        "lambda:CreateCodeSigningConfig",
+        "lambda:GetCodeSigningConfig",
+        "lambda:PutRuntimeManagementConfig"
+      ],
+      "Resource": "arn:aws:lambda:us-east-1:486365525776:function:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:CreateCluster",
+        "ecs:DescribeClusters",
+        "ecs:RegisterTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:ListTagsForResource",
+        "ecs:TagResource",
+        "ecs:UntagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:ListTagsForResource",
+        "cloudwatch:TagResource",
+        "cloudwatch:UntagResource",
+        "cloudwatch:PutDashboard",
+        "cloudwatch:GetDashboard",
+        "cloudwatch:ListDashboards",
+        "cloudwatch:DeleteDashboards"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sqs:CreateQueue",
+        "sqs:GetQueueAttributes",
+        "sqs:ListQueues",
+        "sqs:TagQueue",
+        "sqs:UntagQueue",
+        "sqs:ListQueueTags"
+      ],
+      "Resource": [
+        "arn:aws:sqs:us-east-1:486365525776:turo-ezpass-*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "signer:CreateSigningProfile",
+        "signer:GetSigningProfile",
+        "signer:ListSigningProfiles",
+        "signer:TagResource",
+        "signer:UntagResource",
+        "signer:ListTagsForResource"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

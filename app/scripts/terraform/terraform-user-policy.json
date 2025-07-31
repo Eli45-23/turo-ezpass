@@ -241,6 +241,24 @@
         "arn:aws:logs:us-east-1:486365525776:log-group:/ecs/turo-ezpass",
         "arn:aws:logs:us-east-1:486365525776:log-group:/ecs/turo-ezpass:*"
       ]
+    },
+    {
+      "Sid": "DynamoDBPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:EnableKinesisStreamingDestination",
+        "dynamodb:TagResource",
+        "dynamodb:UntagResource",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:486365525776:table/turo_ezpass_trips"
+      ]
     }
   ]
 }

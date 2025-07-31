@@ -146,10 +146,10 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 }
 
-# IAM policy for secrets access
+# IAM policy for secrets access and DynamoDB
 resource "aws_iam_policy" "secrets_access_policy" {
   name        = "${var.project_name}-secrets-access"
-  description = "Policy granting access to turo-ezpass secrets"
+  description = "Policy granting access to turo-ezpass secrets and DynamoDB"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -176,6 +176,37 @@ resource "aws_iam_policy" "secrets_access_policy" {
             "secretsmanager:ResourceTag/Service" = "turo-ezpass-scrapers"
           }
         }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey"
+        ]
+        Resource = [
+          aws_kms_key.secrets_key.arn
+        ]
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "secretsmanager.${data.aws_region.current.name}.amazonaws.com"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/turo_ezpass_trips",
+          "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/turo_ezpass_trips/index/*"
+        ]
       }
     ]
   })

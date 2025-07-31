@@ -8,22 +8,23 @@
  */
 
 const { chromium } = require('playwright');
-const AWS = require('aws-sdk');
+const {
+  SecretsManagerClient,
+  GetSecretValueCommand
+} = require('@aws-sdk/client-secrets-manager');
+const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+const { fromNodeProviderChain } = require('@aws-sdk/credential-providers');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Configure AWS
-AWS.config.update({
+// Configure AWS SDK v3
+const awsConfig = {
   region: process.env.AWS_REGION || 'us-east-1',
-  ...(process.env.AWS_ACCESS_KEY_ID && { 
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID 
-  }),
-  ...(process.env.AWS_SECRET_ACCESS_KEY && { 
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY 
-  })
-});
+  credentials: fromNodeProviderChain()
+};
 
-const secretsManager = new AWS.SecretsManager();
+const secretsManagerClient = new SecretsManagerClient(awsConfig);
+const dynamoDbClient = new DynamoDBClient(awsConfig);
 
 class EZPassScraper {
   constructor() {
@@ -43,9 +44,9 @@ class EZPassScraper {
       
       console.log(`Retrieving E-ZPass credentials from AWS Secrets Manager: ${secretName}`);
       
-      const result = await secretsManager.getSecretValue({
-        SecretId: secretName
-      }).promise();
+      const result = await secretsManagerClient.send(
+        new GetSecretValueCommand({ SecretId: secretName })
+      );
 
       const credentials = JSON.parse(result.SecretString);
       
@@ -56,7 +57,8 @@ class EZPassScraper {
       return {
         username: credentials.username,
         password: credentials.password,
-        state: credentials.state || 'ny'
+        state: credentials.state || 'ny',
+        userId: credentials.userId || credentials.username // Use userId if available, fallback to username
       };
     } catch (error) {
       console.error('Failed to retrieve E-ZPass credentials:', error);
@@ -67,7 +69,8 @@ class EZPassScraper {
         return {
           username: process.env.EZPASS_USERNAME,
           password: process.env.EZPASS_PASSWORD,
-          state: process.env.EZPASS_STATE || 'ny'
+          state: process.env.EZPASS_STATE || 'ny',
+          userId: process.env.EZPASS_USER_ID || process.env.EZPASS_USERNAME
         };
       }
       
@@ -112,22 +115,97 @@ class EZPassScraper {
    */
   async login(credentials) {
     const { page } = this;
-    const loginUrl = 'https://www.e-zpassny.com/isp/home.do';
+    const loginUrl = 'https://www.e-zpassny.com/';
     const startTime = Date.now();
 
     try {
       // Navigate to login page
-      console.log(`↗️ Navigating to E-ZPass login page: ${loginUrl}`);
+      console.log(`↗️ Navigating to E-ZPass homepage: ${loginUrl}`);
       await page.goto(loginUrl, { 
         waitUntil: 'domcontentloaded',
         timeout: 10000 
       });
       
       // Wait a bit for page to fully render
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2000);
+      
+      // Look for and click login/sign-in link
+      console.log('🔍 Looking for login/sign-in link...');
+      const loginLinkSelectors = [
+        'a[href*="login"]',
+        'a[href*="signin"]', 
+        'a[href*="account"]',
+        'a:contains("Login")',
+        'a:contains("Sign In")',
+        'a:contains("My Account")',
+        'button:contains("Login")',
+        'button:contains("Sign In")'
+      ];
+      
+      let loginClicked = false;
+      for (const selector of loginLinkSelectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 1000 });
+          await page.click(selector);
+          console.log(`✅ Clicked login link: ${selector}`);
+          await page.waitForTimeout(2000);
+          loginClicked = true;
+          break;
+        } catch (e) {
+          // Continue to next selector
+        }
+      }
+      
+      if (!loginClicked) {
+        console.log('⚠️ No login link found, looking for form on current page');
+      }
+      
+      // Handle Imperva security check if present
+      console.log('🔍 Checking for security verification...');
+      try {
+        // Multiple selectors for the security checkbox
+        const checkboxSelectors = [
+          'input[type="checkbox"]',
+          '.cf-browser-verification input',
+          '#challenge-form input[type="checkbox"]',
+          'input[id*="checkbox"]',
+          'input[name*="checkbox"]'
+        ];
+        
+        let checkboxClicked = false;
+        for (const selector of checkboxSelectors) {
+          try {
+            await page.waitForSelector(selector, { timeout: 2000 });
+            console.log(`🛡️ Security check detected, clicking checkbox: ${selector}`);
+            await page.click(selector);
+            await page.waitForTimeout(5000);
+            checkboxClicked = true;
+            break;
+          } catch (e) {
+            // Try next selector
+          }
+        }
+        
+        if (checkboxClicked) {
+          // Wait for page to redirect after security check
+          try {
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 });
+            console.log('✅ Security check completed, page redirected');
+          } catch (e) {
+            console.log('⚠️ No redirect after checkbox, continuing...');
+          }
+        } else {
+          console.log('ℹ️ No security checkbox found, proceeding...');
+        }
+      } catch (e) {
+        console.log('ℹ️ No security check detected, proceeding...');
+      }
 
       // Comprehensive selectors for username field
       const USER_SELECTORS = [
+        // Current E-ZPass selectors (2025)
+        'input#loginId',
+        'input[name="loginId"]',
         // ID-based
         'input#userIdentifier',
         'input#username',
@@ -729,6 +807,39 @@ class EZPassScraper {
   }
 
   /**
+   * Persist scrape results to DynamoDB
+   */
+  async persistResult(credentials, summary, trips) {
+    try {
+      console.log('Persisting scrape results to DynamoDB...');
+      
+      const tableName = process.env.DYNAMODB_TABLE_NAME || 'turo_ezpass_trips';
+      const scrapeDate = new Date().toISOString();
+      
+      const putItemCommand = new PutItemCommand({
+        TableName: tableName,
+        Item: {
+          userId: { S: credentials.userId },
+          scrapeDate: { S: scrapeDate },
+          scrapeType: { S: 'ezpass' },
+          totalRecords: { N: String(summary.totalRecords) },
+          summary: { S: JSON.stringify(summary) },
+          records: { S: JSON.stringify(trips) },
+          status: { S: 'success' }
+        }
+      });
+      
+      await dynamoDbClient.send(putItemCommand);
+      console.log(`✅ Successfully persisted ${summary.totalRecords} E-ZPass records to DynamoDB`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to persist results to DynamoDB:', error);
+      // Don't throw - we don't want DynamoDB errors to break the main scrape flow
+      return false;
+    }
+  }
+
+  /**
    * Save toll records to JSON file
    */
   async saveTollRecords() {
@@ -781,11 +892,12 @@ class EZPassScraper {
    * Main scraping method
    */
   async scrape() {
+    let credentials = null;
     try {
       console.log('Starting E-ZPass NY toll scraping...');
 
       // Get credentials
-      const credentials = await this.getCredentials();
+      credentials = await this.getCredentials();
       
       // Initialize browser
       await this.initializeBrowser();
@@ -805,8 +917,22 @@ class EZPassScraper {
       // Take screenshots
       await this.takeScreenshots();
       
-      // Save results
+      // Save results to JSON file
       const outputPath = await this.saveTollRecords();
+      
+      // Prepare summary for DynamoDB
+      const summary = {
+        scrapeDate: new Date().toISOString(),
+        dateRange: {
+          start: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          end: new Date().toISOString().split('T')[0]
+        },
+        totalRecords: this.tollRecords.length,
+        outputPath: outputPath
+      };
+      
+      // Persist to DynamoDB
+      await this.persistResult(credentials, summary, this.tollRecords);
       
       console.log('E-ZPass scraping completed successfully!');
       return {
@@ -818,6 +944,20 @@ class EZPassScraper {
       
     } catch (error) {
       console.error('E-ZPass scraping failed:', error);
+      
+      // Persist error to DynamoDB if we have credentials
+      if (credentials) {
+        try {
+          const errorSummary = {
+            scrapeDate: new Date().toISOString(),
+            totalRecords: 0,
+            error: error.message
+          };
+          await this.persistResult(credentials, errorSummary, []);
+        } catch (persistError) {
+          console.error('Failed to persist error to DynamoDB:', persistError);
+        }
+      }
       
       // Take error screenshot
       if (this.page) {

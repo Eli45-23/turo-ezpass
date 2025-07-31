@@ -1,0 +1,367 @@
+name: Production Deployment
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - staging
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: 1.6.0
+  NODE_VERSION: 18
+
+jobs:
+  # Validate all required secrets are present
+  validate-secrets:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Required Secrets
+        run: |
+          echo "Validating required secrets..."
+          
+          # AWS Configuration
+          if [ -z "${{ secrets.AWS_ROLE_ARN }}" ]; then
+            echo "❌ AWS_ROLE_ARN secret is missing"
+            exit 1
+          fi
+          
+          # Database Configuration
+          if [ -z "${{ secrets.DYNAMODB_TABLE_NAME }}" ]; then
+            echo "❌ DYNAMODB_TABLE_NAME secret is missing"
+            exit 1
+          fi
+          
+          # Cognito Configuration (optional)
+          if [ -n "${{ secrets.COGNITO_USER_POOL_ID }}" ]; then
+            if [ -z "${{ secrets.COGNITO_CLIENT_ID }}" ]; then
+              echo "❌ COGNITO_CLIENT_ID required when COGNITO_USER_POOL_ID is set"
+              exit 1
+            fi
+          fi
+          
+          # Alert Configuration
+          if [ -z "${{ secrets.ALERT_EMAIL }}" ]; then
+            echo "⚠️  ALERT_EMAIL not set - alerts will not be sent"
+          fi
+          
+          # Domain Configuration (optional)
+          if [ -n "${{ secrets.DOMAIN_NAME }}" ]; then
+            echo "✅ Custom domain configured: ${{ secrets.DOMAIN_NAME }}"
+          fi
+          
+          # Slack Integration (optional)
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            echo "✅ Slack integration configured"
+          fi
+          
+          echo "✅ Secret validation complete"
+
+  # Deploy infrastructure
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    
+    outputs:
+      api_url: ${{ steps.terraform.outputs.api_url }}
+      dashboard_url: ${{ steps.terraform.outputs.dashboard_url }}
+      s3_bucket: ${{ steps.terraform.outputs.s3_bucket }}
+      cloudfront_id: ${{ steps.terraform.outputs.cloudfront_id }}
+    
+    defaults:
+      run:
+        working-directory: api/terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Infrastructure-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Setup Node.js for Lambda builds
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Build Lambda Functions
+        run: |
+          # Build trips API Lambda
+          cd ../lambdas/trips-api
+          npm ci
+          npm run build
+          
+          # Build analytics Lambda
+          cd ../analytics
+          npm ci
+          npm run build
+          
+          cd ../../terraform
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -no-color -input=false \
+            -var="project_name=turo-ezpass" \
+            -var="environment=${{ github.event.inputs.environment || 'prod' }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="dynamodb_table_name=${{ secrets.DYNAMODB_TABLE_NAME }}" \
+            -var="alert_email=${{ secrets.ALERT_EMAIL || '' }}" \
+            -var="domain_name=${{ secrets.DOMAIN_NAME || '' }}" \
+            -var="dashboard_subdomain=${{ secrets.DASHBOARD_SUBDOMAIN || 'dashboard' }}" \
+            -var="api_subdomain=${{ secrets.API_SUBDOMAIN || 'api' }}" \
+            -var="create_dns_records=${{ secrets.CREATE_DNS_RECORDS || 'false' }}" \
+            -var="enable_cognito_auth=${{ secrets.ENABLE_COGNITO_AUTH || 'false' }}" \
+            -var="cors_allowed_origins=[\"${{ secrets.CORS_ALLOWED_ORIGINS || '*' }}\"]"
+
+      - name: Terraform Apply
+        id: terraform
+        run: |
+          terraform apply -auto-approve -input=false \
+            -var="project_name=turo-ezpass" \
+            -var="environment=${{ github.event.inputs.environment || 'prod' }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="dynamodb_table_name=${{ secrets.DYNAMODB_TABLE_NAME }}" \
+            -var="alert_email=${{ secrets.ALERT_EMAIL || '' }}" \
+            -var="domain_name=${{ secrets.DOMAIN_NAME || '' }}" \
+            -var="dashboard_subdomain=${{ secrets.DASHBOARD_SUBDOMAIN || 'dashboard' }}" \
+            -var="api_subdomain=${{ secrets.API_SUBDOMAIN || 'api' }}" \
+            -var="create_dns_records=${{ secrets.CREATE_DNS_RECORDS || 'false' }}" \
+            -var="enable_cognito_auth=${{ secrets.ENABLE_COGNITO_AUTH || 'false' }}" \
+            -var="cors_allowed_origins=[\"${{ secrets.CORS_ALLOWED_ORIGINS || '*' }}\"]"
+          
+          # Capture outputs
+          echo "api_url=$(terraform output -raw api_gateway_url)" >> $GITHUB_OUTPUT
+          echo "dashboard_url=$(terraform output -raw dashboard_url)" >> $GITHUB_OUTPUT
+          echo "s3_bucket=$(terraform output -raw s3_bucket_name)" >> $GITHUB_OUTPUT
+          echo "cloudfront_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+
+      - name: Store Configuration in SSM
+        run: |
+          # Store shared configuration in SSM Parameter Store
+          
+          # API Configuration
+          aws ssm put-parameter \
+            --name "/turo-ezpass/${{ github.event.inputs.environment || 'prod' }}/api/url" \
+            --value "${{ steps.terraform.outputs.api_url }}" \
+            --type "String" \
+            --overwrite
+          
+          # Dashboard Configuration
+          aws ssm put-parameter \
+            --name "/turo-ezpass/${{ github.event.inputs.environment || 'prod' }}/dashboard/url" \
+            --value "${{ steps.terraform.outputs.dashboard_url }}" \
+            --type "String" \
+            --overwrite
+          
+          # Cognito Configuration (if enabled)
+          if [ "${{ secrets.ENABLE_COGNITO_AUTH }}" = "true" ]; then
+            COGNITO_CONFIG=$(terraform output -json cognito_config)
+            aws ssm put-parameter \
+              --name "/turo-ezpass/${{ github.event.inputs.environment || 'prod' }}/cognito/config" \
+              --value "$COGNITO_CONFIG" \
+              --type "String" \
+              --overwrite
+          fi
+          
+          # Infrastructure Configuration
+          aws ssm put-parameter \
+            --name "/turo-ezpass/${{ github.event.inputs.environment || 'prod' }}/infrastructure/s3-bucket" \
+            --value "${{ steps.terraform.outputs.s3_bucket }}" \
+            --type "String" \
+            --overwrite
+          
+          aws ssm put-parameter \
+            --name "/turo-ezpass/${{ github.event.inputs.environment || 'prod' }}/infrastructure/cloudfront-id" \
+            --value "${{ steps.terraform.outputs.cloudfront_id }}" \
+            --type "String" \
+            --overwrite
+
+  # Deploy dashboard application
+  deploy-dashboard:
+    name: Deploy Dashboard
+    runs-on: ubuntu-latest
+    needs: deploy-infrastructure
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    
+    defaults:
+      run:
+        working-directory: dashboard
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Dashboard-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create Environment Configuration
+        run: |
+          # Create production environment file
+          cat > .env.production << EOF
+          NEXT_PUBLIC_API_URL=${{ needs.deploy-infrastructure.outputs.api_url }}
+          NEXT_PUBLIC_DASHBOARD_URL=${{ needs.deploy-infrastructure.outputs.dashboard_url }}
+          NEXT_PUBLIC_AWS_REGION=${{ env.AWS_REGION }}
+          EOF
+          
+          # Add Cognito configuration if enabled
+          if [ "${{ secrets.ENABLE_COGNITO_AUTH }}" = "true" ]; then
+            cat >> .env.production << EOF
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}
+          NEXT_PUBLIC_COGNITO_DOMAIN=${{ secrets.COGNITO_DOMAIN }}
+          EOF
+          fi
+          
+          # Add custom domain if configured
+          if [ -n "${{ secrets.DOMAIN_NAME }}" ]; then
+            CUSTOM_API_URL="https://${{ secrets.API_SUBDOMAIN || 'api' }}.${{ secrets.DOMAIN_NAME }}"
+            CUSTOM_DASHBOARD_URL="https://${{ secrets.DASHBOARD_SUBDOMAIN || 'dashboard' }}.${{ secrets.DOMAIN_NAME }}"
+            
+            cat >> .env.production << EOF
+          NEXT_PUBLIC_API_URL=${CUSTOM_API_URL}
+          NEXT_PUBLIC_DASHBOARD_URL=${CUSTOM_DASHBOARD_URL}
+          EOF
+          fi
+
+      - name: Lint and Type Check
+        run: |
+          npm run lint
+          npx tsc --noEmit
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Deploy to S3
+        run: |
+          # Sync static files with long cache
+          aws s3 sync dist/ s3://${{ needs.deploy-infrastructure.outputs.s3_bucket }}/ \
+            --delete \
+            --exact-timestamps \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "*.json" \
+            --exclude "*.txt"
+          
+          # Sync HTML files with short cache
+          aws s3 sync dist/ s3://${{ needs.deploy-infrastructure.outputs.s3_bucket }}/ \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.json" \
+            --include "*.txt" \
+            --cache-control "public, max-age=0, must-revalidate"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ needs.deploy-infrastructure.outputs.cloudfront_id }} \
+            --paths "/*"
+
+  # Run production smoke tests
+  smoke-tests:
+    name: Production Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure, deploy-dashboard]
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-SmokeTest-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run Smoke Tests
+        run: |
+          chmod +x scripts/production-smoke-test.sh
+          ./scripts/production-smoke-test.sh \
+            "${{ needs.deploy-infrastructure.outputs.api_url }}" \
+            "${{ needs.deploy-infrastructure.outputs.dashboard_url }}" \
+            "${{ secrets.DYNAMODB_TABLE_NAME }}"
+
+      - name: Notify Slack on Success
+        if: success() && secrets.SLACK_WEBHOOK_URL
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"🚀 Turo-EZPass production deployment successful!\n\nDashboard: ${{ needs.deploy-infrastructure.outputs.dashboard_url }}\nAPI: ${{ needs.deploy-infrastructure.outputs.api_url }}\nCommit: ${{ github.sha }}"}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on Failure
+        if: failure() && secrets.SLACK_WEBHOOK_URL
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"❌ Turo-EZPass production deployment failed!\n\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nCommit: ${{ github.sha }}"}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Update release documentation
+  update-documentation:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: [smoke-tests]
+    if: success()
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update OPERATIONS_RUNBOOK.md
+        run: |
+          # Update deployment information in runbook
+          sed -i "s/Last Updated:.*/Last Updated: $(date)/" OPERATIONS_RUNBOOK.md
+          sed -i "s/Dashboard URL:.*/Dashboard URL: ${{ needs.deploy-infrastructure.outputs.dashboard_url }}/" OPERATIONS_RUNBOOK.md
+          sed -i "s/API URL:.*/API URL: ${{ needs.deploy-infrastructure.outputs.api_url }}/" OPERATIONS_RUNBOOK.md
+
+      - name: Commit Documentation Updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add OPERATIONS_RUNBOOK.md
+          git diff --staged --quiet || git commit -m "docs: update deployment information after v${{ github.ref_name }} release
+
+          🤖 Generated with GitHub Actions
+          
+          Co-Authored-By: GitHub Actions <noreply@github.com>"
+          git push

@@ -1,0 +1,166 @@
+name: Deploy Dashboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard/**'
+      - '.github/workflows/deploy-dashboard.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'dashboard/**'
+      - '.github/workflows/deploy-dashboard.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '18'
+
+jobs:
+  build-and-deploy:
+    name: 'Build and Deploy Dashboard'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: dashboard/package-lock.json
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: GitHubActions-Dashboard-Deployment
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Install dependencies
+      working-directory: dashboard
+      run: npm ci
+
+    - name: Lint code
+      working-directory: dashboard
+      run: npm run lint
+
+    - name: Build application
+      working-directory: dashboard
+      run: npm run build
+      env:
+        NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || vars.API_URL }}
+
+    - name: Get S3 bucket name from Terraform
+      id: get-bucket
+      run: |
+        cd api/terraform
+        terraform init -input=false
+        BUCKET_NAME=$(terraform output -raw s3_bucket_name 2>/dev/null || echo "")
+        if [ -z "$BUCKET_NAME" ]; then
+          echo "Warning: Could not get S3 bucket name from Terraform. Using fallback."
+          BUCKET_NAME="${{ vars.S3_BUCKET_NAME }}"
+        fi
+        echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+        echo "S3 Bucket: $BUCKET_NAME"
+
+    - name: Sync to S3
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      working-directory: dashboard
+      run: |
+        if [ -z "${{ steps.get-bucket.outputs.bucket_name }}" ]; then
+          echo "Error: S3 bucket name not found. Please check Terraform configuration."
+          exit 1
+        fi
+        
+        # Sync built files to S3
+        aws s3 sync dist/ s3://${{ steps.get-bucket.outputs.bucket_name }}/ \
+          --delete \
+          --exact-timestamps \
+          --cache-control "public, max-age=31536000" \
+          --exclude "*.html" \
+          --exclude "*.json"
+        
+        # Upload HTML files with shorter cache
+        aws s3 sync dist/ s3://${{ steps.get-bucket.outputs.bucket_name }}/ \
+          --exclude "*" \
+          --include "*.html" \
+          --include "*.json" \
+          --cache-control "public, max-age=0, must-revalidate"
+
+    - name: Get CloudFront distribution ID
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      id: get-cloudfront
+      run: |
+        cd api/terraform
+        DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
+        if [ -z "$DISTRIBUTION_ID" ]; then
+          echo "Warning: Could not get CloudFront distribution ID from Terraform. Using fallback."
+          DISTRIBUTION_ID="${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"
+        fi
+        echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+        echo "CloudFront Distribution: $DISTRIBUTION_ID"
+
+    - name: Invalidate CloudFront
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        if [ -z "${{ steps.get-cloudfront.outputs.distribution_id }}" ]; then
+          echo "Warning: CloudFront distribution ID not found. Skipping invalidation."
+        else
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.get-cloudfront.outputs.distribution_id }} \
+            --paths "/*"
+        fi
+
+    - name: Get dashboard URL
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        cd api/terraform
+        DASHBOARD_URL=$(terraform output -raw dashboard_url 2>/dev/null || echo "")
+        if [ -z "$DASHBOARD_URL" ]; then
+          echo "Dashboard URL not available from Terraform output"
+        else
+          echo "🚀 Dashboard deployed successfully!"
+          echo "📱 Dashboard URL: $DASHBOARD_URL"
+        fi
+
+  test:
+    name: 'Test Dashboard'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: dashboard/package-lock.json
+
+    - name: Install dependencies
+      working-directory: dashboard
+      run: npm ci
+
+    - name: Run linter
+      working-directory: dashboard
+      run: npm run lint
+
+    - name: Type check
+      working-directory: dashboard
+      run: npx tsc --noEmit
+
+    - name: Build test
+      working-directory: dashboard
+      run: npm run build
+      env:
+        NEXT_PUBLIC_API_URL: https://example.com/api

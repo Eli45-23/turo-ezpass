@@ -122,14 +122,14 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr_policy_attachment"
 # ECR Repository (if it doesn't exist)
 resource "aws_ecr_repository" "turo_ezpass" {
   name                 = "turo-ezpass"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
   }
 
   encryption_configuration {
-    encryption_type = "AES256"
+    encryption_type = "KMS"
   }
 
   tags = {

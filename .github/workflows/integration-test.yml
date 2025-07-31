@@ -111,3 +111,158 @@ jobs:
         else
           echo "✅ All scrapers completed successfully"
         fi
+
+  # E2E Dashboard Tests - Run after successful API deployment
+  dashboard-e2e-tests:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN || 'arn:aws:iam::486365525776:role/turo-ezpass-github-actions-role' }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-E2E-Dashboard-Test
+      
+      - name: Get Infrastructure URLs from SSM
+        id: get-urls
+        run: |
+          # Try to get URLs from SSM Parameter Store first
+          API_URL=$(aws ssm get-parameter \
+            --name "/turo-ezpass/prod/api/url" \
+            --query 'Parameter.Value' \
+            --output text 2>/dev/null || echo "")
+          
+          DASHBOARD_URL=$(aws ssm get-parameter \
+            --name "/turo-ezpass/prod/dashboard/url" \
+            --query 'Parameter.Value' \
+            --output text 2>/dev/null || echo "")
+          
+          # If SSM fails, try to construct from secrets
+          if [ -z "$API_URL" ]; then
+            if [ -n "${{ secrets.DOMAIN_NAME }}" ]; then
+              API_URL="https://${{ secrets.API_SUBDOMAIN || 'api' }}.${{ secrets.DOMAIN_NAME }}"
+            else
+              echo "❌ Could not determine API URL from SSM or secrets"
+              exit 1
+            fi
+          fi
+          
+          if [ -z "$DASHBOARD_URL" ]; then
+            if [ -n "${{ secrets.DOMAIN_NAME }}" ]; then
+              DASHBOARD_URL="https://${{ secrets.DASHBOARD_SUBDOMAIN || 'dashboard' }}.${{ secrets.DOMAIN_NAME }}"
+            else
+              echo "❌ Could not determine Dashboard URL from SSM or secrets"
+              exit 1
+            fi
+          fi
+          
+          # Get DynamoDB table name
+          DYNAMODB_TABLE="${{ secrets.DYNAMODB_TABLE_NAME || 'turo_ezpass_trips' }}"
+          
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "dashboard_url=$DASHBOARD_URL" >> $GITHUB_OUTPUT
+          echo "dynamodb_table=$DYNAMODB_TABLE" >> $GITHUB_OUTPUT
+          
+          echo "🔍 Test Configuration:"
+          echo "  API URL: $API_URL"
+          echo "  Dashboard URL: $DASHBOARD_URL"
+          echo "  DynamoDB Table: $DYNAMODB_TABLE"
+      
+      - name: Wait for Infrastructure to be Ready
+        run: |
+          echo "⏳ Waiting for infrastructure to be ready..."
+          
+          # Test API connectivity
+          for i in {1..10}; do
+            if curl -f --max-time 10 "${{ steps.get-urls.outputs.api_url }}/trips?userId=health-check" >/dev/null 2>&1; then
+              echo "✅ API is responding"
+              break
+            fi
+            echo "⏳ Waiting for API... attempt $i/10"
+            sleep 30
+          done
+          
+          # Test Dashboard connectivity
+          for i in {1..10}; do
+            if curl -f --max-time 10 "${{ steps.get-urls.outputs.dashboard_url }}" >/dev/null 2>&1; then
+              echo "✅ Dashboard is responding"
+              break
+            fi
+            echo "⏳ Waiting for Dashboard... attempt $i/10"
+            sleep 30
+          done
+      
+      - name: Run E2E Dashboard Tests
+        id: e2e-tests
+        run: |
+          chmod +x scripts/e2e-dashboard-test.sh
+          
+          echo "🧪 Starting E2E dashboard tests..."
+          
+          # Set environment variables for the test
+          export HEADLESS=true
+          export TEST_TIMEOUT=300
+          
+          # Run the E2E test script
+          if ./scripts/e2e-dashboard-test.sh \
+            "${{ steps.get-urls.outputs.dashboard_url }}" \
+            "${{ steps.get-urls.outputs.api_url }}" \
+            "${{ steps.get-urls.outputs.dynamodb_table }}"; then
+            echo "test_result=success" >> $GITHUB_OUTPUT
+            echo "✅ E2E dashboard tests completed successfully"
+          else
+            echo "test_result=failure" >> $GITHUB_OUTPUT
+            echo "❌ E2E dashboard tests failed"
+            exit 1
+          fi
+      
+      - name: Upload E2E Test Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots-${{ github.run_number }}
+          path: /tmp/turo-ezpass-screenshots-*
+          retention-days: 7
+      
+      - name: Upload E2E Test Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs-${{ github.run_number }}
+          path: /tmp/turo-ezpass-e2e-test-*.log
+          retention-days: 7
+      
+      - name: Upload Playwright Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: /tmp/turo-ezpass-playwright-*/playwright-report/
+          retention-days: 7
+      
+      - name: E2E Test Summary
+        if: always()
+        run: |
+          echo "## E2E Dashboard Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Result:** ${{ steps.e2e-tests.outputs.test_result == 'success' && '✅ PASSED' || '❌ FAILED' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dashboard URL:** ${{ steps.get-urls.outputs.dashboard_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.get-urls.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- 📸 Screenshots: \`e2e-screenshots-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 Test Logs: \`e2e-logs-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Playwright Report: \`playwright-report-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY

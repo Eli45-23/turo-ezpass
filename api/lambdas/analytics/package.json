@@ -1,0 +1,25 @@
+{
+  "name": "analytics-lambda",
+  "version": "1.0.0",
+  "description": "Analytics Lambda function for Turo-E-Pass scraper monitoring",
+  "main": "dist/handler.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "npm run build && zip -r function.zip dist/ node_modules/",
+    "clean": "rm -rf dist/ function.zip"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.848.0",
+    "@aws-sdk/lib-dynamodb": "^3.848.0",
+    "@aws-sdk/client-cloudwatch": "^3.848.0",
+    "@aws-sdk/client-sns": "^3.848.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

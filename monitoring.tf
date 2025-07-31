@@ -1,3 +1,57 @@
+# KMS Key for CloudWatch Logs encryption
+resource "aws_kms_key" "log" {
+  description             = "KMS key for CloudWatch Logs encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${var.aws_account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudWatch Logs"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.${var.aws_region}.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+        Condition = {
+          ArnEquals = {
+            "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/ecs/${var.project_name}"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "turo-ezpass-logs-key"
+    Project     = "turo-ezpass"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_kms_alias" "log" {
+  name          = "alias/turo-ezpass-logs"
+  target_key_id = aws_kms_key.log.key_id
+}
+
 # CloudWatch Dashboard for Turo-EZPass monitoring
 resource "aws_cloudwatch_dashboard" "turo_ezpass" {
   dashboard_name = "turo-ezpass-monitoring"
@@ -189,10 +243,11 @@ resource "aws_cloudwatch_metric_alarm" "high_failure_rate" {
   }
 }
 
-# CloudWatch Log Group retention (cost optimization)
+# CloudWatch Log Group with encryption and proper retention
 resource "aws_cloudwatch_log_group" "ecs_logs_extended" {
   name              = "/ecs/${var.project_name}"
-  retention_in_days = 30
+  retention_in_days = 365
+  kms_key_id        = aws_kms_key.log.arn
 
   tags = {
     Name        = "turo-ezpass-logs"

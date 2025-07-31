@@ -153,3 +153,47 @@ resource "aws_cloudwatch_dashboard" "scraper_dashboard" {
     ]
   })
 }
+
+# Enhanced monitoring for scraper failures
+resource "aws_cloudwatch_log_metric_filter" "scraper_failures" {
+  name           = "${var.project_name}-scraper-failures"
+  log_group_name = aws_cloudwatch_log_group.ecs_logs.name
+  pattern        = "[timestamp, ..., message=\"*scraping failed*\" || message=\"*Scraping failed*\" || message=\"Username field not found*\"]"
+
+  metric_transformation {
+    name      = "ScraperFailures"
+    namespace = "Custom/${var.project_name}"
+    value     = "1"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "scraper_failures_alarm" {
+  alarm_name          = "${var.project_name}-scraper-failures"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ScraperFailures"
+  namespace           = "Custom/${var.project_name}"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  alarm_description   = "Scraper failures detected - website structure may have changed"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  tags = {
+    Name = "${var.project_name}-scraper-failures"
+  }
+}
+
+# Monitor for successful scraper runs
+resource "aws_cloudwatch_log_metric_filter" "scraper_success" {
+  name           = "${var.project_name}-scraper-success"
+  log_group_name = aws_cloudwatch_log_group.ecs_logs.name
+  pattern        = "[timestamp, ..., message=\"*Successfully submitted*\" || message=\"*completed successfully*\" || message=\"*totalTrips*\"]"
+
+  metric_transformation {
+    name      = "ScraperSuccess"
+    namespace = "Custom/${var.project_name}"
+    value     = "1"
+  }
+}

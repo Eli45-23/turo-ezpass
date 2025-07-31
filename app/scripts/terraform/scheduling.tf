@@ -39,7 +39,7 @@ resource "aws_cloudwatch_event_target" "nightly_target" {
 resource "aws_cloudwatch_event_rule" "manual_trigger" {
   name        = "${var.project_name}-manual-trigger"
   description = "Manual trigger for testing the scraper"
-  state       = "DISABLED"
+  state       = "ENABLED"
 
   event_pattern = jsonencode({
     source      = ["custom.scraper"]

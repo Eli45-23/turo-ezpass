@@ -74,8 +74,33 @@
       "Bash(git remote set-url:*)",
       "Bash(curl:*)",
       "Bash(gh run list:*)",
-      "Bash(./follow-logs.sh)"
+      "Bash(./follow-logs.sh)",
+      "Bash(jq:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(./scripts/deploy-production.sh:*)",
+      "Bash(./../../scripts/deploy-production.sh:*)",
+      "Bash(true)",
+      "Bash(./scripts/update-iam-policy.sh:*)",
+      "Bash(./scripts/terraform-import-all.sh:*)",
+      "Bash(/agents)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(dig:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/auto-commit.sh"
+          }
+        ]
+      }
+    ]
   }
 }

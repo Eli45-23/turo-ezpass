@@ -38,7 +38,10 @@ resource "aws_iam_role_policy" "secrets_rotation" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/turo-ezpass-rotate-secrets",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/turo-ezpass-rotate-secrets:*"
+        ]
       },
       {
         Effect = "Allow"
@@ -66,13 +69,27 @@ resource "aws_lambda_function" "rotate_secrets" {
   runtime       = "python3.9"
   timeout       = 300
 
-  # This would need to be created with actual rotation logic
   source_code_hash = data.archive_file.rotate_secrets_zip.output_base64sha256
 
+  tracing_config {
+    mode = "Active"
+  }
+
+  reserved_concurrent_executions = 1
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.dlq.arn
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  code_signing_config_arn = aws_lambda_code_signing_config.sign.arn
+
   environment {
-    variables = {
-      SECRETS_REGION = var.aws_region
-    }
+    variables = var.lambda_env_vars
   }
 
   tags = {

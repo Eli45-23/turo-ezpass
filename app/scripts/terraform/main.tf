@@ -22,6 +22,7 @@ provider "aws" {
     cloudwatch     = "https://monitoring.${var.aws_region}.amazonaws.com"
     events         = "https://events.${var.aws_region}.amazonaws.com"
     ec2            = "https://ec2.${var.aws_region}.amazonaws.com"
+    dynamodb       = "https://dynamodb.${var.aws_region}.amazonaws.com"
   }
 
   default_tags {
@@ -178,6 +179,41 @@ resource "aws_kms_key" "logs_key" {
   deletion_window_in_days = 10
   enable_key_rotation     = true
 
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::486365525776:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudWatch Logs"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.${var.aws_region}.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+        Condition = {
+          ArnEquals = {
+            "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:${var.aws_region}:486365525776:log-group:/ecs/${var.project_name}"
+          }
+        }
+      }
+    ]
+  })
+
   tags = {
     Name = "${var.project_name}-logs-key"
   }
@@ -228,6 +264,10 @@ resource "aws_ecs_task_definition" "scraper" {
         {
           name  = "TURO_CREDENTIALS_SECRET_NAME"
           value = module.secrets_management.turo_secret_name
+        },
+        {
+          name  = "DYNAMODB_TABLE_NAME"
+          value = aws_dynamodb_table.turo_ezpass_trips.name
         }
       ]
 

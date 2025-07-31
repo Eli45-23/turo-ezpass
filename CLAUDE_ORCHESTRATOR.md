@@ -1,7 +1,6 @@
 # Orchestrator for Turo-EzPass Project
 
-This file is your centralized command center to drive all Claude agents for the turo-ezpass project.  
-
+This file is your centralized command center to drive all Claude agents for the turo-ezpass project. set up remote ac
 ## Project Overview
 The Turo-EzPass system automates toll submission for Turo hosts by:
 1. Scraping E-ZPass accounts for toll charges

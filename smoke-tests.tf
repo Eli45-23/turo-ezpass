@@ -11,16 +11,25 @@ resource "aws_lambda_function" "smoke_test" {
 
   source_code_hash = data.archive_file.smoke_test_zip.output_base64sha256
 
+  tracing_config {
+    mode = "Active"
+  }
+
+  reserved_concurrent_executions = 1
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.dlq.arn
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  code_signing_config_arn = aws_lambda_code_signing_config.sign.arn
+
   environment {
-    variables = {
-      ECS_CLUSTER_NAME    = "${var.project_name}-cluster"
-      ECS_TASK_DEFINITION = "${var.project_name}-scraper"
-      S3_BUCKET           = aws_s3_bucket.proofs.id
-      SNS_TOPIC_ARN       = aws_sns_topic.alerts.arn
-      EZPASS_SECRET_NAME  = "turo-ezpass/ezpass/credentials"
-      TURO_SECRET_NAME    = "turo-ezpass/turo/credentials"
-      REGION              = var.aws_region
-    }
+    variables = var.lambda_env_vars
   }
 
   tags = {
@@ -71,18 +80,36 @@ resource "aws_iam_role_policy" "smoke_test" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/turo-ezpass-smoke-test",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/turo-ezpass-smoke-test:*"
+        ]
       },
       {
         Effect = "Allow"
         Action = [
-          "ecs:DescribeClusters",
-          "ecs:DescribeTaskDefinition",
+          "ecs:DescribeClusters"
+        ]
+        Resource = "arn:aws:ecs:${var.aws_region}:${var.aws_account_id}:cluster/${var.project_name}-cluster"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeTaskDefinition"
+        ]
+        Resource = "arn:aws:ecs:${var.aws_region}:${var.aws_account_id}:task-definition/${var.project_name}-scraper:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "ecs:RunTask",
           "ecs:DescribeTasks",
           "ecs:ListTasks"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:ecs:${var.aws_region}:${var.aws_account_id}:task/${var.project_name}-cluster/*",
+          "arn:aws:ecs:${var.aws_region}:${var.aws_account_id}:task-definition/${var.project_name}-scraper:*"
+        ]
       },
       {
         Effect = "Allow"
@@ -120,7 +147,10 @@ resource "aws_iam_role_policy" "smoke_test" {
           "logs:DescribeLogStreams",
           "logs:GetLogEvents"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/ecs/${var.project_name}:*",
+          "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/ecs/${var.project_name}-cost-optimized:*"
+        ]
       }
     ]
   })

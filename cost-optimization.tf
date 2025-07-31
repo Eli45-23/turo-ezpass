@@ -33,15 +33,15 @@ resource "aws_s3_bucket_lifecycle_configuration" "proofs_cost_optimized" {
       prefix = ""
     }
 
-    # Move to IA after 7 days (faster than original 30)
+    # Move to IA after 30 days (AWS minimum)
     transition {
-      days          = 7
+      days          = 30
       storage_class = "STANDARD_IA"
     }
 
-    # Move to Intelligent Tiering after 14 days
+    # Move to Intelligent Tiering after 60 days
     transition {
-      days          = 14
+      days          = 60
       storage_class = "INTELLIGENT_TIERING"
     }
 
@@ -121,7 +121,8 @@ resource "aws_cloudwatch_metric_alarm" "high_costs" {
 # CloudWatch Log Group with shorter retention for cost savings
 resource "aws_cloudwatch_log_group" "ecs_logs_cost_optimized" {
   name              = "/ecs/${var.project_name}-cost-optimized"
-  retention_in_days = 365 # Minimum 1 year for compliance
+  retention_in_days = 365
+  kms_key_id        = aws_kms_key.log.arn
 
   tags = {
     Name        = "turo-ezpass-logs-optimized"
@@ -129,6 +130,75 @@ resource "aws_cloudwatch_log_group" "ecs_logs_cost_optimized" {
     Environment = var.environment
     ManagedBy   = "terraform"
     Purpose     = "cost-optimization"
+  }
+}
+
+# SQS Dead Letter Queue for Lambda functions
+resource "aws_sqs_queue" "dlq" {
+  name                      = "turo-ezpass-lambda-dlq"
+  message_retention_seconds = 1209600 # 14 days
+
+  tags = {
+    Name        = "turo-ezpass-lambda-dlq"
+    Project     = "turo-ezpass"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# Security Group for Lambda functions
+resource "aws_security_group" "lambda" {
+  name        = "turo-ezpass-lambda-sg"
+  description = "Security group for Turo-EZPass Lambda functions"
+  vpc_id      = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  lifecycle {
+    ignore_changes = [ingress, egress]
+  }
+
+  tags = {
+    Name        = "turo-ezpass-lambda-sg"
+    Project     = "turo-ezpass"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# Lambda Code Signing Config
+resource "aws_lambda_code_signing_config" "sign" {
+  allowed_publishers {
+    signing_profile_version_arns = [aws_signer_signing_profile.lambda.arn]
+  }
+
+  policies {
+    untrusted_artifact_on_deployment = "Enforce"
+  }
+
+  tags = {
+    Name        = "turo-ezpass-code-signing"
+    Project     = "turo-ezpass"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# Signer Signing Profile for Lambda
+resource "aws_signer_signing_profile" "lambda" {
+  platform_id = "AWSLambda-SHA384-ECDSA"
+  name        = "turoezpasslambdasigningprofile"
+
+  tags = {
+    Name        = "turo-ezpass-lambda-signing"
+    Project     = "turo-ezpass"
+    Environment = var.environment
+    ManagedBy   = "terraform"
   }
 }
 
@@ -143,11 +213,25 @@ resource "aws_lambda_function" "cost_optimizer" {
 
   source_code_hash = data.archive_file.cost_optimizer_zip.output_base64sha256
 
+  tracing_config {
+    mode = "Active"
+  }
+
+  reserved_concurrent_executions = 1
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.dlq.arn
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  code_signing_config_arn = aws_lambda_code_signing_config.sign.arn
+
   environment {
-    variables = {
-      S3_BUCKET = aws_s3_bucket.proofs.id
-      REGION    = var.aws_region
-    }
+    variables = var.lambda_env_vars
   }
 
   tags = {

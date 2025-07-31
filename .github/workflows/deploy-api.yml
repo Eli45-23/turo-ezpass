@@ -1,0 +1,100 @@
+name: Deploy API Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/deploy-api.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: 1.6.0
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: api/terraform
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: GitHubActions-API-Deployment
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: api/lambdas/trips-api/package-lock.json
+
+    - name: Install Lambda dependencies
+      run: |
+        cd ../lambdas/trips-api
+        npm ci
+        npm run build
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Format
+      run: terraform fmt -check
+
+    - name: Terraform Plan
+      run: terraform plan -no-color -input=false
+      env:
+        TF_VAR_project_name: turo-ezpass
+        TF_VAR_environment: prod
+        TF_VAR_aws_region: ${{ env.AWS_REGION }}
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve -input=false
+      env:
+        TF_VAR_project_name: turo-ezpass
+        TF_VAR_environment: prod
+        TF_VAR_aws_region: ${{ env.AWS_REGION }}
+
+    - name: Get API Gateway URL
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        API_URL=$(terraform output -raw api_gateway_url)
+        echo "API_URL=$API_URL" >> $GITHUB_ENV
+        echo "API Gateway URL: $API_URL"
+
+    - name: Update API URL in repository
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        echo "NEXT_PUBLIC_API_URL=${{ env.API_URL }}" > ../../dashboard/.env.production
+        echo "API URL has been written to dashboard/.env.production"
+
+    - name: Commit API URL
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: 'chore: update API URL in dashboard environment'
+        file_pattern: 'dashboard/.env.production'
+        skip_dirty_check: true

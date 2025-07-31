@@ -8,22 +8,23 @@
  */
 
 const { chromium } = require('playwright');
-const AWS = require('aws-sdk');
+const {
+  SecretsManagerClient,
+  GetSecretValueCommand
+} = require('@aws-sdk/client-secrets-manager');
+const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+const { fromNodeProviderChain } = require('@aws-sdk/credential-providers');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Configure AWS
-AWS.config.update({
+// Configure AWS SDK v3
+const awsConfig = {
   region: process.env.AWS_REGION || 'us-east-1',
-  ...(process.env.AWS_ACCESS_KEY_ID && { 
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID 
-  }),
-  ...(process.env.AWS_SECRET_ACCESS_KEY && { 
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY 
-  })
-});
+  credentials: fromNodeProviderChain()
+};
 
-const secretsManager = new AWS.SecretsManager();
+const secretsManagerClient = new SecretsManagerClient(awsConfig);
+const dynamoDbClient = new DynamoDBClient(awsConfig);
 
 class TuroScraper {
   constructor() {
@@ -43,9 +44,9 @@ class TuroScraper {
       
       console.log(`Retrieving Turo credentials from AWS Secrets Manager: ${secretName}`);
       
-      const result = await secretsManager.getSecretValue({
-        SecretId: secretName
-      }).promise();
+      const result = await secretsManagerClient.send(
+        new GetSecretValueCommand({ SecretId: secretName })
+      );
 
       const credentials = JSON.parse(result.SecretString);
       
@@ -55,7 +56,8 @@ class TuroScraper {
 
       return {
         email: credentials.email,
-        password: credentials.password
+        password: credentials.password,
+        userId: credentials.userId || credentials.email // Use userId if available, fallback to email
       };
     } catch (error) {
       console.error('Failed to retrieve Turo credentials:', error);
@@ -65,7 +67,8 @@ class TuroScraper {
         console.log('Using fallback environment variable credentials');
         return {
           email: process.env.TURO_EMAIL,
-          password: process.env.TURO_PASSWORD
+          password: process.env.TURO_PASSWORD,
+          userId: process.env.TURO_USER_ID || process.env.TURO_EMAIL
         };
       }
       
@@ -790,6 +793,39 @@ class TuroScraper {
   }
 
   /**
+   * Persist scrape results to DynamoDB
+   */
+  async persistResult(credentials, summary, trips) {
+    try {
+      console.log('Persisting scrape results to DynamoDB...');
+      
+      const tableName = process.env.DYNAMODB_TABLE_NAME || 'turo_ezpass_trips';
+      const scrapeDate = new Date().toISOString();
+      
+      const putItemCommand = new PutItemCommand({
+        TableName: tableName,
+        Item: {
+          userId: { S: credentials.userId },
+          scrapeDate: { S: scrapeDate },
+          scrapeType: { S: 'turo' },
+          totalTrips: { N: String(summary.totalTrips) },
+          summary: { S: JSON.stringify(summary) },
+          trips: { S: JSON.stringify(trips) },
+          status: { S: 'success' }
+        }
+      });
+      
+      await dynamoDbClient.send(putItemCommand);
+      console.log(`✅ Successfully persisted ${summary.totalTrips} Turo trips to DynamoDB`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to persist results to DynamoDB:', error);
+      // Don't throw - we don't want DynamoDB errors to break the main scrape flow
+      return false;
+    }
+  }
+
+  /**
    * Save trip data to JSON file
    */
   async saveTripData() {
@@ -842,6 +878,7 @@ class TuroScraper {
    * Main scraping method
    */
   async scrape(vehicleId = null) {
+    let credentials = null;
     try {
       console.log('Starting Turo trip scraping...');
 
@@ -849,7 +886,7 @@ class TuroScraper {
       await fs.mkdir(this.screenshotsDir, { recursive: true });
 
       // Get credentials
-      const credentials = await this.getCredentials();
+      credentials = await this.getCredentials();
       
       // Initialize browser
       await this.initializeBrowser();
@@ -866,8 +903,23 @@ class TuroScraper {
       // Extract trip data
       await this.extractTripData();
       
-      // Save results
+      // Save results to JSON file
       const outputPath = await this.saveTripData();
+      
+      // Prepare summary for DynamoDB
+      const summary = {
+        scrapeDate: new Date().toISOString(),
+        dateRange: {
+          start: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          end: new Date().toISOString().split('T')[0]
+        },
+        totalTrips: this.tripData.length,
+        outputPath: outputPath,
+        vehicleId: vehicleId
+      };
+      
+      // Persist to DynamoDB
+      await this.persistResult(credentials, summary, this.tripData);
       
       console.log('Turo scraping completed successfully!');
       return {
@@ -879,6 +931,21 @@ class TuroScraper {
       
     } catch (error) {
       console.error('Turo scraping failed:', error);
+      
+      // Persist error to DynamoDB if we have credentials
+      if (credentials) {
+        try {
+          const errorSummary = {
+            scrapeDate: new Date().toISOString(),
+            totalTrips: 0,
+            error: error.message,
+            vehicleId: vehicleId
+          };
+          await this.persistResult(credentials, errorSummary, []);
+        } catch (persistError) {
+          console.error('Failed to persist error to DynamoDB:', persistError);
+        }
+      }
       
       // Take error screenshot
       if (this.page) {

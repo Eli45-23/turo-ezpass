@@ -65,3 +65,37 @@ variable "project_name" {
   type        = string
   default     = "turo-ezpass"
 }
+
+variable "vpc_id" {
+  description = "The VPC where we deploy ECS, Lambdas, etc."
+  type        = string
+  default     = "vpc-0d1e78b3f7c5bc2bd" # turo-ezpass-vpc (10.0.0.0/16)
+}
+
+variable "subnet_ids" {
+  description = "List of private subnet IDs for ECS and Lambda"
+  type        = list(string)
+  default = [
+    "subnet-05a2b2dfdb7d3d3e4", # Private subnet 1 (10.0.2.0/24)
+    "subnet-033419b4086d22aed"  # Private subnet 2 (10.0.3.0/24)
+  ]
+}
+
+variable "lambda_env_vars" {
+  description = "Environment variables for Lambda functions"
+  type        = map(string)
+  default = {
+    ECS_CLUSTER_NAME    = "turo-ezpass-cluster"
+    ECS_TASK_DEFINITION = "turo-ezpass-scraper"
+    EZPASS_SECRET_NAME  = "turo-ezpass/ezpass/credentials"
+    TURO_SECRET_NAME    = "turo-ezpass/turo/credentials"
+    S3_BUCKET           = "turo-ezpass-proofs"
+    SECRETS_REGION      = "us-east-1"
+  }
+  sensitive = true
+}
+
+variable "docker_image" {
+  description = "The Docker image URI to deploy."
+  type        = string
+}
