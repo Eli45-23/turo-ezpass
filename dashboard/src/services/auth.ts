@@ -113,7 +113,7 @@ class CognitoAuthService implements AuthService {
   /**
    * Get current authenticated user
    */
-  getCurrentUser(): Promise<CognitoUser | null> {
+  getCurrentUser(): Promise<AuthUser | null> {
     return new Promise((resolve, reject) => {
       const user = userPool.getCurrentUser();
 
