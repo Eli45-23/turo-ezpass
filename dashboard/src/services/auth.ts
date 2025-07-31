@@ -195,7 +195,7 @@ class CognitoAuthService implements AuthService {
 
 // Demo auth service for when Cognito is not configured
 class DemoAuthService implements AuthService {
-  private currentUser: CognitoUser | null = null;
+  private currentUser: AuthUser | null = null;
 
   isConfigured(): boolean {
     return false;
