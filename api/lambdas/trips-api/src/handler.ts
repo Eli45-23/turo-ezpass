@@ -2,7 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { TripRecord, APIResponse, ListTripsResponse, ErrorResponse, TriggerScrapeRequest, TriggerScrapeResponse } from './types';
+import { TripRecord, APIResponse, ListTripsResponse, ErrorResponse, TriggerScrapeRequest, TriggerScrapeResponse, APIInfoResponse } from './types';
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -17,16 +17,82 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
 };
 
-function createResponse<T>(statusCode: number, body: T): APIResponse<T> {
+function createResponse<T>(statusCode: number, body: T, prettyPrint: boolean = false, contentType: string = 'application/json'): APIResponse<T> {
+  const headers = {
+    ...corsHeaders,
+    'Content-Type': contentType
+  };
+
   return {
     statusCode,
-    headers: corsHeaders,
-    body: JSON.stringify(body)
+    headers,
+    body: prettyPrint ? JSON.stringify(body, null, 2) : JSON.stringify(body)
   };
 }
 
 function createErrorResponse(statusCode: number, error: string, message: string): APIResponse<ErrorResponse> {
-  return createResponse(statusCode, { error, message });
+  return createResponse(statusCode, { error, message }, true);
+}
+
+async function getAPIInfo(acceptHeader?: string): Promise<APIResponse<APIInfoResponse & { meta?: any }>> {
+  // Check if this is a browser request (looks for text/html in Accept header)
+  const isBrowserRequest = acceptHeader && acceptHeader.includes('text/html');
+  
+  const apiInfo = {
+    name: "Turo-EZPass API",
+    description: "Automated toll payment system API for Turo rental trips",
+    version: "1.0.0",
+    status: "operational",
+    timestamp: new Date().toISOString(),
+    endpoints: [
+      {
+        path: "/",
+        method: "GET",
+        description: "API information and documentation",
+        authentication: "none",
+        example: "GET https://api.turoezpass.com/"
+      },
+      {
+        path: "/trips",
+        method: "GET",
+        description: "List all trips for a user",
+        authentication: "required",
+        parameters: ["userId (required)"],
+        example: "GET https://api.turoezpass.com/trips?userId=your-user-id"
+      },
+      {
+        path: "/trips/{userId}/{scrapeDate}",
+        method: "GET",
+        description: "Get a specific trip by user ID and scrape date",
+        authentication: "required",
+        parameters: ["userId (path)", "scrapeDate (path)"],
+        example: "GET https://api.turoezpass.com/trips/your-user-id/2025-07-31T10:00:00Z"
+      },
+      {
+        path: "/scrape",
+        method: "POST",
+        description: "Trigger a new scraping operation",
+        authentication: "required",
+        parameters: ["userId (body)", "scrapeType (optional, body)"],
+        example: 'POST https://api.turoezpass.com/scrape\nBody: {"userId": "your-user-id", "scrapeType": "manual"}'
+      }
+    ],
+    links: {
+      documentation: "https://github.com/your-repo/turo-ezpass/blob/main/README.md",
+      dashboard: "https://dashboard.turoezpass.com",
+      support: "https://github.com/your-repo/turo-ezpass/issues"
+    },
+    ...(isBrowserRequest && {
+      meta: {
+        message: "👋 Welcome! This API provides trip data and toll automation for Turo rentals.",
+        tip: "For a better experience, visit our dashboard at https://dashboard.turoezpass.com",
+        note: "All endpoints except '/' require authentication via Cognito JWT tokens."
+      }
+    })
+  };
+
+  // Always use pretty-printing for better readability, especially for browser users
+  return createResponse(200, apiInfo, true, 'application/json');
 }
 
 async function listTrips(userId: string): Promise<APIResponse<ListTripsResponse | ErrorResponse>> {
@@ -50,7 +116,7 @@ async function listTrips(userId: string): Promise<APIResponse<ListTripsResponse 
     return createResponse(200, {
       trips,
       count: trips.length
-    });
+    }, true);
   } catch (error) {
     console.error('Error listing trips:', error);
     return createErrorResponse(500, 'InternalServerError', 'Failed to retrieve trips');
@@ -77,7 +143,7 @@ async function getTrip(userId: string, scrapeDate: string): Promise<APIResponse<
       return createErrorResponse(404, 'NotFound', 'Trip not found');
     }
 
-    return createResponse(200, response.Item as TripRecord);
+    return createResponse(200, response.Item as TripRecord, true);
   } catch (error) {
     console.error('Error getting trip:', error);
     return createErrorResponse(500, 'InternalServerError', 'Failed to retrieve trip');
@@ -123,7 +189,7 @@ async function triggerScrape(userId: string, scrapeType?: string): Promise<APIRe
       scrapeType: scrapeType || 'manual',
       eventId: response.Entries?.[0]?.EventId || 'unknown',
       timestamp: eventDetail.timestamp
-    });
+    }, true);
   } catch (error) {
     console.error('Error triggering scrape:', error);
     return createErrorResponse(500, 'InternalServerError', 'Failed to trigger scrape');
@@ -138,11 +204,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return createResponse(200, {});
   }
 
-  const { httpMethod, pathParameters, queryStringParameters, body } = event;
+  const { httpMethod, pathParameters, queryStringParameters, body, headers } = event;
 
   try {
     // Handle GET requests
     if (httpMethod === 'GET') {
+      // Route: GET / (root endpoint)
+      if (event.resource === '/' || event.path === '/') {
+        const acceptHeader = headers?.Accept || headers?.accept;
+        return await getAPIInfo(acceptHeader);
+      }
+
       // Route: GET /trips/{userId}/{scrapeDate}
       if (pathParameters?.userId && pathParameters?.scrapeDate) {
         return await getTrip(pathParameters.userId, pathParameters.scrapeDate);
@@ -153,7 +225,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         return await listTrips(queryStringParameters.userId);
       }
 
-      return createErrorResponse(400, 'BadRequest', 'Invalid request. Use GET /trips?userId={userId} or GET /trips/{userId}/{scrapeDate}');
+      return createErrorResponse(400, 'BadRequest', 'Invalid request. Use GET / for API info, GET /trips?userId={userId} to list trips, or GET /trips/{userId}/{scrapeDate} for specific trip');
     }
 
     // Handle POST requests
