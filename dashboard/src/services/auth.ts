@@ -24,7 +24,7 @@ export interface AuthService {
   signIn(username: string, password: string): Promise<CognitoUserSession>;
   signUp(username: string, email: string, password: string): Promise<any>;
   confirmSignUp(username: string, code: string): Promise<any>;
-  getCurrentUser(): Promise<CognitoUser | null>;
+  getCurrentUser(): Promise<AuthUser | null>;
   signOut(): Promise<void>;
   getAuthToken(): Promise<string | null>;
   isConfigured(): boolean;
