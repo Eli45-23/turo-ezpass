@@ -148,7 +148,7 @@ const tollOperationsLimiter = rateLimit({
 // Dashboard API rate limiter - prevent dashboard data scraping
 const dashboardLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 200, // 200 dashboard requests per 5 minutes
+    max: process.env.NODE_ENV === 'production' ? 1000 : 3000, // Higher limits for development
     message: {
         success: false,
         error: 'Too many dashboard requests, please try again in 5 minutes',
@@ -156,6 +156,14 @@ const dashboardLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for localhost in development
+        if (process.env.NODE_ENV !== 'production' && 
+            (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.startsWith('192.168.'))) {
+            return true;
+        }
+        return false;
+    },
     handler: (req, res) => {
         logSecurityEvent('DASHBOARD_RATE_LIMIT', {
             ip: req.ip,
@@ -175,7 +183,7 @@ const dashboardLimiter = rateLimit({
 // Analytics API rate limiter - prevent data mining
 const analyticsLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 10 minutes
-    max: 50, // 50 analytics requests per 10 minutes
+    max: process.env.NODE_ENV === 'production' ? 50 : 500, // Higher limits for development
     message: {
         success: false,
         error: 'Too many analytics requests, please try again in 10 minutes',
@@ -183,6 +191,14 @@ const analyticsLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for localhost in development
+        if (process.env.NODE_ENV !== 'production' && 
+            (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.startsWith('192.168.'))) {
+            return true;
+        }
+        return false;
+    },
     handler: (req, res) => {
         logSecurityEvent('ANALYTICS_RATE_LIMIT', {
             ip: req.ip,
@@ -282,10 +298,10 @@ const notificationLimiter = rateLimit({
     }
 });
 
-// Update general limiter to remove skipped paths and apply to all non-specific routes
+// Enhanced general limiter with development-friendly settings
 const enhancedGeneralLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 300, // Reduced from 500 for better security
+    max: process.env.NODE_ENV === 'production' ? 1500 : 5000, // Higher limits for development
     message: {
         success: false,
         error: 'Too many requests, please try again later',
@@ -294,11 +310,25 @@ const enhancedGeneralLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {
-        // Only skip health check and static files
-        return req.path === '/health' || 
-               req.path.startsWith('/style.css') ||
-               req.path.startsWith('/js/') ||
-               req.path.startsWith('/favicon');
+        // Skip common endpoints that make frequent requests
+        const skipPaths = [
+            '/health',
+            '/style.css',
+            '/js/',
+            '/favicon',
+            '/dashboard.html',
+            '/api/dashboard/summary',
+            '/api/transponders',
+            '/api/trips/recent',
+            '/api/websocket'
+        ];
+        
+        // Skip localhost during development
+        if (process.env.NODE_ENV !== 'production' && req.ip === '127.0.0.1') {
+            return true;
+        }
+        
+        return skipPaths.some(path => req.path === path || req.path.startsWith(path));
     },
     handler: (req, res) => {
         logSecurityEvent('GENERAL_RATE_LIMIT', {
