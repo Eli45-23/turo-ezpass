@@ -1413,11 +1413,13 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         console.log('🚗 Known vehicles:', Array.from(knownVehicles));
         console.log('🏷️ Known transponders:', Array.from(knownTransponders));
         
-        // Get list of previously deleted vehicles to avoid recreating them
+        // Get list of previously deleted/deactivated vehicles to avoid recreating them
         const deletedVehicles = await new Promise((resolve, reject) => {
             db.all(`
                 SELECT DISTINCT vehicle_plate FROM transponder_mappings WHERE host_id = ? AND is_active = 0
-            `, [hostId], (err, rows) => {
+                UNION
+                SELECT DISTINCT vehicle_plate FROM deleted_transponder_plates WHERE host_id = ?
+            `, [hostId, hostId], (err, rows) => {
                 if (err) reject(err);
                 else {
                     const plates = rows.map(row => normalizeVehiclePlate(row.vehicle_plate));

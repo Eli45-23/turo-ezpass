@@ -3574,9 +3574,13 @@ The Turo Team`;
                             View Tolls
                         </button>
                     </td>
-                    <td>
+                    <td style="white-space: nowrap;">
                         <button class="btn btn-sm btn-edit" onclick="editTransponder(${t.id})">Edit</button>
-                        <button class="btn btn-sm btn-delete" onclick="deleteTransponder(${t.id})">Delete</button>
+                        ${t.is_active 
+                            ? `<button class="btn btn-sm btn-warning" onclick="deactivateTransponder(${t.id})" title="Deactivate (can be reactivated later)">Deactivate</button>`
+                            : `<button class="btn btn-sm btn-success" onclick="activateTransponder(${t.id})" title="Reactivate this transponder">Activate</button>`
+                        }
+                        <button class="btn btn-sm btn-danger" onclick="permanentDeleteTransponder(${t.id})" title="Permanently delete (cannot be recovered)">🗑️ Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -3625,8 +3629,9 @@ The Turo Team`;
             }
         });
         
+        // Legacy delete function (now deactivates)
         async function deleteTransponder(id) {
-            if (!confirm('Are you sure you want to delete this transponder mapping?')) return;
+            if (!confirm('Are you sure you want to deactivate this transponder mapping? (It can be reactivated later)')) return;
             
             const response = await fetch(`/api/transponders/${id}`, {
                 method: 'DELETE'
@@ -3634,10 +3639,66 @@ The Turo Team`;
             
             const result = await response.json();
             if (result.success) {
-                alert('Transponder mapping deleted');
+                alert('Transponder mapping deactivated');
                 loadTransponders();
             } else {
-                alert('Error deleting transponder mapping');
+                alert('Error deactivating transponder mapping');
+            }
+        }
+
+        // Activate transponder mapping
+        async function activateTransponder(id) {
+            if (!confirm('Activate this transponder mapping?')) return;
+            
+            const response = await fetch(`/api/transponders/${id}/activate`, {
+                method: 'PUT'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('Transponder mapping activated successfully!');
+                loadTransponders();
+            } else {
+                alert('Error activating transponder mapping: ' + (result.error || 'Unknown error'));
+            }
+        }
+
+        // Deactivate transponder mapping
+        async function deactivateTransponder(id) {
+            if (!confirm('Deactivate this transponder mapping? (It can be reactivated later)')) return;
+            
+            const response = await fetch(`/api/transponders/${id}/deactivate`, {
+                method: 'PUT'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('Transponder mapping deactivated successfully!');
+                loadTransponders();
+            } else {
+                alert('Error deactivating transponder mapping: ' + (result.error || 'Unknown error'));
+            }
+        }
+
+        // Permanently delete transponder mapping
+        async function permanentDeleteTransponder(id) {
+            const confirmed = confirm('⚠️ PERMANENT DELETE ⚠️\n\nThis will PERMANENTLY remove the transponder from your system and prevent it from being auto-discovered again.\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?');
+            if (!confirmed) return;
+            
+            // Double confirmation for permanent delete
+            const doubleConfirmed = confirm('Last chance!\n\nClick OK to PERMANENTLY DELETE this transponder.\nClick Cancel to keep it.');
+            if (!doubleConfirmed) return;
+            
+            const response = await fetch(`/api/transponders/${id}/permanent`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('Transponder mapping permanently deleted and blacklisted!');
+                loadTransponders();
+            } else {
+                alert('Error permanently deleting transponder mapping: ' + (result.error || 'Unknown error'));
             }
         }
         
@@ -4406,6 +4467,9 @@ The Turo Team`;
         window.showAddTransponder = showAddTransponder;
         window.hideAddTransponder = hideAddTransponder;
         window.deleteTransponder = deleteTransponder;
+        window.activateTransponder = activateTransponder;
+        window.deactivateTransponder = deactivateTransponder;
+        window.permanentDeleteTransponder = permanentDeleteTransponder;
         window.editTransponder = editTransponder;
         window.viewTransponderTolls = viewTransponderTolls;
         window.importTransponders = importTransponders;
@@ -9238,6 +9302,26 @@ The Turo Team`;
 
         .btn-warning:hover {
             background-color: #f57c00;
+        }
+
+        .btn-success {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background-color: #45a049;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background-color: #da190b;
         }
 
         /* Review modal styles */

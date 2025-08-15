@@ -153,19 +153,19 @@ router.put('/:id', requireAuth, (req, res) => {
     );
 });
 
-// Delete transponder mapping
-router.delete('/:id', requireAuth, (req, res) => {
+// Activate transponder mapping
+router.put('/:id/activate', requireAuth, (req, res) => {
     const hostId = req.session.hostId;
     const mappingId = req.params.id;
     
     db.run(
-        `UPDATE transponder_mappings SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
+        `UPDATE transponder_mappings SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
         [mappingId, hostId],
         function(err) {
             if (err) {
                 return res.status(500).json({
                     success: false,
-                    error: 'Failed to delete transponder mapping'
+                    error: 'Failed to activate transponder mapping'
                 });
             }
             
@@ -178,7 +178,156 @@ router.delete('/:id', requireAuth, (req, res) => {
             
             res.json({
                 success: true,
-                message: 'Transponder mapping deleted successfully'
+                message: 'Transponder mapping activated successfully'
+            });
+        }
+    );
+});
+
+// Deactivate transponder mapping (soft delete)
+router.put('/:id/deactivate', requireAuth, (req, res) => {
+    const hostId = req.session.hostId;
+    const mappingId = req.params.id;
+    
+    db.run(
+        `UPDATE transponder_mappings SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
+        [mappingId, hostId],
+        function(err) {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to deactivate transponder mapping'
+                });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Transponder mapping not found'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Transponder mapping deactivated successfully'
+            });
+        }
+    );
+});
+
+// Permanently delete transponder mapping
+router.delete('/:id/permanent', requireAuth, (req, res) => {
+    const hostId = req.session.hostId;
+    const mappingId = req.params.id;
+    
+    // First get the transponder details to add to blacklist
+    db.get(
+        `SELECT vehicle_plate FROM transponder_mappings WHERE id = ? AND host_id = ?`,
+        [mappingId, hostId],
+        (err, mapping) => {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to find transponder mapping'
+                });
+            }
+            
+            if (!mapping) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Transponder mapping not found'
+                });
+            }
+            
+            // Begin transaction to ensure both operations succeed
+            db.serialize(() => {
+                db.run('BEGIN TRANSACTION');
+                
+                // Add to blacklist to prevent auto-discovery
+                db.run(
+                    `INSERT OR IGNORE INTO deleted_transponder_plates 
+                     (host_id, vehicle_plate, deleted_at) 
+                     VALUES (?, ?, datetime('now'))`,
+                    [hostId, mapping.vehicle_plate],
+                    function(blacklistErr) {
+                        if (blacklistErr) {
+                            db.run('ROLLBACK');
+                            return res.status(500).json({
+                                success: false,
+                                error: 'Failed to add to deletion blacklist'
+                            });
+                        }
+                        
+                        // Permanently delete the transponder mapping
+                        db.run(
+                            `DELETE FROM transponder_mappings WHERE id = ? AND host_id = ?`,
+                            [mappingId, hostId],
+                            function(deleteErr) {
+                                if (deleteErr) {
+                                    db.run('ROLLBACK');
+                                    return res.status(500).json({
+                                        success: false,
+                                        error: 'Failed to permanently delete transponder mapping'
+                                    });
+                                }
+                                
+                                if (this.changes === 0) {
+                                    db.run('ROLLBACK');
+                                    return res.status(404).json({
+                                        success: false,
+                                        error: 'Transponder mapping not found'
+                                    });
+                                }
+                                
+                                // Commit transaction
+                                db.run('COMMIT', (commitErr) => {
+                                    if (commitErr) {
+                                        return res.status(500).json({
+                                            success: false,
+                                            error: 'Failed to commit deletion'
+                                        });
+                                    }
+                                    
+                                    res.json({
+                                        success: true,
+                                        message: 'Transponder mapping permanently deleted and blacklisted'
+                                    });
+                                });
+                            }
+                        );
+                    }
+                );
+            });
+        }
+    );
+});
+
+// Legacy delete endpoint for backward compatibility (now deactivates)
+router.delete('/:id', requireAuth, (req, res) => {
+    const hostId = req.session.hostId;
+    const mappingId = req.params.id;
+    
+    db.run(
+        `UPDATE transponder_mappings SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
+        [mappingId, hostId],
+        function(err) {
+            if (err) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to deactivate transponder mapping'
+                });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Transponder mapping not found'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Transponder mapping deactivated successfully'
             });
         }
     );

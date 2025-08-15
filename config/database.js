@@ -210,6 +210,18 @@ const initialize = () => {
             )
         `);
 
+        // Deleted transponder plates blacklist table (prevents auto-discovery)
+        db.run(`
+            CREATE TABLE IF NOT EXISTS deleted_transponder_plates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host_id INTEGER NOT NULL,
+                vehicle_plate TEXT NOT NULL,
+                deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (host_id) REFERENCES hosts(id),
+                UNIQUE(host_id, vehicle_plate)
+            )
+        `);
+
         // Security audit logs table
         db.run(`
             CREATE TABLE IF NOT EXISTS security_logs (
