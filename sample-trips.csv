@@ -1,0 +1,9 @@
+Trip ID,Guest Name,Guest Email,License Plate,Start Date,End Date
+TR123456,John Smith,john@example.com,ABC123,2025-05-15 10:00,2025-05-18 18:00
+TR789012,Sarah Johnson,sarah@example.com,XYZ789,2025-06-05 14:00,2025-06-08 20:00
+TR345678,Mike Davis,mike@example.com,DEF456,2025-06-20 09:00,2025-06-23 17:00
+TR901234,Emily Wilson,emily@example.com,GHI789,2025-07-01 11:00,2025-07-04 19:00
+TR567890,David Brown,david@example.com,JKL012,2025-05-25 08:00,2025-05-28 16:00
+TR246810,Lisa Chen,lisa@example.com,ABC123,2025-06-12 13:00,2025-06-15 21:00
+TR135792,Robert Taylor,robert@example.com,XYZ789,2025-07-15 15:00,2025-07-18 10:00
+TR468135,Amanda White,amanda@example.com,DEF456,2025-07-25 12:00,2025-07-28 14:00

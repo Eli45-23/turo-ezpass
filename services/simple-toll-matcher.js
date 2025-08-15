@@ -1,0 +1,627 @@
+const { db } = require('../config/database');
+
+/**
+ * Simple Toll Matcher
+ * Following user's exact specification for 95-100% match rate
+ * 
+ * Logic:
+ * 1. Extract trip data: ID, Guest, Vehicle, Start, End
+ * 2. Extract toll data: Txn ID, Tag/Plate, Date, Time, Amount  
+ * 3. Use transponder mappings to resolve Tag IDs to plates
+ * 4. Match tolls within trip time windows for known vehicles only
+ */
+class SimpleTollMatcher {
+    
+    /**
+     * Main matching function - follows user's 4-step process exactly
+     */
+    async matchTollsToTrips(hostId, trips, tolls, progressCallback = () => {}) {
+        console.log('🎯 Starting Simple Toll Matching (User Spec)');
+        console.log('🔍 DEBUG: matchTollsToTrips called with:');
+        console.log('  - hostId:', hostId);
+        console.log('  - trips type:', typeof trips, 'isArray:', Array.isArray(trips));
+        console.log('  - tolls type:', typeof tolls, 'isArray:', Array.isArray(tolls));
+        console.log('  - trips:', trips);
+        console.log('  - tolls:', tolls);
+        console.log(`📊 Processing ${trips?.length || 0} trips and ${tolls?.length || 0} tolls`);
+        
+        progressCallback({
+            step: 'initializing',
+            message: 'Starting simple toll matching...',
+            progress: 5
+        });
+        
+        // Step 1: Extract and normalize trip data
+        const tripData = this.extractTripData(trips);
+        console.log(`✅ Step 1: Extracted ${tripData.length} trip records`);
+        
+        // Step 2: Extract and normalize toll data  
+        const tollData = this.extractTollData(tolls);
+        console.log(`✅ Step 2: Extracted ${tollData.length} toll records`);
+        
+        // Step 3: Load transponder mappings for known vehicles
+        const transponderMappings = await this.loadTransponderMappings(hostId);
+        console.log(`✅ Step 3: Loaded ${transponderMappings.size} transponder mappings`);
+        console.log('🔍 DEBUG: Available transponder mappings:', Array.from(transponderMappings.entries()));
+        
+        progressCallback({
+            step: 'matching',
+            message: 'Matching tolls to trips...',
+            progress: 20
+        });
+        
+        // Step 4: Match tolls to trips using time windows and vehicle identity
+        const matches = this.performMatching(tripData, tollData, transponderMappings, progressCallback);
+        
+        console.log(`✅ Step 4: Found ${matches.length} toll-to-trip matches`);
+        
+        // Analyze personal driving tolls for debugging
+        this.analyzePersonalDrivingTolls(tollData, matches, transponderMappings);
+        
+        // Apply matches to database
+        const appliedCount = await this.applyMatches(matches);
+        
+        progressCallback({
+            step: 'completed',
+            message: `Simple matching complete: ${appliedCount} tolls matched`,
+            progress: 100
+        });
+        
+        return {
+            totalTolls: tollData.length,
+            matchedCount: appliedCount,
+            personalDrivingCount: tollData.length - appliedCount,
+            accuracy: ((appliedCount / tollData.length) * 100).toFixed(1)
+        };
+    }
+    
+    /**
+     * Step 1: Extract useful trip data from CSV
+     * Fields: Reservation ID, Guest, Vehicle, Vehicle name, Trip start, Trip end
+     */
+    extractTripData(trips) {
+        console.log('🔍 DEBUG: extractTripData called with:', typeof trips, Array.isArray(trips) ? trips.length : 'not array');
+        console.log('🔍 DEBUG: trips parameter:', trips);
+        
+        if (!trips || !Array.isArray(trips)) {
+            console.log('❌ DEBUG: trips is not an array!', trips);
+            return [];
+        }
+        
+        console.log('🔍 DEBUG: Raw trips data received:', trips.length > 0 ? {
+            sampleTrip: trips[0],
+            totalTrips: trips.length,
+            sampleFields: Object.keys(trips[0] || {})
+        } : 'No trips');
+        
+        const extracted = trips.map((trip, index) => {
+            const extracted = {
+                reservationId: trip.turoTripId || trip.reservationId,
+                guest: trip.guest,
+                vehicle: trip.vehiclePlate,
+                vehicleName: trip.vehicleName || trip.vehicle || '',
+                tripStart: this.parseDate(trip.startDate),
+                tripEnd: this.parseDate(trip.endDate),
+                originalTrip: trip // Keep reference for database updates
+            };
+            
+            if (index === 0) {
+                console.log('🔍 DEBUG: First trip extraction:', {
+                    input: trip,
+                    extracted: extracted,
+                    tripStartValid: !isNaN(extracted.tripStart),
+                    tripEndValid: !isNaN(extracted.tripEnd)
+                });
+            }
+            
+            return extracted;
+        }).filter(trip => {
+            // Only include completed trips with valid dates and plates
+            const valid = trip.vehicle && trip.tripStart && trip.tripEnd && !isNaN(trip.tripStart) && !isNaN(trip.tripEnd);
+            if (!valid && trip.vehicle) {
+                console.log('⚠️ Filtering out invalid trip:', {
+                    vehicle: trip.vehicle,
+                    tripStart: trip.tripStart,
+                    tripEnd: trip.tripEnd,
+                    startValid: !isNaN(trip.tripStart),
+                    endValid: !isNaN(trip.tripEnd)
+                });
+            }
+            
+            // Also filter out cancelled trips (defense in depth)
+            if (valid && trip.originalTrip && trip.originalTrip.status) {
+                const tripStatus = trip.originalTrip.status.toLowerCase();
+                const isCancelled = tripStatus.includes('cancel') || tripStatus.includes('decline') || 
+                                  tripStatus.includes('expired') || tripStatus.includes('terminated') || 
+                                  tripStatus.includes('rejected');
+                if (isCancelled) {
+                    console.log('🚫 SimpleTollMatcher: Filtering out cancelled trip:', {
+                        reservationId: trip.reservationId,
+                        status: trip.originalTrip.status,
+                        vehicle: trip.vehicle
+                    });
+                    return false;
+                }
+            }
+            
+            return valid;
+        });
+        
+        console.log(`📊 Trip extraction result: ${extracted.length}/${trips.length} trips valid`);
+        return extracted;
+    }
+    
+    /**
+     * Step 2: Extract toll data from CSV
+     * Fields: Lane Txn ID, Tag/Plate #, Posted Date, Agency, Entry Plaza, Exit Plaza, Class, Date, Time, Amount
+     */
+    extractTollData(tolls) {
+        console.log('🔍 DEBUG: extractTollData called with:', typeof tolls, Array.isArray(tolls) ? tolls.length : 'not array');
+        console.log('🔍 DEBUG: tolls parameter:', tolls);
+        
+        if (!tolls || !Array.isArray(tolls)) {
+            console.log('❌ DEBUG: tolls is not an array!', tolls);
+            return [];
+        }
+        
+        console.log('🔍 DEBUG: Raw tolls data received:', tolls.length > 0 ? {
+            sampleToll: tolls[0],
+            totalTolls: tolls.length,
+            sampleFields: Object.keys(tolls[0] || {})
+        } : 'No tolls');
+        
+        const extracted = tolls.map((toll, index) => {
+            const extracted = {
+                laneTransactionId: toll.laneId || toll.transactionId || toll.id,
+                tagOrPlate: toll.plateNumber || toll.transponderId || toll.transponder_id,
+                postedDate: toll.postedDate ? new Date(toll.postedDate) : null,
+                agency: toll.agency || '',
+                entryPlaza: toll.entryPlaza || '',
+                exitPlaza: toll.exitPlaza || '',
+                tollLocation: toll.location || '',
+                tollClass: toll.class || '',
+                tollDate: this.parseDate(toll.transactionDate || toll.date),
+                tollTime: this.extractTime(toll),
+                amount: Math.abs(parseFloat(toll.amount)) || 0,
+                originalToll: toll // Keep reference for database updates
+            };
+            
+            if (index === 0) {
+                console.log('🔍 DEBUG: First toll extraction:', {
+                    input: toll,
+                    extracted: extracted,
+                    tollDateValid: !isNaN(extracted.tollDate),
+                    hasPlateOrTransponder: !!extracted.tagOrPlate,
+                    hasAmount: extracted.amount > 0
+                });
+            }
+            
+            return extracted;
+        }).filter(toll => {
+            // Only include tolls with valid dates, amounts, and tag/plate data
+            const valid = toll.tagOrPlate && toll.tollDate && toll.amount > 0 && !isNaN(toll.tollDate);
+            if (!valid && toll.amount > 0) {
+                console.log('⚠️ Filtering out invalid toll:', {
+                    tagOrPlate: toll.tagOrPlate,
+                    tollDate: toll.tollDate,
+                    amount: toll.amount,
+                    dateValid: !isNaN(toll.tollDate)
+                });
+            }
+            return valid;
+        });
+        
+        console.log(`📊 Toll extraction result: ${extracted.length}/${tolls.length} tolls valid`);
+        return extracted;
+    }
+    
+    /**
+     * Parse date - handles Unix timestamps (milliseconds), Unix timestamps (seconds), and ISO strings
+     */
+    parseDate(dateInput) {
+        if (!dateInput) return null;
+        
+        // If it's already a Date object
+        if (dateInput instanceof Date) return dateInput;
+        
+        // If it's a number (Unix timestamp)
+        if (typeof dateInput === 'number') {
+            // Database uses milliseconds (13 digits), but some systems use seconds (10 digits)
+            if (dateInput > 1000000000000) {
+                return new Date(dateInput); // Already in milliseconds
+            } else {
+                return new Date(dateInput * 1000); // Convert seconds to milliseconds
+            }
+        }
+        
+        // If it's a string
+        if (typeof dateInput === 'string') {
+            // Try parsing as Unix timestamp first (if all digits)
+            if (/^\d{10,13}$/.test(dateInput)) {
+                const timestamp = parseInt(dateInput);
+                if (timestamp > 1000000000000) {
+                    return new Date(timestamp); // Milliseconds
+                } else {
+                    return new Date(timestamp * 1000); // Seconds
+                }
+            }
+            
+            // Otherwise try parsing as date string
+            const parsed = new Date(dateInput);
+            return isNaN(parsed) ? null : parsed;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Extract time from toll record (handle different formats)
+     */
+    extractTime(toll) {
+        // If toll has separate time field, use it
+        if (toll.time) return toll.time;
+        
+        // Otherwise extract from transactionDate or date
+        const date = this.parseDate(toll.transactionDate || toll.date || toll.toll_date);
+        if (!date) return '00:00 AM';
+        
+        return date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    }
+    
+    /**
+     * Step 3: Load transponder mappings from database
+     * Returns Map: transponderNumber -> plateNumber
+     */
+    async loadTransponderMappings(hostId) {
+        return new Promise((resolve) => {
+            const mappings = new Map();
+            
+            db.all(
+                `SELECT transponder_number, vehicle_plate 
+                 FROM transponder_mappings 
+                 WHERE host_id = ? AND is_active = 1`,
+                [hostId],
+                (err, results) => {
+                    if (!err && results) {
+                        results.forEach(mapping => {
+                            mappings.set(mapping.transponder_number, this.normalizePlate(mapping.vehicle_plate));
+                        });
+                        console.log(`🔗 Loaded transponder mappings:`, Array.from(mappings.entries()));
+                    }
+                    resolve(mappings);
+                }
+            );
+        });
+    }
+    
+    /**
+     * Step 4: Perform the actual matching
+     * Logic: For each toll, find trips where:
+     * 1. Vehicle matches (plate OR transponder resolves to plate)
+     * 2. Toll date/time is within trip start/end window
+     */
+    performMatching(tripData, tollData, transponderMappings, progressCallback) {
+        const matches = [];
+        let processed = 0;
+        
+        console.log(`🔍 Starting matching process for ${tollData.length} tolls...`);
+        
+        for (const toll of tollData) {
+            processed++;
+            const progress = 20 + (processed / tollData.length * 60);
+            
+            // Resolve vehicle identity from toll
+            const tollVehicles = this.resolveTollVehicle(toll.tagOrPlate, transponderMappings);
+            
+            if (tollVehicles.length === 0) {
+                console.log(`⚠️ UNMATCHED: Unknown vehicle/transponder: ${toll.tagOrPlate} (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()}) - ignoring as per user spec`);
+                continue;
+            }
+            
+            // Find matching trip
+            const matchingTrip = this.findMatchingTrip(toll, tollVehicles, tripData);
+            
+            if (matchingTrip) {
+                matches.push({
+                    toll: toll,
+                    trip: matchingTrip,
+                    reason: `Vehicle: ${tollVehicles.join('/')} - Time: ${toll.tollDate.toISOString()} within trip window`,
+                    confidence: 0.95
+                });
+                
+                console.log(`✅ MATCH: Toll ${toll.laneTransactionId} (${toll.tagOrPlate}) → Trip ${matchingTrip.reservationId} (${matchingTrip.vehicle})`);
+                
+                progressCallback({
+                    step: 'matching',
+                    message: `✅ Matched: ${toll.tollLocation} → Trip ${matchingTrip.reservationId}`,
+                    progress: progress,
+                    tollDetails: {
+                        id: toll.laneTransactionId,
+                        location: toll.tollLocation,
+                        amount: toll.amount,
+                        date: toll.tollDate.toLocaleDateString(),
+                        plate: toll.tagOrPlate,
+                        status: 'MATCHED',
+                        tripId: matchingTrip.reservationId,
+                        confidence: 0.95
+                    }
+                });
+            } else {
+                console.log(`❌ NO MATCH: Toll ${toll.laneTransactionId} (${toll.tagOrPlate}) - no trip found within time window (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()})`);
+                
+                progressCallback({
+                    step: 'matching',
+                    message: `🚗 Personal driving: ${toll.tollLocation} - business expense`,
+                    progress: progress,
+                    tollDetails: {
+                        id: toll.laneTransactionId,
+                        location: toll.tollLocation,
+                        amount: toll.amount,
+                        date: toll.tollDate.toLocaleDateString(),
+                        plate: toll.tagOrPlate,
+                        status: 'UNMATCHED',
+                        reason: 'Personal driving (no rental trip found)'
+                    }
+                });
+            }
+        }
+        
+        return matches;
+    }
+    
+    /**
+     * Resolve toll vehicle identity - handle both plates and transponders
+     * Returns array of normalized plate numbers this toll could belong to
+     * ONLY returns vehicles that are in the transponder mappings (per user requirement)
+     */
+    resolveTollVehicle(tagOrPlate, transponderMappings) {
+        if (!tagOrPlate) return [];
+        
+        const vehicles = [];
+        const normalized = this.normalizePlate(tagOrPlate);
+        
+        // Check if it's a transponder that maps to a plate
+        if (transponderMappings.has(tagOrPlate)) {
+            const mappedPlate = transponderMappings.get(tagOrPlate);
+            vehicles.push(mappedPlate);
+        }
+        
+        // Check if it's a direct plate match in our transponder mappings
+        if (this.isPlateNumber(tagOrPlate)) {
+            // Only include this plate if it's one of our tracked vehicles
+            for (const [transponder, plate] of transponderMappings.entries()) {
+                if (this.normalizePlate(plate) === normalized) {
+                    if (!vehicles.includes(normalized)) {
+                        vehicles.push(normalized);
+                    }
+                    break;
+                }
+            }
+        }
+        
+        return vehicles;
+    }
+    
+    /**
+     * Find a trip that matches the toll based on vehicle and time window
+     * Prioritizes active/completed trips over cancelled ones
+     */
+    findMatchingTrip(toll, tollVehicles, tripData) {
+        const matchingTrips = [];
+        
+        // First pass: collect all matching trips
+        for (const trip of tripData) {
+            // Check vehicle match
+            const tripVehicle = this.normalizePlate(trip.vehicle);
+            if (!tollVehicles.includes(tripVehicle)) {
+                continue;
+            }
+            
+            // Check time window - toll must be within trip dates (exact match)
+            if (toll.tollDate >= trip.tripStart && toll.tollDate <= trip.tripEnd) {
+                matchingTrips.push(trip);
+            }
+        }
+        
+        if (matchingTrips.length === 0) {
+            return null;
+        }
+        
+        // If only one match, return it
+        if (matchingTrips.length === 1) {
+            return matchingTrips[0];
+        }
+        
+        // Multiple matches: prioritize active/completed trips over cancelled ones
+        // First try to find non-cancelled trips
+        const activeTrips = matchingTrips.filter(trip => {
+            if (!trip.originalTrip || !trip.originalTrip.status) {
+                return true; // Assume active if no status
+            }
+            const status = trip.originalTrip.status.toLowerCase();
+            const isCancelled = status.includes('cancel') || status.includes('decline') || 
+                              status.includes('expired') || status.includes('terminated') || 
+                              status.includes('rejected');
+            return !isCancelled;
+        });
+        
+        if (activeTrips.length > 0) {
+            console.log(`🎯 Multiple trip matches found for toll ${toll.laneTransactionId}, prioritizing active trip ${activeTrips[0].reservationId} over cancelled alternatives`);
+            return activeTrips[0];
+        }
+        
+        // Fallback to first match (should rarely happen due to earlier filtering)
+        console.log(`⚠️ Only cancelled trips match toll ${toll.laneTransactionId}, using ${matchingTrips[0].reservationId}`);
+        return matchingTrips[0];
+    }
+    
+    /**
+     * Determine if a tag/plate value is a plate number vs transponder
+     */
+    isPlateNumber(value) {
+        if (!value) return false;
+        
+        // Remove spaces and special chars for analysis
+        const cleaned = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+        
+        // Transponders are typically all digits, 10-11 characters
+        if (/^\d{10,11}$/.test(cleaned)) {
+            return false; // This is likely a transponder
+        }
+        
+        // Plates typically have letters and numbers, 6-8 characters
+        if (cleaned.length >= 4 && cleaned.length <= 8 && /[A-Z]/.test(cleaned)) {
+            return true; // This is likely a plate
+        }
+        
+        // Default to treating it as a plate if unclear
+        return true;
+    }
+    
+    /**
+     * Normalize plate number for comparison
+     */
+    normalizePlate(plate) {
+        if (!plate) return '';
+        return plate
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '')  // Remove special chars and spaces
+            .replace(/^[A-Z]{2}/, '');   // Remove state prefix (NY, NJ, etc.)
+    }
+    
+    /**
+     * Apply matches to database
+     */
+    async applyMatches(matches) {
+        let appliedCount = 0;
+        
+        for (const match of matches) {
+            try {
+                // We need to find the actual database IDs since CSV data doesn't have them
+                const tripDbId = await this.findTripDatabaseId(match.trip);
+                const tollDbId = await this.findTollDatabaseId(match.toll);
+                
+                if (tripDbId && tollDbId) {
+                    await new Promise((resolve, reject) => {
+                        db.run(
+                            `UPDATE toll_charges 
+                             SET trip_id = ?, is_matched = 1, match_confidence = ?, match_method = 'simple_matcher'
+                             WHERE id = ?`,
+                            [tripDbId, match.confidence, tollDbId],
+                            function(err) {
+                                if (err) {
+                                    console.error(`❌ Failed to apply match for toll ${match.toll.laneTransactionId}:`, err);
+                                    reject(err);
+                                } else {
+                                    appliedCount++;
+                                    console.log(`✅ Applied match: Toll ${tollDbId} → Trip ${tripDbId} (${match.confidence})`);
+                                    resolve();
+                                }
+                            }
+                        );
+                    });
+                } else {
+                    console.error(`❌ Could not find database IDs for match:`, {
+                        trip: match.trip.reservationId,
+                        toll: match.toll.laneTransactionId,
+                        tripDbId,
+                        tollDbId
+                    });
+                }
+            } catch (error) {
+                console.error(`❌ Database error applying match:`, error);
+            }
+        }
+        
+        console.log(`✅ Applied ${appliedCount}/${matches.length} matches to database`);
+        return appliedCount;
+    }
+    
+    /**
+     * Find trip database ID from reservation ID
+     */
+    async findTripDatabaseId(trip) {
+        return new Promise((resolve) => {
+            db.get(
+                `SELECT id FROM trips WHERE turo_trip_id = ? OR id = ?`,
+                [trip.reservationId, trip.originalTrip.id],
+                (err, result) => {
+                    if (err || !result) {
+                        console.error(`❌ Could not find trip in database:`, trip.reservationId);
+                        resolve(null);
+                    } else {
+                        resolve(result.id);
+                    }
+                }
+            );
+        });
+    }
+    
+    /**
+     * Find toll database ID from transaction ID
+     */
+    async findTollDatabaseId(toll) {
+        return new Promise((resolve) => {
+            db.get(
+                `SELECT id FROM toll_charges WHERE transaction_id = ? OR id = ?`,
+                [toll.laneTransactionId, toll.originalToll.id],
+                (err, result) => {
+                    if (err || !result) {
+                        console.error(`❌ Could not find toll in database:`, toll.laneTransactionId);
+                        resolve(null);
+                    } else {
+                        resolve(result.id);
+                    }
+                }
+            );
+        });
+    }
+    
+    /**
+     * Analyze personal driving tolls to understand why they didn't match
+     */
+    analyzePersonalDrivingTolls(tollData, matches, transponderMappings) {
+        const matchedTollIds = new Set(matches.map(m => m.toll.laneTransactionId));
+        const personalDrivingTolls = tollData.filter(toll => !matchedTollIds.has(toll.laneTransactionId));
+        
+        console.log(`📊 ANALYSIS: ${matches.length}/${tollData.length} tolls matched (${((matches.length/tollData.length)*100).toFixed(1)}%)`);
+        console.log(`🚗 PERSONAL DRIVING: ${personalDrivingTolls.length} tolls (business expenses)`);
+        
+        // Group personal driving tolls by reason
+        const unknownVehicles = new Set();
+        const knownVehiclesNoTrip = new Set();
+        
+        for (const toll of personalDrivingTolls) {
+            const tollVehicles = this.resolveTollVehicle(toll.tagOrPlate, transponderMappings);
+            if (tollVehicles.length === 0) {
+                unknownVehicles.add(toll.tagOrPlate);
+            } else {
+                knownVehiclesNoTrip.add(toll.tagOrPlate);
+            }
+        }
+        
+        console.log(`🔍 Unknown vehicles/transponders: ${unknownVehicles.size}`, Array.from(unknownVehicles));
+        console.log(`⏰ Known vehicles with no trip match: ${knownVehiclesNoTrip.size}`, Array.from(knownVehiclesNoTrip));
+        
+        // Show sample unmatched tolls for each category
+        if (unknownVehicles.size > 0) {
+            console.log('📋 Sample unknown vehicle tolls:');
+            personalDrivingTolls.filter(t => unknownVehicles.has(t.tagOrPlate)).slice(0, 5).forEach(toll => {
+                console.log(`  - ${toll.tagOrPlate}: $${toll.amount} at ${toll.tollLocation} on ${toll.tollDate.toLocaleDateString()}`);
+            });
+        }
+        
+        if (knownVehiclesNoTrip.size > 0) {
+            console.log('📋 Sample time window issues:');
+            personalDrivingTolls.filter(t => knownVehiclesNoTrip.has(t.tagOrPlate)).slice(0, 5).forEach(toll => {
+                console.log(`  - ${toll.tagOrPlate}: $${toll.amount} at ${toll.tollLocation} on ${toll.tollDate.toLocaleDateString()}`);
+            });
+        }
+    }
+}
+
+module.exports = SimpleTollMatcher;

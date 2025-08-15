@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Test</title>
+</head>
+<body>
+    <h1>Button Functionality Test</h1>
+    
+    <div>
+        <h2>Test 1: Basic Alert Button</h2>
+        <button onclick="alert('Basic button works!')">Test Alert</button>
+    </div>
+    
+    <div>
+        <h2>Test 2: Function Call</h2>
+        <button onclick="testFunction()">Test Function</button>
+    </div>
+    
+    <div>
+        <h2>Test 3: Email Setup (from dashboard)</h2>
+        <button onclick="showEmailSetup()">Setup Email Forwarding</button>
+    </div>
+    
+    <div>
+        <h2>Test 4: CSV Import</h2>
+        <input type="file" id="csv-file" accept=".csv" onchange="handleFileSelect(this)">
+        <button onclick="importCSV()" id="import-btn" disabled>Import Trips</button>
+        <p id="file-status" style="margin-top: 10px; font-size: 14px; color: #666;"></p>
+        <p><small>Sample CSV available at: <code>/Users/eli/turo-tolls/sample-trips.csv</code></small></p>
+    </div>
+    
+    <div>
+        <h2>Test 5: Auto Sync</h2>
+        <button onclick="runAutoSync()">Run Auto-Sync</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        function testFunction() {
+            alert('Function call works!');
+            document.getElementById('results').innerHTML += '<p>✅ Function call test passed</p>';
+        }
+        
+        // Copy the functions from dashboard
+        async function showEmailSetup() {
+            console.log('showEmailSetup called');
+            try {
+                const response = await fetch('/api/turo-sync/email-setup');
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.success) {
+                    const instructions = data.data;
+                    alert(`Email Setup Instructions:\n\n` +
+                          `Forward all Turo confirmation emails to:\n${instructions.forwardingEmail}\n\n` +
+                          `Instructions:\n${instructions.instructions.join('\n')}\n\n` +
+                          `Gmail Filter Setup:\n` +
+                          `From: ${instructions.gmailFilter.from}\n` +
+                          `Subject contains: Trip confirmed OR Booking confirmation\n` +
+                          `Forward to: ${instructions.gmailFilter.forward}`);
+                    document.getElementById('results').innerHTML += '<p>✅ Email setup test passed</p>';
+                } else {
+                    alert('Error getting email setup instructions: ' + (data.error || 'Unknown error'));
+                    document.getElementById('results').innerHTML += '<p>❌ Email setup test failed: ' + data.error + '</p>';
+                }
+            } catch (error) {
+                console.error('Error in showEmailSetup:', error);
+                alert('Error: ' + error.message);
+                document.getElementById('results').innerHTML += '<p>❌ Email setup test error: ' + error.message + '</p>';
+            }
+        }
+        
+        async function importCSV() {
+            console.log('importCSV called');
+            const fileInput = document.getElementById('csv-file');
+            
+            if (!fileInput) {
+                alert('File input not found');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file first');
+                document.getElementById('results').innerHTML += '<p>⚠️ No file selected for import</p>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('csvFile', file);
+            
+            try {
+                document.getElementById('results').innerHTML += '<p>🔄 Attempting CSV import...</p>';
+                const response = await fetch('/api/turo-sync/import-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Import successful: ' + result.message);
+                    document.getElementById('results').innerHTML += '<p>✅ CSV import test passed</p>';
+                } else {
+                    alert('Import failed: ' + result.error);
+                    document.getElementById('results').innerHTML += '<p>❌ CSV import test failed: ' + result.error + '</p>';
+                }
+            } catch (error) {
+                alert('Import error: ' + error.message);
+                document.getElementById('results').innerHTML += '<p>❌ CSV import test error: ' + error.message + '</p>';
+            }
+        }
+        
+        async function runAutoSync() {
+            console.log('runAutoSync called');
+            try {
+                document.getElementById('results').innerHTML += '<p>🔄 Running auto-sync...</p>';
+                const response = await fetch('/api/turo-sync/auto-sync', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Auto-sync successful: ' + result.message);
+                    document.getElementById('results').innerHTML += '<p>✅ Auto-sync test passed</p>';
+                } else {
+                    alert('Auto-sync failed: ' + result.error);
+                    document.getElementById('results').innerHTML += '<p>❌ Auto-sync test failed: ' + result.error + '</p>';
+                }
+            } catch (error) {
+                alert('Auto-sync error: ' + error.message);
+                document.getElementById('results').innerHTML += '<p>❌ Auto-sync test error: ' + error.message + '</p>';
+            }
+        }
+        
+        // File selection handler
+        function handleFileSelect(input) {
+            console.log('File selected:', input.files[0]);
+            const file = input.files[0];
+            const importBtn = document.getElementById('import-btn');
+            const fileStatus = document.getElementById('file-status');
+            
+            if (file && file.name.endsWith('.csv')) {
+                importBtn.disabled = false;
+                importBtn.textContent = `Import ${file.name}`;
+                fileStatus.textContent = `✅ Selected: ${file.name} (${(file.size/1024).toFixed(1)}KB)`;
+                fileStatus.style.color = '#28a745';
+                document.getElementById('results').innerHTML += '<p>📁 File selected: ' + file.name + '</p>';
+            } else if (file) {
+                importBtn.disabled = true;
+                importBtn.textContent = 'Import Trips';
+                fileStatus.textContent = '❌ Please select a CSV file';
+                fileStatus.style.color = '#dc3545';
+            } else {
+                importBtn.disabled = true;
+                importBtn.textContent = 'Import Trips';
+                fileStatus.textContent = '';
+            }
+        }
+    </script>
+</body>
+</html>

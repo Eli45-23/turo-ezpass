@@ -1,0 +1,127 @@
+{
+  "authentication": {
+    "invalidLogin": {
+      "statusCode": 400,
+      "responseTime": 7,
+      "hasValidation": true,
+      "response": "{\"success\":false,\"error\":\"Email and password are required\"}"
+    },
+    "nonExistentUser": {
+      "statusCode": 401,
+      "responseTime": 40,
+      "handlesNonExistentUser": true,
+      "response": "{\"success\":false,\"error\":\"Invalid credentials\"}"
+    },
+    "signupTest": {
+      "statusCode": 200,
+      "responseTime": 41,
+      "acceptsSignup": true,
+      "response": "{\"success\":true,\"message\":\"Registration successful\",\"hostId\":15}"
+    },
+    "incompleteSignup": {
+      "statusCode": 400,
+      "responseTime": 0,
+      "validatesRequiredFields": true,
+      "response": "{\"success\":false,\"error\":\"Email, password, and full name are required\"}"
+    }
+  },
+  "csvUpload": {
+    "tollUpload": {
+      "endpointExists": false,
+      "statusCode": 404,
+      "responseTime": 1,
+      "requiresAuth": false,
+      "hasValidation": false
+    },
+    "tripUpload": {
+      "endpointExists": false,
+      "statusCode": 404,
+      "responseTime": 0,
+      "requiresAuth": false
+    },
+    "fileValidation": {
+      "statusCode": 404,
+      "responseTime": 0,
+      "validatesFileType": false
+    }
+  },
+  "validation": {
+    "loginForm": {
+      "hasEmailValidation": true,
+      "hasRequiredFields": true,
+      "hasPasswordField": true,
+      "hasClientSideValidation": false,
+      "hasCustomValidation": false,
+      "hasPatternValidation": false,
+      "hasMinLengthValidation": false,
+      "hasMaxLengthValidation": false
+    },
+    "dashboardForms": {
+      "hasFileInputs": true,
+      "hasDropZones": false,
+      "hasFormValidation": true,
+      "hasFileTypeValidation": true,
+      "hasFileSizeValidation": true,
+      "hasProgressBars": true,
+      "hasUploadFeedback": true
+    },
+    "accessibility": {
+      "hasAriaLabels": false,
+      "hasAriaDescribedBy": false,
+      "hasAriaRequired": false,
+      "hasAriaInvalid": false,
+      "hasFieldsets": false,
+      "hasLegends": false
+    }
+  },
+  "userExperience": {
+    "hasLoadingIndicators": true,
+    "hasSkeletonLoaders": false,
+    "hasProgressIndicators": true,
+    "hasToasts": true,
+    "hasModalDialogs": true,
+    "hasConfirmDialogs": true,
+    "hasSuccessMessages": true,
+    "hasErrorMessages": true,
+    "hasTooltips": true,
+    "hasHoverEffects": true,
+    "hasFocusStyles": false,
+    "hasClickFeedback": true,
+    "hasPagination": false,
+    "hasSorting": true,
+    "hasFiltering": true,
+    "hasSearch": true,
+    "hasHamburgerMenu": false,
+    "hasCollapsibleSections": false,
+    "hasTabInterface": true,
+    "hasWebSocketConnection": true,
+    "hasAutoRefresh": true,
+    "hasLiveUpdates": true
+  },
+  "errors": [],
+  "dashboardFeatures": {
+    "hasTollMatching": true,
+    "hasUnmatchedTolls": true,
+    "hasTripManagement": false,
+    "hasInvoiceGeneration": true,
+    "hasAnalyticsCharts": true,
+    "hasKPIDashboard": true,
+    "hasCSVUpload": true,
+    "hasDragDrop": false,
+    "hasFileValidation": true,
+    "hasEZPassIntegration": true,
+    "hasTransponderManagement": true,
+    "has2FAVerification": true,
+    "hasTuroSync": true,
+    "hasTuroAPI": true,
+    "hasMLMatching": true,
+    "hasAutomation": true,
+    "hasReporting": true,
+    "hasScheduling": true
+  },
+  "featureCompleteness": {
+    "availableFeatures": 16,
+    "totalFeatures": 18,
+    "completionPercentage": 89
+  }
+}

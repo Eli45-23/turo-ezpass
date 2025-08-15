@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Login</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    <script src="/js/xss-utils.js"></script>
+    <script src="/js/accessibility.js"></script>
+</head>
+<body>
+    <div class="container">
+        <main class="auth-container" role="main" aria-labelledby="app-title">
+            <h1 id="app-title">🚗 Turo Toll Tracker</h1>
+            <p class="subtitle">Automatic toll tracking and billing for Turo hosts</p>
+            
+            <div class="auth-tabs" role="tablist" aria-label="Authentication options">
+                <button class="tab-btn active" onclick="showTab('login')" role="tab" aria-selected="true" aria-controls="login-tab" id="login-tab-btn">Login</button>
+                <button class="tab-btn" onclick="showTab('signup')" role="tab" aria-selected="false" aria-controls="signup-tab" id="signup-tab-btn">Sign Up</button>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="login-tab" class="tab-content active" role="tabpanel" aria-labelledby="login-tab-btn">
+                <form id="login-form" aria-label="Login form">
+                    <div class="form-group">
+                        <label for="login-email" class="required">Email</label>
+                        <input type="email" id="login-email" name="email" required 
+                               placeholder="host@example.com" aria-describedby="login-email-desc"
+                               autocomplete="email">
+                        <div id="login-email-desc" class="sr-only">Enter your registered email address</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password" class="required">Password</label>
+                        <input type="password" id="login-password" name="password" required 
+                               placeholder="••••••••" aria-describedby="login-password-desc"
+                               autocomplete="current-password">
+                        <div id="login-password-desc" class="sr-only">Enter your account password</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" data-loading-text="Logging in...">Login</button>
+                </form>
+            </div>
+            
+            <!-- Signup Form -->
+            <div id="signup-tab" class="tab-content" role="tabpanel" aria-labelledby="signup-tab-btn">
+                <form id="signup-form" aria-label="Sign up form">
+                    <div class="form-group">
+                        <label for="signup-name" class="required">Full Name</label>
+                        <input type="text" id="signup-name" name="fullName" required 
+                               placeholder="John Doe" aria-describedby="signup-name-desc"
+                               autocomplete="name">
+                        <div id="signup-name-desc" class="sr-only">Enter your full name as it appears on your Turo account</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-email" class="required">Email</label>
+                        <input type="email" id="signup-email" name="email" required 
+                               placeholder="host@example.com" aria-describedby="signup-email-desc"
+                               autocomplete="email">
+                        <div id="signup-email-desc" class="sr-only">Enter a valid email address for your account</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password" class="required">Password</label>
+                        <input type="password" id="signup-password" name="password" required 
+                               placeholder="••••••••" aria-describedby="signup-password-desc"
+                               autocomplete="new-password" minlength="8">
+                        <div id="signup-password-desc" class="sr-only">Password must be at least 8 characters long and include uppercase, lowercase, number, and special character</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-turo-id">Turo Host ID (Optional)</label>
+                        <input type="text" id="signup-turo-id" placeholder="TH123456">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+            </div>
+            
+            <div id="error-message" class="error-message"></div>
+            <div id="success-message" class="success-message"></div>
+        </div>
+    </div>
+    
+    <script>
+        let csrfToken = null;
+        
+        // Fetch CSRF token on page load
+        async function fetchCSRFToken() {
+            try {
+                const response = await fetch('/api/auth/csrf-token');
+                const data = await response.json();
+                if (data.success) {
+                    csrfToken = data.csrfToken;
+                }
+            } catch (error) {
+                console.warn('Could not fetch CSRF token:', error);
+            }
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchCSRFToken();
+        });
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'login') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('login-tab').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('signup-tab').classList.add('active');
+            }
+        }
+        
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Ensure we have a CSRF token
+            if (!csrfToken) {
+                await fetchCSRFToken();
+            }
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '/dashboard.html';
+                } else {
+                    showError(data.error || 'Login failed');
+                    // Refresh CSRF token on failed login
+                    if (data.error && data.error.includes('CSRF')) {
+                        await fetchCSRFToken();
+                    }
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+        
+        // Signup form handler
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Ensure we have a CSRF token
+            if (!csrfToken) {
+                await fetchCSRFToken();
+            }
+            
+            const fullName = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const turoHostId = document.getElementById('signup-turo-id').value;
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+                
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ fullName, email, password, turoHostId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Account created successfully! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1500);
+                } else {
+                    showError(data.error || 'Signup failed');
+                    // Refresh CSRF token on failed signup
+                    if (data.error && data.error.includes('CSRF')) {
+                        await fetchCSRFToken();
+                    }
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

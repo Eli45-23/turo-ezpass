@@ -1,0 +1,541 @@
+/**
+ * WCAG 2.1 AA Accessibility Enhancements
+ * 
+ * This file provides comprehensive accessibility improvements including:
+ * - High contrast mode support
+ * - Focus management
+ * - Screen reader optimizations
+ * - Motion preferences
+ * - Color contrast compliance
+ */
+
+/* ===== COLOR CONTRAST IMPROVEMENTS ===== */
+
+/* Ensure minimum 4.5:1 contrast ratio for normal text */
+body {
+    color: #1a1a1a; /* Enhanced from #1d1d1f for better contrast */
+}
+
+.subtitle {
+    color: #4a4a4a; /* Enhanced from #666 for better contrast */
+}
+
+.form-group label {
+    color: #1a1a1a; /* Enhanced from #333 for better contrast */
+}
+
+/* Button contrast improvements */
+.btn-secondary {
+    background-color: #e8e8e8; /* Enhanced contrast */
+    color: #1a1a1a;
+    border: 1px solid #a0a0a0;
+}
+
+.btn-secondary:hover {
+    background-color: #d0d0d0;
+    border-color: #808080;
+}
+
+/* ===== FOCUS MANAGEMENT ===== */
+
+/* Enhanced focus indicators for all interactive elements */
+.btn:focus,
+.tab-btn:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus,
+button:focus,
+[tabindex]:focus {
+    outline: 3px solid #005fcc; /* High contrast blue */
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(0, 95, 204, 0.2);
+}
+
+/* Ensure focus is visible even on blue backgrounds */
+.btn-primary:focus {
+    outline: 3px solid #ffffff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 0 0 5px rgba(0, 95, 204, 0.5);
+}
+
+/* Remove focus styles for mouse users while keeping for keyboard */
+.js-focus-visible :focus:not(.focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+
+.js-focus-visible .focus-visible {
+    outline: 3px solid #005fcc;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(0, 95, 204, 0.2);
+}
+
+/* ===== SKIP LINKS ===== */
+
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: #000;
+    color: #fff;
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 4px;
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    top: 6px;
+    outline: 3px solid #fff;
+}
+
+/* ===== SCREEN READER IMPROVEMENTS ===== */
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.sr-only-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* ===== ENHANCED FORM ACCESSIBILITY ===== */
+
+/* Required field indicators */
+.required::after {
+    content: " *";
+    color: #d73527;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+/* Error state styling */
+.form-group.error input,
+.form-group.error select,
+.form-group.error textarea {
+    border-color: #d73527;
+    border-width: 2px;
+    background-color: #fff8f8;
+}
+
+.form-group.error label {
+    color: #d73527;
+}
+
+.error-text {
+    color: #d73527;
+    font-size: 14px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.error-text::before {
+    content: "⚠";
+    margin-right: 4px;
+    font-weight: bold;
+}
+
+/* Success state styling */
+.form-group.success input,
+.form-group.success select,
+.form-group.success textarea {
+    border-color: #28a745;
+    border-width: 2px;
+    background-color: #f8fff8;
+}
+
+.success-text {
+    color: #28a745;
+    font-size: 14px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.success-text::before {
+    content: "✓";
+    margin-right: 4px;
+    font-weight: bold;
+}
+
+/* ===== BUTTON ACCESSIBILITY ===== */
+
+/* Minimum touch target size (44x44px) */
+.btn,
+.tab-btn,
+button,
+input[type="submit"],
+input[type="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Loading state accessibility */
+.btn[aria-busy="true"] {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn[aria-busy="true"]::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: button-loading 1s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes button-loading {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== TABLE ACCESSIBILITY ===== */
+
+/* Enhanced table headers */
+.data-table th {
+    background-color: #f0f0f0;
+    border: 1px solid #a0a0a0;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px;
+}
+
+.data-table td {
+    border: 1px solid #d0d0d0;
+    padding: 12px;
+}
+
+/* Zebra striping for better readability */
+.data-table tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+.data-table tbody tr:hover {
+    background-color: #e8f4fd;
+    outline: 2px solid #007AFF;
+    outline-offset: -2px;
+}
+
+/* ===== HIGH CONTRAST MODE SUPPORT ===== */
+
+@media (prefers-contrast: high) {
+    body {
+        background-color: #ffffff;
+        color: #000000;
+    }
+    
+    .auth-container,
+    .main-content,
+    .sidebar {
+        background-color: #ffffff;
+        border: 2px solid #000000;
+        box-shadow: none;
+    }
+    
+    .btn-primary {
+        background-color: #000000;
+        color: #ffffff;
+        border: 2px solid #000000;
+    }
+    
+    .btn-secondary {
+        background-color: #ffffff;
+        color: #000000;
+        border: 2px solid #000000;
+    }
+    
+    .stat-card {
+        background: #ffffff;
+        color: #000000;
+        border: 2px solid #000000;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        background-color: #ffffff;
+        color: #000000;
+        border: 2px solid #000000;
+    }
+}
+
+/* ===== REDUCED MOTION SUPPORT ===== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    .btn[aria-busy="true"]::after {
+        animation: none;
+        border: 2px solid currentColor;
+        border-radius: 0;
+    }
+}
+
+/* ===== RESPONSIVE TEXT SIZING ===== */
+
+/* Support browser zoom up to 200% */
+@media (min-width: 320px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 18px;
+    }
+}
+
+/* ===== STATUS AND ALERT STYLING ===== */
+
+.alert {
+    padding: 16px;
+    border-radius: 8px;
+    border: 2px solid;
+    margin: 16px 0;
+    position: relative;
+    padding-left: 48px;
+}
+
+.alert::before {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.alert-success::before {
+    content: "✓";
+    color: #28a745;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.alert-error::before {
+    content: "⚠";
+    color: #dc3545;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.alert-warning::before {
+    content: "⚠";
+    color: #ffc107;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #17a2b8;
+    color: #0c5460;
+}
+
+.alert-info::before {
+    content: "ℹ";
+    color: #17a2b8;
+}
+
+/* ===== MOBILE ACCESSIBILITY ===== */
+
+@media (max-width: 768px) {
+    /* Larger touch targets on mobile */
+    .btn,
+    .tab-btn,
+    button {
+        min-height: 48px;
+        font-size: 16px;
+    }
+    
+    /* Improved form field sizing */
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 16px;
+    }
+    
+    /* Better spacing for mobile */
+    .dashboard-container {
+        padding: 16px;
+        gap: 16px;
+    }
+    
+    /* Accessible menu on mobile */
+    .menu {
+        display: flex;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .menu:focus-within {
+        outline: 3px solid #005fcc;
+        outline-offset: 2px;
+    }
+}
+
+/* ===== KEYBOARD NAVIGATION IMPROVEMENTS ===== */
+
+/* Enhanced navigation for keyboard users */
+.menu li a {
+    display: block;
+    padding: 16px 20px;
+    position: relative;
+}
+
+.menu li a:focus {
+    background-color: #e8f4fd;
+    z-index: 1;
+}
+
+/* Tab order indicators for complex layouts */
+.tab-container {
+    position: relative;
+}
+
+.tab-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #007AFF 0%, #007AFF 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+    transform-origin: left;
+}
+
+.tab-container:focus-within::before {
+    transform: scaleX(1);
+}
+
+/* ===== ARIA LIVE REGION STYLING ===== */
+
+.live-region {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.live-region.polite {
+    /* Will be announced when user is idle */
+}
+
+.live-region.assertive {
+    /* Will interrupt user and announce immediately */
+}
+
+/* ===== COLOR-BLIND FRIENDLY IMPROVEMENTS ===== */
+
+/* Use patterns and shapes in addition to color */
+.badge-success {
+    background-color: #28a745;
+    color: white;
+    position: relative;
+}
+
+.badge-success::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+    position: relative;
+}
+
+.badge-danger::before {
+    content: "✗ ";
+    font-weight: bold;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #1a1a1a;
+    position: relative;
+}
+
+.badge-warning::before {
+    content: "⚠ ";
+    font-weight: bold;
+}
+
+/* Progress indicators */
+.progress-bar {
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 24px;
+    border: 1px solid #a0a0a0;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #007AFF;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: attr(data-progress) "%";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+}

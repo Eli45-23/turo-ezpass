@@ -1,0 +1,260 @@
+{
+  "authentication": {
+    "loginPage": {
+      "accessible": true,
+      "responseTime": 6,
+      "size": 6560,
+      "hasEmailValidation": true,
+      "hasPasswordValidation": true,
+      "hasRequiredFields": true,
+      "hasFormSubmitHandler": true,
+      "hasTabs": true,
+      "hasErrorHandling": true,
+      "hasSuccessHandling": true,
+      "hasAsyncFetch": true,
+      "hasFormValidation": true,
+      "usesHTTPS": true,
+      "hasCSRF": false,
+      "hasLabels": true,
+      "hasAriaElements": false,
+      "hasTabIndex": false
+    },
+    "signupForm": {
+      "hasFullNameField": true,
+      "hasEmailField": true,
+      "hasPasswordField": true,
+      "hasTuroIdField": true,
+      "hasSubmitButton": true
+    },
+    "twoFactorAuth": {
+      "accessible": true,
+      "responseTime": 0,
+      "hasModal": true,
+      "hasEmailOption": true,
+      "hasSMSOption": true,
+      "hasCodeInput": true,
+      "hasAPIIntegration": true
+    }
+  },
+  "dashboard": {
+    "interface": {
+      "accessible": true,
+      "responseTime": 2,
+      "size": 368920,
+      "hasNavbar": true,
+      "hasSidebar": true,
+      "hasMenuItems": true,
+      "hasActiveStates": true,
+      "hasOverview": true,
+      "hasAnalytics": true,
+      "hasTrips": true,
+      "hasInvoices": true,
+      "hasTollAccounts": true,
+      "hasCharts": true,
+      "hasCanvasElements": true,
+      "hasChartContainers": true,
+      "hasStatsGrid": true,
+      "hasStatCards": true,
+      "hasKPICards": true,
+      "hasDataTables": true,
+      "hasTableHeaders": true,
+      "hasSortableColumns": false,
+      "hasFileUploads": true,
+      "hasFormValidation": true,
+      "hasDropZone": false,
+      "hasModals": true,
+      "hasTooltips": true,
+      "hasDropdowns": false,
+      "hasButtons": true,
+      "hasWebSocket": true,
+      "hasRealTimeUpdates": true,
+      "hasViewportMeta": true,
+      "hasResponsiveClasses": true
+    }
+  },
+  "api": {
+    "endpoints": {
+      "/api/auth/login": {
+        "accessible": true,
+        "statusCode": 400,
+        "responseTime": 0,
+        "size": 59,
+        "hasJSON": true,
+        "requiresAuth": false,
+        "isHealthy": true
+      },
+      "/api/dashboard/stats": {
+        "accessible": false,
+        "statusCode": 404,
+        "responseTime": 1,
+        "size": 158,
+        "hasJSON": false,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/dashboard/recent-activity": {
+        "accessible": false,
+        "statusCode": 404,
+        "responseTime": 0,
+        "size": 168,
+        "hasJSON": false,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/tolls": {
+        "accessible": false,
+        "statusCode": 404,
+        "responseTime": 0,
+        "size": 148,
+        "hasJSON": false,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/tolls/upload": {
+        "accessible": false,
+        "statusCode": 404,
+        "responseTime": 1,
+        "size": 156,
+        "hasJSON": false,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/analytics/overview": {
+        "accessible": false,
+        "statusCode": 404,
+        "responseTime": 0,
+        "size": 161,
+        "hasJSON": false,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/invoices": {
+        "accessible": true,
+        "statusCode": 401,
+        "responseTime": 1,
+        "size": 51,
+        "hasJSON": true,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/turo-sync": {
+        "accessible": false,
+        "statusCode": 404,
+        "responseTime": 0,
+        "size": 152,
+        "hasJSON": false,
+        "requiresAuth": true,
+        "isHealthy": true
+      },
+      "/api/transponders": {
+        "accessible": true,
+        "statusCode": 401,
+        "responseTime": 0,
+        "size": 51,
+        "hasJSON": true,
+        "requiresAuth": true,
+        "isHealthy": true
+      }
+    }
+  },
+  "ui": {
+    "css": {
+      "accessible": true,
+      "size": 15442,
+      "hasMediaQueries": true,
+      "hasMobileBreakpoints": true,
+      "hasFlexbox": true,
+      "hasGrid": true,
+      "hasCustomProperties": false,
+      "hasTransitions": true,
+      "hasAnimations": true,
+      "hasTransforms": true,
+      "hasContainerQueries": false,
+      "hasGridAreas": false,
+      "hasFlexGrow": false,
+      "hasColorSchemes": false,
+      "hasDarkMode": false,
+      "hasConsistentSpacing": true,
+      "hasFontFamilies": true,
+      "hasFontSizes": true,
+      "hasLineHeight": true,
+      "hasFocusStyles": true,
+      "hasHoverStates": true,
+      "hasAriaSupport": false,
+      "hasOptimizedSelectors": true,
+      "minimizesReflows": true
+    },
+    "dashboard": {
+      "hasProperHeadings": false,
+      "hasConsistentSpacing": true,
+      "hasColorConsistency": true,
+      "hasButtonStyles": true,
+      "hasFormStyles": true,
+      "hasInputStyles": true,
+      "hasTableStyling": true,
+      "hasCardLayout": true,
+      "hasIconUsage": true,
+      "hasLoadingIndicators": true,
+      "hasProgressBars": true,
+      "hasErrorHandling": true,
+      "hasEmptyStates": true,
+      "hasSuccessMessages": true,
+      "hasTooltips": true,
+      "hasConfirmDialogs": true
+    }
+  },
+  "performance": {
+    "pages": {
+      "Login Page": {
+        "averageResponseTime": 0,
+        "averageSize": 6560,
+        "allSuccessful": true,
+        "responseTimeGrade": "A",
+        "sizeGrade": "A"
+      },
+      "Dashboard": {
+        "averageResponseTime": 0,
+        "averageSize": 368920,
+        "allSuccessful": true,
+        "responseTimeGrade": "A",
+        "sizeGrade": "B"
+      },
+      "2FA Page": {
+        "averageResponseTime": 0,
+        "averageSize": 6332,
+        "allSuccessful": true,
+        "responseTimeGrade": "A",
+        "sizeGrade": "A"
+      }
+    },
+    "assets": {
+      "/style.css": {
+        "responseTime": 0,
+        "size": 15442,
+        "grade": "A"
+      }
+    }
+  },
+  "security": {
+    "headers": {
+      "hasContentType": true,
+      "hasXFrameOptions": true,
+      "hasXContentTypeOptions": true,
+      "hasXXSSProtection": true,
+      "hasStrictTransportSecurity": true,
+      "hasContentSecurityPolicy": true,
+      "hasReferrerPolicy": true
+    },
+    "authentication": {
+      "usesHTTPS": false,
+      "hasPasswordRequirements": true,
+      "hasEmailValidation": true,
+      "hasCSRFProtection": false,
+      "hasRateLimiting": false,
+      "hasSessionManagement": false
+    }
+  },
+  "functionality": {},
+  "accessibility": {},
+  "issues": []
+}

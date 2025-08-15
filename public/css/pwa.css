@@ -1,0 +1,514 @@
+/**
+ * Progressive Web App (PWA) Styles
+ * 
+ * Styles for:
+ * - Install prompts
+ * - Offline indicators
+ * - Sync status notifications
+ * - Update banners
+ * - Mobile-first responsive design
+ */
+
+/* ===== PWA INSTALL BUTTON ===== */
+
+.pwa-install-btn {
+    background: linear-gradient(135deg, #007AFF, #0056CC);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: none;
+    margin-right: 15px;
+    min-height: 36px;
+    white-space: nowrap;
+}
+
+.pwa-install-btn:hover {
+    background: linear-gradient(135deg, #0056CC, #003D99);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.pwa-install-btn:active {
+    transform: translateY(0);
+}
+
+.pwa-install-btn:focus {
+    outline: 3px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
+/* ===== OFFLINE INDICATOR ===== */
+
+.offline-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    display: none;
+}
+
+.offline-banner {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+    padding: 12px 20px;
+    text-align: center;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.offline-icon {
+    font-size: 18px;
+    animation: pulse 2s infinite;
+}
+
+.offline-text {
+    font-size: 14px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ===== SYNC STATUS INDICATOR ===== */
+
+.sync-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    display: none;
+}
+
+.sync-banner {
+    padding: 10px 20px;
+    text-align: center;
+    font-weight: 500;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sync-banner.sync-info {
+    background: linear-gradient(135deg, #007AFF, #0056CC);
+    color: white;
+}
+
+.sync-banner.sync-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.sync-banner.sync-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #1a1a1a;
+}
+
+.sync-banner.sync-error {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+}
+
+.sync-icon {
+    font-size: 16px;
+}
+
+.sync-text {
+    flex: 1;
+}
+
+/* ===== UPDATE NOTIFICATION ===== */
+
+.update-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 400px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.update-banner {
+    background: white;
+    border: 2px solid #007AFF;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 122, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.update-icon {
+    font-size: 24px;
+    color: #007AFF;
+}
+
+.update-text {
+    flex: 1;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.update-btn {
+    background: #007AFF;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.update-btn:hover {
+    background: #0056CC;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ===== INSTALL SUCCESS NOTIFICATION ===== */
+
+.install-success-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    max-width: 500px;
+    animation: slideInDown 0.3s ease-out;
+}
+
+.success-banner {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 32px rgba(40, 167, 69, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.success-icon {
+    font-size: 24px;
+}
+
+.success-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+/* ===== STANDALONE MODE ADJUSTMENTS ===== */
+
+/* When app is installed and running in standalone mode */
+@media (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    .navbar {
+        padding-top: calc(20px + env(safe-area-inset-top));
+    }
+    
+    /* Hide install button when already installed */
+    .pwa-install-btn {
+        display: none !important;
+    }
+    
+    /* Adjust offline indicator for safe areas */
+    .offline-indicator {
+        top: env(safe-area-inset-top);
+    }
+    
+    /* Add standalone mode indicator */
+    .navbar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #007AFF, #00C6FF);
+    }
+}
+
+/* ===== MOBILE OPTIMIZATIONS ===== */
+
+@media (max-width: 768px) {
+    .pwa-install-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin-right: 10px;
+    }
+    
+    .offline-banner,
+    .sync-banner {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .update-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .update-banner {
+        padding: 12px;
+        gap: 8px;
+    }
+    
+    .update-text {
+        font-size: 14px;
+    }
+    
+    .install-success-notification {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        max-width: none;
+    }
+    
+    @keyframes slideInDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* ===== TOUCH OPTIMIZATIONS ===== */
+
+@media (hover: none) and (pointer: coarse) {
+    .pwa-install-btn,
+    .update-btn,
+    .success-banner button {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+    
+    .pwa-install-btn:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+
+@media (prefers-contrast: high) {
+    .offline-banner {
+        background: #000000;
+        color: #ffffff;
+        border: 2px solid #ffffff;
+    }
+    
+    .sync-banner {
+        background: #ffffff;
+        color: #000000;
+        border: 2px solid #000000;
+    }
+    
+    .update-banner {
+        background: #ffffff;
+        color: #000000;
+        border: 3px solid #000000;
+    }
+    
+    .success-banner {
+        background: #000000;
+        color: #ffffff;
+        border: 2px solid #ffffff;
+    }
+    
+    .pwa-install-btn {
+        background: #000000;
+        color: #ffffff;
+        border: 2px solid #ffffff;
+    }
+}
+
+/* ===== REDUCED MOTION ===== */
+
+@media (prefers-reduced-motion: reduce) {
+    .offline-icon {
+        animation: none;
+    }
+    
+    .update-notification,
+    .install-success-notification {
+        animation: none;
+    }
+    
+    .pwa-install-btn {
+        transition: none;
+    }
+    
+    .pwa-install-btn:hover {
+        transform: none;
+    }
+}
+
+/* ===== LOADING STATES ===== */
+
+.pwa-loading {
+    position: relative;
+}
+
+.pwa-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ===== CONNECTIVITY STATUS ===== */
+
+.connectivity-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    display: none;
+    backdrop-filter: blur(10px);
+}
+
+.connectivity-status.offline {
+    display: block;
+    background: rgba(255, 107, 107, 0.9);
+}
+
+.connectivity-status.slow {
+    display: block;
+    background: rgba(255, 193, 7, 0.9);
+    color: #1a1a1a;
+}
+
+/* ===== APP SHORTCUTS STYLING ===== */
+
+.app-shortcuts {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: none;
+    gap: 10px;
+}
+
+.app-shortcuts.visible {
+    display: flex;
+}
+
+.shortcut-btn {
+    background: rgba(0, 122, 255, 0.9);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 25px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+}
+
+.shortcut-btn:hover {
+    background: rgba(0, 86, 204, 0.9);
+    transform: translateY(-2px);
+}
+
+.shortcut-btn:active {
+    transform: translateY(0);
+}
+
+/* ===== THEME ADAPTATION ===== */
+
+@media (prefers-color-scheme: dark) {
+    .update-banner {
+        background: #2a2a2a;
+        border-color: #007AFF;
+        color: #ffffff;
+    }
+    
+    .connectivity-status {
+        background: rgba(42, 42, 42, 0.9);
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+
+@media print {
+    .offline-indicator,
+    .sync-indicator,
+    .update-notification,
+    .install-success-notification,
+    .pwa-install-btn,
+    .connectivity-status,
+    .app-shortcuts {
+        display: none !important;
+    }
+}

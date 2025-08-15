@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.production
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.db.backup*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE/Editor files
+.vscode/
+.claude/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Backup files
+backups/
+
+# Test output
+test-*.csv
+*.png
+*.txt
+
+# Cleanup scripts (temporary)
+check-*.js
+cleanup-*.js
+rematch-*.js
+
+# Performance reports
+*-performance-*.json
+*-audit-*.json
+*-analysis-*.json
+
+# Markdown reports (keep main docs)
+*AUDIT*.md
+*REPORT*.md
+*PERFORMANCE*.md
+*ANALYSIS*.md
+
+# Cookies and temporary auth
+cookies.txt
+login_cookies.txt
