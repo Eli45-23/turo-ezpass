@@ -1428,16 +1428,46 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         
         console.log('❌ Previously deleted vehicles:', Array.from(deletedVehicles));
         
-        // Auto-discovery: Find unknown vehicles in CSV and add them (but not deleted ones)
+        // Auto-discovery: Find unknown vehicles in CSV and add them (but NEVER recreate deleted ones)
         const discoveredVehicles = new Set();
         let nextTransponderId = 8600713750; // Start from next available
+        
+        console.log('🔍 Auto-discovery check: Known vehicles:', Array.from(knownVehicles));
+        console.log('🔍 Auto-discovery check: Deleted vehicles:', Array.from(deletedVehicles));
         
         for (const toll of ezpassTolls) {
             if (toll.plateNumber) {
                 const cleanPlate = normalizeVehiclePlate(toll.plateNumber);
-                if (!knownVehicles.has(cleanPlate) && !discoveredVehicles.has(cleanPlate) && !deletedVehicles.has(cleanPlate)) {
+                
+                // STRICT CHECK: Never auto-discover plates that have been explicitly deleted
+                if (deletedVehicles.has(cleanPlate)) {
+                    console.log('🚫 BLOCKED: Auto-discovery blocked for deleted vehicle:', cleanPlate);
+                    continue;
+                }
+                
+                if (!knownVehicles.has(cleanPlate) && !discoveredVehicles.has(cleanPlate)) {
+                    // Double-check: Make sure this plate doesn't already exist in database (active OR inactive)
+                    const existingMapping = await new Promise((resolve, reject) => {
+                        db.get(`
+                            SELECT id, is_active FROM transponder_mappings 
+                            WHERE host_id = ? AND vehicle_plate = ?
+                        `, [hostId, cleanPlate], (err, row) => {
+                            if (err) reject(err);
+                            else resolve(row);
+                        });
+                    });
+                    
+                    if (existingMapping) {
+                        if (existingMapping.is_active === 0) {
+                            console.log('🚫 BLOCKED: Vehicle was previously deleted, will NOT auto-discover:', cleanPlate);
+                        } else {
+                            console.log('ℹ️ Vehicle already exists as active:', cleanPlate);
+                        }
+                        continue;
+                    }
+                    
                     discoveredVehicles.add(cleanPlate);
-                    console.log('🔍 Auto-discovering new vehicle:', cleanPlate);
+                    console.log('🔍 Auto-discovering new vehicle (never seen before):', cleanPlate);
                     
                     // Add transponder mapping for new vehicle
                     await new Promise((resolve, reject) => {
