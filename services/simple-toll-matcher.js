@@ -25,6 +25,31 @@ class SimpleTollMatcher {
         console.log('  - tolls:', tolls);
         console.log(`📊 Processing ${trips?.length || 0} trips and ${tolls?.length || 0} tolls`);
         
+        // PRE-PROCESSING FILTER: Remove any cancelled trips before any processing
+        const originalTripCount = trips?.length || 0;
+        const filteredTrips = trips.filter(trip => {
+            // Check multiple possible status field names
+            const status = trip.status || trip.trip_status || trip.tripStatus || '';
+            const statusLower = status.toString().toLowerCase();
+            const isCancelled = statusLower.includes('cancel') || statusLower.includes('decline') || 
+                              statusLower.includes('expired') || statusLower.includes('terminated') || 
+                              statusLower.includes('rejected');
+            
+            if (isCancelled) {
+                console.log('🚫 PRE-FILTER: Removing cancelled trip before processing:', {
+                    id: trip.turoTripId || trip.reservationId || trip.id,
+                    status: status,
+                    guest: trip.guest || trip.renter_name
+                });
+                return false;
+            }
+            return true;
+        });
+        
+        if (originalTripCount !== filteredTrips.length) {
+            console.log(`🛡️ Pre-filtering removed ${originalTripCount - filteredTrips.length} cancelled trips. Processing ${filteredTrips.length} active trips.`);
+        }
+        
         progressCallback({
             step: 'initializing',
             message: 'Starting simple toll matching...',
@@ -32,7 +57,7 @@ class SimpleTollMatcher {
         });
         
         // Step 1: Extract and normalize trip data
-        const tripData = this.extractTripData(trips);
+        const tripData = this.extractTripData(filteredTrips);
         console.log(`✅ Step 1: Extracted ${tripData.length} trip records`);
         
         // Step 2: Extract and normalize toll data  
@@ -128,18 +153,19 @@ class SimpleTollMatcher {
                 });
             }
             
-            // Also filter out cancelled trips (defense in depth)
-            if (valid && trip.originalTrip && trip.originalTrip.status) {
+            // STRICT FILTER: Reject any cancelled trips (defense in depth - should already be filtered)
+            if (trip.originalTrip && trip.originalTrip.status) {
                 const tripStatus = trip.originalTrip.status.toLowerCase();
                 const isCancelled = tripStatus.includes('cancel') || tripStatus.includes('decline') || 
                                   tripStatus.includes('expired') || tripStatus.includes('terminated') || 
                                   tripStatus.includes('rejected');
                 if (isCancelled) {
-                    console.log('🚫 SimpleTollMatcher: Filtering out cancelled trip:', {
+                    console.log('🚫 CRITICAL: Cancelled trip found in extractTripData - should have been pre-filtered:', {
                         reservationId: trip.reservationId,
                         status: trip.originalTrip.status,
                         vehicle: trip.vehicle
                     });
+                    // STRICT rejection - don't even process validity
                     return false;
                 }
             }
