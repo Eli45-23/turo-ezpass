@@ -529,6 +529,87 @@ const initialize = () => {
             )
         `);
 
+        // Add new columns for toll memory tracking system
+        console.log('🧠 Adding toll memory tracking columns...');
+        
+        // Add columns to toll_charges table
+        db.run(`
+            ALTER TABLE toll_charges 
+            ADD COLUMN submitted_to_turo BOOLEAN DEFAULT 0
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add submitted_to_turo column:', err.message);
+            }
+        });
+
+        db.run(`
+            ALTER TABLE toll_charges 
+            ADD COLUMN invoice_id INTEGER
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add invoice_id column:', err.message);
+            }
+        });
+
+        db.run(`
+            ALTER TABLE toll_charges 
+            ADD COLUMN submission_date DATETIME
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add submission_date column:', err.message);
+            }
+        });
+
+        db.run(`
+            ALTER TABLE toll_charges 
+            ADD COLUMN is_archived BOOLEAN DEFAULT 0
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add is_archived column:', err.message);
+            }
+        });
+
+        // Add columns to invoices table for snapshot functionality
+        db.run(`
+            ALTER TABLE invoices 
+            ADD COLUMN toll_charge_ids TEXT
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add toll_charge_ids column:', err.message);
+            }
+        });
+
+        db.run(`
+            ALTER TABLE invoices 
+            ADD COLUMN snapshot_data TEXT
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add snapshot_data column:', err.message);
+            }
+        });
+
+        // Create late_tolls_detected table for tracking late-arriving tolls
+        db.run(`
+            CREATE TABLE IF NOT EXISTS late_tolls_detected (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trip_id INTEGER NOT NULL,
+                toll_charge_id INTEGER NOT NULL,
+                original_invoice_id INTEGER,
+                amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
+                detection_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'new' CHECK (status IN ('new', 'acknowledged', 'resolved', 'waived')),
+                resolution_notes TEXT,
+                resolved_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (trip_id) REFERENCES trips(id),
+                FOREIGN KEY (toll_charge_id) REFERENCES toll_charges(id),
+                FOREIGN KEY (original_invoice_id) REFERENCES invoices(id),
+                UNIQUE(trip_id, toll_charge_id)
+            )
+        `);
+
+        console.log('✅ Toll memory tracking system database setup complete');
+
         // Create indexes for better performance - Core Performance Indexes
         db.run(`CREATE INDEX IF NOT EXISTS idx_trips_dates ON trips(start_date, end_date)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_trips_host_status ON trips(host_id, trip_status, start_date)`);
@@ -605,6 +686,16 @@ const initialize = () => {
         db.run(`CREATE INDEX IF NOT EXISTS idx_ml_toll_patterns ON toll_charges(trip_id, toll_location, toll_amount, is_matched)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_ml_vehicle_usage ON toll_charges(toll_date, is_matched) WHERE is_matched = 1`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_ml_unmatched_charges ON toll_charges(toll_account_id, is_matched, toll_date) WHERE is_matched = 0`);
+
+        // Toll memory tracking system indexes
+        db.run(`CREATE INDEX IF NOT EXISTS idx_toll_charges_submitted ON toll_charges(submitted_to_turo)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_toll_charges_invoice_id ON toll_charges(invoice_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_toll_charges_duplicate_detection ON toll_charges(transaction_id, toll_date, toll_amount)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_toll_charges_submission_date ON toll_charges(submission_date)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_late_tolls_status ON late_tolls_detected(status)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_late_tolls_detection_date ON late_tolls_detected(detection_date)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_late_tolls_trip_id ON late_tolls_detected(trip_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_invoices_toll_ids ON invoices(toll_charge_ids)`);
 
         // Add triggers for data integrity
         db.run(`

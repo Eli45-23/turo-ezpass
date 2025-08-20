@@ -1,0 +1,797 @@
+/* ==============================================
+   DASHBOARD - NEO DARK THEME
+   Modern, techy, premium dashboard styling
+   ============================================== */
+
+/* ==============================================
+   LAYOUT FOUNDATION
+   ============================================== */
+
+[data-theme="neo"] .dashboard-layout {
+  min-height: 100vh;
+  background: var(--neo-bg);
+  color: var(--neo-ink);
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-areas: 
+    "sidebar header"
+    "sidebar main";
+}
+
+/* ==============================================
+   HEADER STYLING
+   ============================================== */
+
+[data-theme="neo"] .dashboard-header {
+  grid-area: header;
+  background: var(--neo-panel);
+  border-bottom: 1px solid var(--neo-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: var(--neo-z-sticky, 20);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="neo"] .dashboard-title {
+  font-family: var(--neo-font-heading);
+  font-size: var(--neo-text-xl);
+  font-weight: var(--neo-font-bold);
+  color: var(--neo-ink);
+  margin: 0;
+}
+
+[data-theme="neo"] .dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Primary CTA Button - Gradient Border */
+[data-theme="neo"] .primary-cta {
+  background: var(--neo-panel);
+  color: var(--neo-ink);
+  border: 1px solid transparent;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--neo-radius-sm);
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-semibold);
+  font-family: var(--neo-font-body);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+  position: relative;
+  overflow: hidden;
+  
+  /* Gradient border effect */
+  background-image: 
+    linear-gradient(var(--neo-panel), var(--neo-panel)),
+    linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+[data-theme="neo"] .primary-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--neo-shadow-lg);
+}
+
+[data-theme="neo"] .primary-cta:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+/* User Menu */
+[data-theme="neo"] .user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: var(--neo-radius-sm);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+}
+
+[data-theme="neo"] .user-menu:hover {
+  background: var(--neo-hover);
+}
+
+[data-theme="neo"] .user-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: var(--neo-font-semibold);
+  font-size: var(--neo-text-sm);
+  font-family: var(--neo-font-heading);
+}
+
+/* User Dropdown */
+[data-theme="neo"] .user-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 200px;
+  background: var(--neo-panel);
+  border: 1px solid var(--neo-hairline);
+  border-radius: var(--neo-radius);
+  box-shadow: var(--neo-shadow-lg);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.5rem);
+  transition: all var(--neo-transition-fast);
+  z-index: var(--neo-z-dropdown, 10);
+}
+
+[data-theme="neo"] .user-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+[data-theme="neo"] .user-dropdown-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--neo-hairline);
+}
+
+[data-theme="neo"] .user-email {
+  font-size: var(--neo-text-sm);
+  color: var(--neo-muted);
+  margin: 0;
+  font-family: var(--neo-font-body);
+}
+
+[data-theme="neo"] .user-dropdown-content {
+  padding: 0.5rem 0;
+}
+
+[data-theme="neo"] .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: var(--neo-text-sm);
+  font-family: var(--neo-font-body);
+  color: var(--neo-ink);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+}
+
+[data-theme="neo"] .dropdown-item:hover {
+  background: var(--neo-hover);
+}
+
+[data-theme="neo"] .dropdown-item.danger {
+  color: var(--neo-error);
+}
+
+[data-theme="neo"] .dropdown-item.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ==============================================
+   SIDEBAR STYLING
+   ============================================== */
+
+[data-theme="neo"] .dashboard-sidebar {
+  grid-area: sidebar;
+  background: var(--neo-panel);
+  border-right: 1px solid var(--neo-hairline);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+[data-theme="neo"] .sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--neo-hairline);
+  font-family: var(--neo-font-heading);
+  font-size: var(--neo-text-xl);
+  font-weight: var(--neo-font-bold);
+  color: var(--neo-ink);
+}
+
+[data-theme="neo"] .sidebar-nav {
+  flex: 1;
+  padding: 1.5rem 0;
+}
+
+[data-theme="neo"] .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  color: var(--neo-muted);
+  text-decoration: none;
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-medium);
+  font-family: var(--neo-font-body);
+  transition: all var(--neo-transition-fast);
+  position: relative;
+}
+
+[data-theme="neo"] .nav-item:hover {
+  background: var(--neo-hover);
+  color: var(--neo-ink);
+}
+
+[data-theme="neo"] .nav-item.active {
+  background: var(--neo-hover);
+  color: var(--neo-accent-b);
+  font-weight: var(--neo-font-semibold);
+}
+
+[data-theme="neo"] .nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+}
+
+[data-theme="neo"] .nav-item:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: -2px;
+}
+
+/* ==============================================
+   MAIN CONTENT AREA
+   ============================================== */
+
+[data-theme="neo"] .dashboard-main {
+  grid-area: main;
+  padding: 2rem;
+  background: var(--neo-bg);
+}
+
+[data-theme="neo"] .dashboard-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ==============================================
+   KPI CARDS GRID
+   ============================================== */
+
+[data-theme="neo"] .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+[data-theme="neo"] .kpi-card {
+  background: var(--neo-panel);
+  border: 1px solid var(--neo-hairline);
+  border-radius: var(--neo-radius);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--neo-transition-fast);
+  box-shadow: var(--neo-shadow-sm);
+}
+
+[data-theme="neo"] .kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--neo-shadow-lg);
+}
+
+/* Gradient top border */
+[data-theme="neo"] .kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--neo-accent-a), var(--neo-accent-b), var(--neo-accent-c));
+}
+
+[data-theme="neo"] .kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+[data-theme="neo"] .kpi-title {
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-medium);
+  font-family: var(--neo-font-body);
+  color: var(--neo-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* KPI Icon Containers (will be hidden by no-emoji.css) */
+[data-theme="neo"] .kpi-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--neo-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--neo-text-lg);
+}
+
+/* Main KPI Value */
+[data-theme="neo"] .kpi-value {
+  font-family: var(--neo-font-heading);
+  font-size: 2.5rem;
+  font-weight: var(--neo-font-bold);
+  color: var(--neo-ink);
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+[data-theme="neo"] .kpi-subtitle {
+  font-size: var(--neo-text-sm);
+  font-family: var(--neo-font-body);
+  color: var(--neo-muted);
+  margin-bottom: 0.75rem;
+}
+
+/* Trend Indicators */
+[data-theme="neo"] .kpi-change {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--neo-text-xs);
+  font-weight: var(--neo-font-medium);
+  font-family: var(--neo-font-body);
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  width: fit-content;
+}
+
+[data-theme="neo"] .kpi-change.positive {
+  color: var(--neo-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="neo"] .kpi-change.negative {
+  color: var(--neo-error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="neo"] .kpi-change.neutral {
+  color: var(--neo-muted);
+  background: var(--neo-hover);
+}
+
+/* ==============================================
+   PERFORMANCE SECTION
+   ============================================== */
+
+[data-theme="neo"] .performance-section {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+[data-theme="neo"] .performance-card {
+  background: var(--neo-panel);
+  border: 1px solid var(--neo-hairline);
+  border-radius: var(--neo-radius);
+  overflow: hidden;
+  box-shadow: var(--neo-shadow-sm);
+}
+
+[data-theme="neo"] .card-header {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--neo-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-theme="neo"] .card-title {
+  font-family: var(--neo-font-heading);
+  font-size: var(--neo-text-lg);
+  font-weight: var(--neo-font-semibold);
+  color: var(--neo-ink);
+  margin: 0;
+}
+
+[data-theme="neo"] .card-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Segmented Control */
+[data-theme="neo"] .segmented-control {
+  display: flex;
+  background: var(--neo-hover);
+  border-radius: var(--neo-radius-sm);
+  padding: 0.25rem;
+}
+
+[data-theme="neo"] .segment-option {
+  padding: 0.375rem 0.75rem;
+  font-size: var(--neo-text-xs);
+  font-weight: var(--neo-font-medium);
+  font-family: var(--neo-font-body);
+  color: var(--neo-muted);
+  background: none;
+  border: none;
+  border-radius: var(--neo-radius-sm);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+}
+
+[data-theme="neo"] .segment-option.active {
+  background: var(--neo-panel);
+  color: var(--neo-ink);
+  box-shadow: var(--neo-shadow-sm);
+}
+
+[data-theme="neo"] .segment-option:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: -2px;
+}
+
+/* Performance Metrics */
+[data-theme="neo"] .performance-metrics {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+[data-theme="neo"] .metric-group {
+  text-align: center;
+}
+
+[data-theme="neo"] .metric-value {
+  font-family: var(--neo-font-heading);
+  font-size: 2rem;
+  font-weight: var(--neo-font-bold);
+  color: var(--neo-ink);
+  margin-bottom: 0.25rem;
+  line-height: 1;
+}
+
+[data-theme="neo"] .metric-label {
+  font-size: var(--neo-text-sm);
+  font-family: var(--neo-font-body);
+  color: var(--neo-muted);
+  font-weight: var(--neo-font-medium);
+}
+
+/* Progress Bars */
+[data-theme="neo"] .metric-progress {
+  margin-top: 1rem;
+  height: 0.5rem;
+  background: var(--neo-hover);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+[data-theme="neo"] .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neo-accent-a), var(--neo-accent-b));
+  border-radius: 0.25rem;
+  transition: width var(--neo-transition-base);
+}
+
+/* ==============================================
+   STATUS LIST
+   ============================================== */
+
+[data-theme="neo"] .status-list {
+  padding: 1.5rem;
+}
+
+[data-theme="neo"] .status-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--neo-hairline);
+}
+
+[data-theme="neo"] .status-item:last-child {
+  border-bottom: none;
+}
+
+[data-theme="neo"] .status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+[data-theme="neo"] .status-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-semibold);
+  font-family: var(--neo-font-heading);
+}
+
+[data-theme="neo"] .status-icon.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--neo-success);
+}
+
+[data-theme="neo"] .status-icon.processing {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--neo-warning);
+}
+
+[data-theme="neo"] .status-details h4 {
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-semibold);
+  font-family: var(--neo-font-body);
+  color: var(--neo-ink);
+  margin: 0 0 0.25rem 0;
+}
+
+[data-theme="neo"] .status-details p {
+  font-size: var(--neo-text-xs);
+  font-family: var(--neo-font-body);
+  color: var(--neo-muted);
+  margin: 0;
+}
+
+/* Status Chips */
+[data-theme="neo"] .status-chip {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: var(--neo-text-xs);
+  font-weight: var(--neo-font-medium);
+  font-family: var(--neo-font-body);
+  background: var(--neo-hover);
+  color: var(--neo-muted);
+}
+
+[data-theme="neo"] .status-chip.optimal {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--neo-success);
+}
+
+[data-theme="neo"] .status-chip.just-now {
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--neo-accent-b);
+}
+
+/* ==============================================
+   VIEW ACTIONS
+   ============================================== */
+
+[data-theme="neo"] .view-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+[data-theme="neo"] .view-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--neo-panel);
+  border: 1px solid var(--neo-hairline);
+  border-radius: var(--neo-radius-sm);
+  color: var(--neo-ink);
+  text-decoration: none;
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-medium);
+  font-family: var(--neo-font-body);
+  transition: all var(--neo-transition-fast);
+  box-shadow: var(--neo-shadow-sm);
+}
+
+[data-theme="neo"] .view-button:hover {
+  background: var(--neo-hover);
+  border-color: var(--neo-accent-b);
+  transform: translateY(-1px);
+  box-shadow: var(--neo-shadow-lg);
+  color: var(--neo-ink);
+  text-decoration: none;
+}
+
+[data-theme="neo"] .view-button:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+/* Primary View Button - Gradient Border */
+[data-theme="neo"] .view-button.primary {
+  background-image: 
+    linear-gradient(var(--neo-panel), var(--neo-panel)),
+    linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  border: 1px solid transparent;
+  color: var(--neo-ink);
+}
+
+[data-theme="neo"] .view-button.primary:hover {
+  background-image: 
+    linear-gradient(var(--neo-hover), var(--neo-hover)),
+    linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+  border-color: transparent;
+}
+
+/* ==============================================
+   LOADING STATES
+   ============================================== */
+
+[data-theme="neo"] .kpi-card.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="neo"] .kpi-card.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* ==============================================
+   RESPONSIVE DESIGN
+   ============================================== */
+
+@media (max-width: 1024px) {
+  [data-theme="neo"] .dashboard-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "header"
+      "main";
+  }
+
+  [data-theme="neo"] .dashboard-sidebar {
+    display: none;
+  }
+
+  [data-theme="neo"] .performance-section {
+    grid-template-columns: 1fr;
+  }
+
+  [data-theme="neo"] .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  [data-theme="neo"] .dashboard-header {
+    padding: 0 1rem;
+  }
+
+  [data-theme="neo"] .dashboard-main {
+    padding: 1rem;
+  }
+
+  [data-theme="neo"] .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  [data-theme="neo"] .dashboard-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  [data-theme="neo"] .primary-cta {
+    width: 100%;
+    justify-content: center;
+  }
+
+  [data-theme="neo"] .view-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  [data-theme="neo"] .view-button {
+    justify-content: center;
+  }
+
+  [data-theme="neo"] .performance-metrics {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  [data-theme="neo"] .dashboard-main {
+    padding: 0.75rem;
+  }
+
+  [data-theme="neo"] .kpi-card {
+    padding: 1rem;
+  }
+
+  [data-theme="neo"] .kpi-value {
+    font-size: 2rem;
+  }
+
+  [data-theme="neo"] .metric-value {
+    font-size: 1.75rem;
+  }
+}
+
+/* ==============================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================== */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  [data-theme="neo"] .kpi-card,
+  [data-theme="neo"] .performance-card {
+    border-width: 2px;
+  }
+
+  [data-theme="neo"] .kpi-value,
+  [data-theme="neo"] .metric-value,
+  [data-theme="neo"] .card-title {
+    color: #FFFFFF;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="neo"] * {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  [data-theme="neo"] .kpi-card:hover,
+  [data-theme="neo"] .view-button:hover,
+  [data-theme="neo"] .primary-cta:hover {
+    transform: none;
+  }
+}
+
+/* ==============================================
+   FOCUS MANAGEMENT
+   ============================================== */
+
+[data-theme="neo"] .kpi-card:focus,
+[data-theme="neo"] .performance-card:focus {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+/* Ensure all interactive elements have proper focus states */
+[data-theme="neo"] button:focus-visible,
+[data-theme="neo"] a:focus-visible,
+[data-theme="neo"] [tabindex]:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}

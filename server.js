@@ -321,6 +321,7 @@ const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const { router: tollRoutes } = require('./routes/tolls');
 const invoiceRoutes = require('./routes/invoices');
+const tripsRoutes = require('./routes/trips');
 const turoSyncRoutes = require('./routes/turo-sync');
 const transponderRoutes = require('./routes/transponders');
 const dataIntegrityRoutes = require('./routes/data-integrity');
@@ -364,11 +365,17 @@ const backupSchedule = backupService.scheduleAutomaticBackups();
 // Make backup service available globally
 global.backupService = backupService;
 
+// Dashboard redirect for user convenience
+app.get('/dashboard', (req, res) => {
+    res.redirect('/dashboard.html');
+});
+
 // API Routes with specific rate limiting
 app.use('/api/auth', authRoutes); // Auth routes already have their own limiter
 app.use('/api/dashboard', dashboardLimiter, dashboardRoutes);
 app.use('/api/tolls', tollOperationsLimiter, tollRoutes);
 app.use('/api/invoices', invoiceLimiter, invoiceRoutes);
+app.use('/api/trips', dashboardLimiter, tripsRoutes);
 app.use('/api/turo-sync', csvUploadLimiter, turoSyncRoutes);
 app.use('/api/transponders', tollOperationsLimiter, transponderRoutes);
 app.use('/api/data-integrity', dashboardLimiter, dataIntegrityRoutes);

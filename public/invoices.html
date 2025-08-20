@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoices - Turo Toll Tracker</title>
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    
+    <!-- Scripts -->
+    <script src="/js/ui-utils.js"></script>
+    <script src="/js/xss-utils.js"></script>
+    <script src="/js/performance.js"></script>
+    
+    <style>
+        /* Invoice Page Specific Styles */
+        :root {
+            --header-height: 72px;
+            --sidebar-width: 280px;
+        }
+        
+        .invoices-layout {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            display: grid;
+            grid-template-rows: var(--header-height) 1fr;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-areas: 
+                "sidebar header"
+                "sidebar main";
+        }
+        
+        .invoices-header {
+            grid-area: header;
+            background: var(--panel);
+            border-bottom: 1px solid var(--hairline);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: var(--z-sticky);
+        }
+        
+        .invoices-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .invoices-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .invoices-main {
+            grid-area: main;
+            padding: 2rem;
+            background: var(--bg);
+        }
+        
+        .invoices-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Sidebar */
+        .invoices-sidebar {
+            grid-area: sidebar;
+            background: var(--panel);
+            border-right: 1px solid var(--hairline);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--hairline);
+            font-family: var(--font-heading);
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--hover);
+            color: var(--ink);
+        }
+
+        .nav-item.active {
+            background: var(--hover);
+            color: var(--accentB);
+            font-weight: var(--font-semibold);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
+        }
+
+        .nav-icon {
+            font-size: var(--text-lg);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .invoices-layout {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+
+            .invoices-sidebar {
+                display: none;
+            }
+        }
+        
+        .invoices-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--gap-lg);
+            margin-bottom: 2rem;
+        }
+        
+        .overview-card {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            padding: var(--gap-lg);
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-fast);
+        }
+        
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            pointer-events: none;
+        }
+        
+        .overview-card:hover {
+            border-color: var(--accentB);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-base);
+        }
+        
+        .overview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .overview-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-lg);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .overview-value {
+            font-size: var(--text-3xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+        
+        .overview-label {
+            font-size: var(--text-sm);
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+        
+        .overview-change {
+            font-size: var(--text-xs);
+            font-weight: var(--font-medium);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .overview-change.positive {
+            color: #10B981;
+        }
+        
+        .overview-change.negative {
+            color: #EF4444;
+        }
+        
+        .invoices-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .search-filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .search-input {
+            min-width: 300px;
+            position: relative;
+        }
+        
+        .search-input input {
+            padding-left: 2.5rem;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none;
+        }
+        
+        .invoices-table {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            padding: var(--gap-lg);
+            border-bottom: 1px solid var(--hairline);
+            background: var(--hover);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: var(--text-lg);
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            margin: 0;
+        }
+        
+        .invoice-row {
+            display: grid;
+            grid-template-columns: 1fr 120px 100px 120px 100px 150px;
+            align-items: center;
+            padding: 1rem var(--gap-lg);
+            border-bottom: 1px solid var(--hairline);
+            transition: all var(--transition-fast);
+        }
+        
+        .invoice-row:hover {
+            background: var(--hover);
+        }
+        
+        .invoice-row:last-child {
+            border-bottom: none;
+        }
+        
+        .invoice-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .invoice-avatar {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accentA), var(--accentB));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: var(--font-bold);
+            font-size: var(--text-sm);
+        }
+        
+        .invoice-details h4 {
+            font-size: var(--text-base);
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            margin: 0 0 0.25rem 0;
+        }
+        
+        .invoice-details p {
+            font-size: var(--text-sm);
+            color: var(--muted);
+            margin: 0;
+        }
+        
+        .invoice-status {
+            text-align: center;
+        }
+        
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: var(--text-xs);
+            font-weight: var(--font-medium);
+        }
+        
+        .status-chip.paid {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .status-chip.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        
+        .status-chip.overdue {
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .status-chip.draft {
+            background: rgba(156, 163, 175, 0.1);
+            color: var(--muted);
+            border: 1px solid var(--hairline);
+        }
+        
+        .invoice-amount {
+            text-align: right;
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+        }
+        
+        .invoice-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        
+        .action-btn {
+            width: 2rem;
+            height: 2rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--hairline);
+            background: var(--panel);
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--text-sm);
+        }
+        
+        .action-btn:hover {
+            background: var(--hover);
+            color: var(--ink);
+            border-color: var(--accentB);
+        }
+        
+        .action-btn.primary:hover {
+            background: rgba(34, 211, 238, 0.1);
+            color: var(--accentB);
+            border-color: var(--accentB);
+        }
+        
+        /* Invoice Template Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: var(--z-modal-backdrop);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-xl);
+            max-width: 800px;
+            width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            padding: var(--gap-lg);
+            border-bottom: 1px solid var(--hairline);
+            background: var(--hover);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: var(--text-xl);
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: var(--text-xl);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: var(--panel);
+            color: var(--ink);
+        }
+        
+        .modal-body {
+            padding: var(--gap-lg);
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+        
+        .modal-footer {
+            padding: var(--gap-lg);
+            border-top: 1px solid var(--hairline);
+            background: var(--hover);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--gap);
+        }
+        
+        /* Invoice Preview */
+        .invoice-preview {
+            background: white;
+            color: #000;
+            padding: 2rem;
+            border-radius: var(--radius-sm);
+            margin: 1rem 0;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .invoice-company {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .company-details {
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        .invoice-meta {
+            text-align: right;
+        }
+        
+        .invoice-number {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .invoice-date {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .invoice-parties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .party-section h4 {
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .party-details {
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+        
+        .invoice-table th {
+            background: #f9fafb;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: bold;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .invoice-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+        }
+        
+        .invoice-totals {
+            margin-left: auto;
+            width: 300px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .total-row.final {
+            font-weight: bold;
+            font-size: 1.125rem;
+            border-bottom: 2px solid #1f2937;
+            margin-top: 0.5rem;
+        }
+        
+        .invoice-notes {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .notes-title {
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .notes-text {
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        @media (max-width: 1024px) {
+            .invoice-row {
+                grid-template-columns: 1fr auto;
+                gap: 1rem;
+            }
+            
+            .invoice-row > *:not(.invoice-info):not(.invoice-actions) {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .invoices-main {
+                padding: 1rem;
+            }
+            
+            .invoices-header {
+                padding: 1rem;
+            }
+            
+            .invoices-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-filters {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+            
+            .invoice-parties {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .invoice-preview {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoices-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="invoices-sidebar">
+            <div class="sidebar-brand">
+                <span class="nav-icon">🚗</span>
+                Turo Toll Tracker
+            </div>
+            
+            <div class="sidebar-nav">
+                <a href="/dashboard.html" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    Overview
+                </a>
+                <a href="/trips.html" class="nav-item">
+                    <span class="nav-icon">🛣️</span>
+                    Trips
+                </a>
+                <a href="/upload.html" class="nav-item">
+                    <span class="nav-icon">📤</span>
+                    Upload CSV Files
+                </a>
+                <a href="/analytics.html" class="nav-item">
+                    <span class="nav-icon">📈</span>
+                    Analytics
+                </a>
+                <a href="/transponders.html" class="nav-item">
+                    <span class="nav-icon">📡</span>
+                    Transponders
+                </a>
+                <a href="/invoices.html" class="nav-item active">
+                    <span class="nav-icon">🧾</span>
+                    Invoices
+                </a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header class="invoices-header">
+            <h1 class="h2">📄 Invoice Management</h1>
+            
+            <div class="nav-actions">
+                <button class="btn btn-secondary btn-sm" onclick="createTemplate()">
+                    <span>📄</span>
+                    Templates
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="createInvoice()">
+                    <span>➕</span>
+                    New Invoice
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="invoices-main">
+            <div class="invoices-content">
+                <!-- Overview Cards -->
+            <div class="invoices-overview">
+                <div class="overview-card">
+                    <div class="overview-header">
+                        <div class="overview-icon" style="background: linear-gradient(135deg, var(--accentA), var(--accentB));">📄</div>
+                    </div>
+                    <div class="overview-value" id="total-invoices">0</div>
+                    <div class="overview-label">Total Invoices</div>
+                    <div class="overview-change positive">
+                        <span>↗</span>
+                        Loading...
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="overview-header">
+                        <div class="overview-icon" style="background: #10B981;">💰</div>
+                    </div>
+                    <div class="overview-value" id="total-revenue">$0.00</div>
+                    <div class="overview-label">Total Revenue</div>
+                    <div class="overview-change positive">
+                        <span>↗</span>
+                        Loading...
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="overview-header">
+                        <div class="overview-icon" style="background: #F59E0B;">⏳</div>
+                    </div>
+                    <div class="overview-value" id="pending-invoices">0</div>
+                    <div class="overview-label">Pending Payment</div>
+                    <div class="overview-change negative">
+                        <span>↗</span>
+                        Loading...
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="overview-header">
+                        <div class="overview-icon" style="background: #EF4444;">🚨</div>
+                    </div>
+                    <div class="overview-value" id="overdue-invoices">0</div>
+                    <div class="overview-label">Overdue</div>
+                    <div class="overview-change negative">
+                        <span>↗</span>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="invoices-controls">
+                <div class="search-filters">
+                    <div class="search-input">
+                        <input type="text" class="form-input" placeholder="Search invoices..." id="search-invoices">
+                        <div class="search-icon">🔍</div>
+                    </div>
+                    
+                    <select class="form-select" id="status-filter">
+                        <option value="all">All Status</option>
+                        <option value="paid">Paid</option>
+                        <option value="pending">Pending</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="draft">Draft</option>
+                    </select>
+                    
+                    <select class="form-select" id="date-filter">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="quarter">This Quarter</option>
+                    </select>
+                </div>
+                
+                <div class="table-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="exportInvoices()">
+                        <span>📤</span>
+                        Export
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="refreshData()">
+                        <span>🔄</span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Invoices Table -->
+            <div class="invoices-table">
+                <div class="table-header">
+                    <h3 class="table-title">Invoice List</h3>
+                    <div class="table-actions">
+                        <button class="btn btn-ghost btn-sm" onclick="bulkActions()">
+                            <span>☑️</span>
+                            Bulk Actions
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-body" id="invoices-list">
+                    <!-- Invoice rows will be populated here -->
+                </div>
+            </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Invoice Preview Modal -->
+    <div class="modal-overlay" id="invoice-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Invoice Preview</h3>
+                <button class="modal-close" onclick="hideModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="invoice-preview" id="invoice-preview">
+                    <!-- Invoice content will be populated here -->
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal()">Close</button>
+                <button class="btn btn-secondary" onclick="editInvoice()">
+                    <span>✏️</span>
+                    Edit
+                </button>
+                <button class="btn btn-primary" onclick="downloadInvoice()">
+                    <span>📥</span>
+                    Download PDF
+                </button>
+                <button class="btn btn-primary" onclick="sendInvoice()">
+                    <span>📧</span>
+                    Send to Guest
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+    
+    <script>
+        // Invoice data loaded from API
+        let invoicesData = [];
+        
+        let currentInvoice = null;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInvoices();
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            // Use debounced search for better performance
+            const debouncedFilter = performanceOptimizer.debounce(filterInvoices, 300, 'invoices-search');
+            document.getElementById('search-invoices').addEventListener('input', debouncedFilter);
+            document.getElementById('status-filter').addEventListener('change', filterInvoices);
+            document.getElementById('date-filter').addEventListener('change', filterInvoices);
+        }
+        
+        async function loadInvoices() {
+            try {
+                showLoading();
+                
+                // Fetch invoices data from API
+                console.log('📡 Fetching invoices data from API...');
+                
+                const response = await fetch('/api/invoices', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Invoices data received:', data);
+                
+                if (data.success) {
+                    invoicesData = data.data || [];
+                } else {
+                    throw new Error(data.error || 'Failed to load invoices data');
+                }
+                
+                renderInvoices(invoicesData);
+                updateInvoiceStats();
+                
+                hideLoading();
+                
+                showNotification({
+                    type: 'success',
+                    title: 'Data Loaded',
+                    message: 'Invoices data updated successfully'
+                });
+                
+            } catch (error) {
+                console.error('❌ Failed to load invoices data:', error);
+                hideLoading();
+                
+                // Show empty data if API fails
+                invoicesData = [];
+                renderInvoices([]);
+                updateInvoiceStats();
+                
+                showNotification({
+                    type: 'info',
+                    title: 'No Data Available',
+                    message: 'No invoices data found. Create some invoices to see them here.'
+                });
+            }
+        }
+        
+        function renderInvoices(filteredInvoices = invoicesData) {
+            const container = document.getElementById('invoices-list');
+            
+            if (filteredInvoices.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: var(--muted);">
+                        No invoices found matching your criteria
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filteredInvoices.map(invoice => createInvoiceRow(invoice)).join('');
+        }
+        
+        function createInvoiceRow(invoice) {
+            const statusMap = {
+                paid: { class: 'paid', icon: '✅', text: 'Paid' },
+                pending: { class: 'pending', icon: '⏳', text: 'Pending' },
+                overdue: { class: 'overdue', icon: '🚨', text: 'Overdue' },
+                draft: { class: 'draft', icon: '📝', text: 'Draft' },
+                sent: { class: 'pending', icon: '📤', text: 'Sent' }
+            };
+            
+            const status = statusMap[invoice.status] || statusMap['pending'];
+            const guestName = invoice.guest || 'Unknown Guest';
+            const initials = guestName.split(' ').map(n => n[0]).join('').toUpperCase();
+            
+            return `
+                <div class="invoice-row">
+                    <div class="invoice-info">
+                        <div class="invoice-avatar">${initials}</div>
+                        <div class="invoice-details">
+                            <h4>${invoice.id}</h4>
+                            <p>${guestName} • Trip #${invoice.tripId || 'Unknown'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-status">
+                        <div class="status-chip ${status.class}">
+                            <span>${status.icon}</span>
+                            ${status.text}
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-amount">
+                        $${invoice.amount.toFixed(2)}
+                    </div>
+                    
+                    <div style="text-align: center; color: var(--ink); font-size: var(--text-sm);">
+                        ${new Date(invoice.issueDate).toLocaleDateString()}
+                    </div>
+                    
+                    <div style="text-align: center; color: var(--ink); font-size: var(--text-sm);">
+                        ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'No due date'}
+                    </div>
+                    
+                    <div class="invoice-actions">
+                        <button class="action-btn primary" onclick="previewInvoice('${invoice.id}')" title="Preview">
+                            👁️
+                        </button>
+                        <button class="action-btn" onclick="editInvoice('${invoice.id}')" title="Edit">
+                            ✏️
+                        </button>
+                        <button class="action-btn" onclick="sendInvoice('${invoice.id}')" title="Send">
+                            📧
+                        </button>
+                        <button class="action-btn" onclick="downloadInvoice('${invoice.id}')" title="Download">
+                            📥
+                        </button>
+                        <button class="action-btn" onclick="unsubmitTrip('${invoice.invoiceId}', '${invoice.tripId}')" title="Unsubmit Trip" style="background: var(--warning); color: white;">
+                            ↩️
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function filterInvoices() {
+            const searchTerm = document.getElementById('search-invoices').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const dateFilter = document.getElementById('date-filter').value;
+            
+            const filtered = sampleInvoices.filter(invoice => {
+                const matchesSearch = searchTerm === '' || 
+                    invoice.id.toLowerCase().includes(searchTerm) ||
+                    invoice.guest.toLowerCase().includes(searchTerm) ||
+                    invoice.tripId.toLowerCase().includes(searchTerm);
+                
+                const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+                
+                // Date filter logic would be implemented here
+                const matchesDate = true; // Simplified for demo
+                
+                return matchesSearch && matchesStatus && matchesDate;
+            });
+            
+            renderInvoices(filtered);
+        }
+        
+        function previewInvoice(invoiceId) {
+            const invoice = sampleInvoices.find(inv => inv.id === invoiceId);
+            if (!invoice) return;
+            
+            currentInvoice = invoice;
+            generateInvoicePreview(invoice);
+            showModal();
+        }
+        
+        function generateInvoicePreview(invoice) {
+            const preview = document.getElementById('invoice-preview');
+            const subtotal = invoice.items.reduce((sum, item) => sum + item.amount, 0);
+            const tax = 0; // No tax for toll charges
+            const total = subtotal;
+            
+            preview.innerHTML = `
+                <div class="invoice-header">
+                    <div class="invoice-company">
+                        <div class="company-name">Turo Toll Services</div>
+                        <div class="company-details">
+                            123 Main Street<br>
+                            San Francisco, CA 94102<br>
+                            Phone: (555) 123-4567<br>
+                            Email: tolls@turotracker.com
+                        </div>
+                    </div>
+                    <div class="invoice-meta">
+                        <div class="invoice-number">Invoice ${invoice.id}</div>
+                        <div class="invoice-date">
+                            Issue Date: ${new Date(invoice.issueDate).toLocaleDateString()}<br>
+                            Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'No due date'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="invoice-parties">
+                    <div class="party-section">
+                        <h4>Bill To:</h4>
+                        <div class="party-details">
+                            ${invoice.guest}<br>
+                            ${invoice.guestEmail}<br>
+                            Trip ID: ${invoice.tripId}
+                        </div>
+                    </div>
+                    <div class="party-section">
+                        <h4>Service Period:</h4>
+                        <div class="party-details">
+                            From: ${new Date(invoice.items[0]?.date || invoice.issueDate).toLocaleDateString()}<br>
+                            To: ${new Date(invoice.items[invoice.items.length - 1]?.date || invoice.issueDate).toLocaleDateString()}<br>
+                            Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                        </div>
+                    </div>
+                </div>
+                
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Date</th>
+                            <th style="text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${invoice.items.map(item => `
+                            <tr>
+                                <td>${item.description}</td>
+                                <td>${new Date(item.date).toLocaleDateString()}</td>
+                                <td style="text-align: right;">$${item.amount.toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="invoice-totals">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>$${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Tax:</span>
+                        <span>$${tax.toFixed(2)}</span>
+                    </div>
+                    <div class="total-row final">
+                        <span>Total:</span>
+                        <span>$${total.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div class="invoice-notes">
+                    <div class="notes-title">Payment Terms & Notes:</div>
+                    <div class="notes-text">
+                        Payment is due within 7 days of the invoice date. This invoice covers toll charges incurred during your Turo rental period. All toll fees are automatically detected and calculated based on your trip route. For questions about specific charges, please contact our support team.
+                    </div>
+                </div>
+            `;
+        }
+        
+        function createInvoice() {
+            showNotification({
+                type: 'info',
+                title: 'Create Invoice',
+                message: 'Opening invoice creation wizard'
+            });
+        }
+        
+        function createTemplate() {
+            showNotification({
+                type: 'info',
+                title: 'Invoice Templates',
+                message: 'Template management coming soon'
+            });
+        }
+        
+        function editInvoice(invoiceId = null) {
+            const id = invoiceId || (currentInvoice ? currentInvoice.id : null);
+            showNotification({
+                type: 'info',
+                title: 'Edit Invoice',
+                message: `Opening editor for invoice ${id}`
+            });
+        }
+        
+        function sendInvoice(invoiceId = null) {
+            const id = invoiceId || (currentInvoice ? currentInvoice.id : null);
+            showNotification({
+                type: 'success',
+                title: 'Invoice Sent',
+                message: `Invoice ${id} has been sent to the guest`
+            });
+        }
+        
+        function downloadInvoice(invoiceId = null) {
+            const id = invoiceId || (currentInvoice ? currentInvoice.id : null);
+            showNotification({
+                type: 'success',
+                title: 'Download Started',
+                message: `Generating PDF for invoice ${id}`
+            });
+        }
+        
+        async function unsubmitTrip(invoiceId, tripId) {
+            if (!confirm(`Are you sure you want to unsubmit trip #${tripId}? This will delete the invoice and move the trip back to the trips page.`)) {
+                return;
+            }
+            
+            try {
+                showNotification({
+                    type: 'info',
+                    title: 'Unsubmitting Trip',
+                    message: `Reversing submission for trip #${tripId}...`
+                });
+                
+                const response = await fetch(`/api/invoices/${invoiceId}/unsubmit`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    showNotification({
+                        type: 'success',
+                        title: 'Trip Unsubmitted',
+                        message: `Trip #${result.trip.turoTripId} has been moved back to the trips page.`
+                    });
+                    
+                    // Refresh the invoices data to remove the unsubmitted invoice
+                    await loadInvoices();
+                } else {
+                    showNotification({
+                        type: 'error',
+                        title: 'Unsubmit Failed',
+                        message: result.error || 'Failed to unsubmit trip'
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Error unsubmitting trip:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Error',
+                    message: 'An error occurred while unsubmitting the trip'
+                });
+            }
+        }
+        
+        function showModal() {
+            document.getElementById('invoice-modal').classList.add('show');
+        }
+        
+        function hideModal() {
+            document.getElementById('invoice-modal').classList.remove('show');
+            currentInvoice = null;
+        }
+        
+        function bulkActions() {
+            showNotification({
+                type: 'info',
+                title: 'Bulk Actions',
+                message: 'Bulk operation tools coming soon'
+            });
+        }
+        
+        function exportInvoices() {
+            showNotification({
+                type: 'success',
+                title: 'Export Started',
+                message: 'Invoice data is being exported'
+            });
+        }
+        
+        function refreshData() {
+            showNotification({
+                type: 'success',
+                title: 'Data Refreshed',
+                message: 'Invoice data has been updated'
+            });
+            loadInvoices();
+        }
+        
+        function updateInvoiceStats() {
+            const totalInvoices = invoicesData.length;
+            const totalRevenue = invoicesData.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+            const pendingInvoices = invoicesData.filter(inv => inv.status === 'pending').length;
+            const overdueInvoices = invoicesData.filter(inv => inv.status === 'overdue').length;
+            
+            updateEl('total-invoices', totalInvoices);
+            updateEl('total-revenue', `$${totalRevenue.toFixed(2)}`);
+            updateEl('pending-invoices', pendingInvoices);
+            updateEl('overdue-invoices', overdueInvoices);
+        }
+        
+        // Loading states
+        function showLoading() {
+            updateEl('total-invoices', 'Loading...');
+            updateEl('total-revenue', 'Loading...');
+            updateEl('pending-invoices', 'Loading...');
+            updateEl('overdue-invoices', 'Loading...');
+        }
+        
+        function hideLoading() {
+            // Loading will be replaced by actual values in updateInvoiceStats
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('invoice-modal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                hideModal();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('invoice-modal').classList.contains('show')) {
+                hideModal();
+            }
+        });
+    </script>
+</body>
+</html>

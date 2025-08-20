@@ -69,14 +69,27 @@ class EnhancedTollProcessor {
                     if (duplicateResult.isDuplicate) {
                         processingResult.duplicates++;
                         
-                        // Log duplicate detection
-                        this.validator.logIntegrityEvent('DUPLICATE_DETECTED', {
-                            transaction: validationResult.sanitizedTransaction,
-                            existingTransactions: duplicateResult.existingTransactions,
-                            accountId
-                        }, 'LOW');
+                        // Check if this is a submitted toll (late toll scenario)
+                        if (duplicateResult.isSubmitted) {
+                            console.log(`🚨 SUBMITTED TOLL RE-DETECTED: ${transaction.location} at ${transaction.date} - This may indicate a late toll situation!`);
+                            
+                            // Log as potential late toll rather than just duplicate
+                            this.validator.logIntegrityEvent('LATE_TOLL_DETECTED', {
+                                transaction: validationResult.sanitizedTransaction,
+                                existingTransactions: duplicateResult.existingTransactions,
+                                accountId,
+                                submissionStatus: duplicateResult.submissionStatus
+                            }, 'MEDIUM');
+                        } else {
+                            // Regular duplicate detection
+                            this.validator.logIntegrityEvent('DUPLICATE_DETECTED', {
+                                transaction: validationResult.sanitizedTransaction,
+                                existingTransactions: duplicateResult.existingTransactions,
+                                accountId
+                            }, 'LOW');
+                        }
                         
-                        console.log(`⚠️ Duplicate detected: ${transaction.location} at ${transaction.date}`);
+                        console.log(`⚠️ Duplicate detected: ${transaction.location} at ${transaction.date} - Status: ${duplicateResult.submissionStatus || 'unsubmitted'}`);
                         continue;
                     }
                     
@@ -220,12 +233,15 @@ class EnhancedTollProcessor {
     }
 
     /**
-     * Check for exact transaction ID duplicates
+     * Check for exact transaction ID duplicates with submission status
      */
     async checkExactTransactionId(transactionId) {
         return new Promise((resolve, reject) => {
             db.get(
-                'SELECT * FROM toll_charges WHERE transaction_id = ?',
+                `SELECT *, 
+                    CASE WHEN submitted_to_turo = 1 THEN 'submitted' ELSE 'unsubmitted' END as submission_status
+                 FROM toll_charges 
+                 WHERE transaction_id = ?`,
                 [transactionId],
                 (err, row) => {
                     if (err) {
@@ -233,11 +249,25 @@ class EnhancedTollProcessor {
                         return;
                     }
                     
-                    resolve({
-                        isDuplicate: !!row,
-                        duplicateCount: row ? 1 : 0,
-                        existingTransactions: row ? [row] : []
-                    });
+                    if (row) {
+                        const isSubmitted = row.submitted_to_turo === 1;
+                        console.log(`🔍 Found existing toll: ${transactionId} - Status: ${isSubmitted ? 'SUBMITTED' : 'UNSUBMITTED'}`);
+                        
+                        resolve({
+                            isDuplicate: true,
+                            duplicateCount: 1,
+                            existingTransactions: [row],
+                            isSubmitted: isSubmitted,
+                            submissionStatus: row.submission_status
+                        });
+                    } else {
+                        resolve({
+                            isDuplicate: false,
+                            duplicateCount: 0,
+                            existingTransactions: [],
+                            isSubmitted: false
+                        });
+                    }
                 }
             );
         });

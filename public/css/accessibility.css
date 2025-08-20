@@ -539,3 +539,301 @@ input[type="button"] {
     font-size: 12px;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
 }
+
+/* ===== ENHANCED ACCESSIBILITY FEATURES ===== */
+
+/* Print accessibility */
+@media print {
+    .btn,
+    .action-btn,
+    button {
+        display: none;
+    }
+    
+    .sr-only {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        clip: auto !important;
+        overflow: visible !important;
+    }
+    
+    a[href]::after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+        color: #666;
+    }
+}
+
+/* Loading state accessibility */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+}
+
+.loading-content {
+    background: var(--panel);
+    padding: 2rem;
+    border-radius: var(--radius);
+    border: 2px solid var(--hairline);
+    text-align: center;
+    color: var(--ink);
+}
+
+/* Enhanced notification accessibility */
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: var(--z-toast);
+    min-width: 300px;
+    max-width: 500px;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border: 2px solid;
+    box-shadow: var(--shadow-lg);
+}
+
+.notification.success {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.notification.error {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.notification.warning {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.notification.info {
+    background: #d1ecf1;
+    border-color: #17a2b8;
+    color: #0c5460;
+}
+
+/* Modal accessibility improvements */
+.modal-overlay[role="dialog"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content:focus {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+}
+
+/* Table accessibility enhancements */
+.table caption {
+    font-weight: var(--font-semibold);
+    color: var(--ink);
+    text-align: left;
+    padding: 0.75rem 0;
+    caption-side: top;
+}
+
+.table th[aria-sort] {
+    cursor: pointer;
+    position: relative;
+}
+
+.table th[aria-sort="ascending"]::after {
+    content: ' ↑';
+    color: var(--accentB);
+}
+
+.table th[aria-sort="descending"]::after {
+    content: ' ↓';
+    color: var(--accentB);
+}
+
+.table th[aria-sort="none"]::after {
+    content: ' ↕';
+    color: var(--muted);
+}
+
+/* Form field group accessibility */
+fieldset {
+    border: 2px solid var(--hairline);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin: 0 0 1rem 0;
+}
+
+legend {
+    font-weight: var(--font-semibold);
+    color: var(--ink);
+    padding: 0 0.5rem;
+}
+
+/* Enhanced focus for card components */
+.card:focus-within {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+.kpi-card:focus,
+.overview-card:focus {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+/* Navigation accessibility */
+.nav-link[aria-current="page"] {
+    background: var(--accentB);
+    color: white;
+    font-weight: var(--font-semibold);
+}
+
+/* Tab navigation accessibility */
+.tab-button[aria-selected="true"] {
+    background: var(--accentB);
+    color: white;
+    position: relative;
+}
+
+.tab-button[aria-selected="true"]::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--accentA);
+}
+
+/* Progress bar accessibility */
+.progress[role="progressbar"] {
+    background: var(--hover);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    height: 8px;
+    border: 1px solid var(--hairline);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accentA), var(--accentB));
+    transition: width var(--transition-base);
+}
+
+/* Error boundary styling */
+.error-boundary {
+    padding: 2rem;
+    text-align: center;
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius);
+    color: var(--ink);
+    margin: 1rem 0;
+}
+
+.error-boundary h2 {
+    color: #EF4444;
+    margin-bottom: 1rem;
+}
+
+.error-boundary p {
+    margin-bottom: 1.5rem;
+    color: var(--muted);
+}
+
+/* Status indicator accessibility */
+.status-indicator {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.status-indicator::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.status-indicator.online::before {
+    background: #10B981;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.offline::before {
+    background: #EF4444;
+}
+
+.status-indicator.warning::before {
+    background: #F59E0B;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Utility classes for better accessibility */
+.text-high-contrast {
+    color: var(--ink);
+    background: var(--bg);
+}
+
+.border-high-contrast {
+    border: 2px solid var(--hairline);
+}
+
+.focus-ring {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+/* Dark mode specific accessibility improvements */
+@media (prefers-color-scheme: dark) {
+    .notification.success {
+        background: rgba(16, 185, 129, 0.2);
+        border-color: #10B981;
+        color: #10B981;
+    }
+    
+    .notification.error {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: #EF4444;
+        color: #EF4444;
+    }
+    
+    .notification.warning {
+        background: rgba(245, 158, 11, 0.2);
+        border-color: #F59E0B;
+        color: #F59E0B;
+    }
+    
+    .notification.info {
+        background: rgba(34, 211, 238, 0.2);
+        border-color: var(--accentB);
+        color: var(--accentB);
+    }
+}

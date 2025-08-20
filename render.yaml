@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: turo-toll-tracker
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ENCRYPTION_MASTER_KEY
+        generateValue: true
+      - key: LOG_LEVEL
+        value: info
+    healthCheckPath: /api/health
+    disk:
+      name: turo-toll-data
+      mountPath: /app/data
+      sizeGB: 1

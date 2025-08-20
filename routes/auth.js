@@ -207,7 +207,15 @@ router.post('/logout', validateCSRF, (req, res) => {
 
 // Check authentication status
 router.get('/status', (req, res) => {
-    if (req.session.hostId) {
+    console.log('🔍 Auth status check:', {
+        hasSession: !!req.session,
+        hostId: req.session?.hostId,
+        sessionKeys: req.session ? Object.keys(req.session) : 'no session',
+        cookies: req.headers.cookie?.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+    });
+    
+    if (req.session && req.session.hostId) {
         res.json({ 
             success: true,
             authenticated: true,
@@ -223,6 +231,25 @@ router.get('/status', (req, res) => {
             authenticated: false 
         });
     }
+});
+
+// Simple check endpoint for debugging
+router.get('/check', (req, res) => {
+    const sessionInfo = {
+        hasSession: !!req.session,
+        hostId: req.session?.hostId,
+        sessionId: req.session?.id,
+        keys: req.session ? Object.keys(req.session) : [],
+        authenticated: !!(req.session && req.session.hostId)
+    };
+    
+    console.log('🔧 Session check:', sessionInfo);
+    
+    res.json({
+        success: true,
+        session: sessionInfo,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Get CSRF token for frontend forms

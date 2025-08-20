@@ -85,7 +85,7 @@ class EnhancedTollMatcher {
             });
             
             const processAllTolls = options.processAllTolls || false;
-            const { unmatchedTolls, trips, transponderMappings } = await this.loadMatchingData(hostId, processAllTolls);
+            const { unmatchedTolls, trips, transponderMappings } = await this.loadMatchingData(hostId, processAllTolls, options.dateFilter);
             
             // Load learned patterns
             if (this.config.enablePatternLearning) {
@@ -627,21 +627,29 @@ class EnhancedTollMatcher {
     
     /**
      * Resolve transponder ID to plate number using mappings
+     * ONLY uses user-defined mappings (not auto-discovered)
      */
     async resolveTransponderToPlate(transponderId, hostId) {
         return new Promise((resolve) => {
             db.get(
                 `SELECT vehicle_plate, vehicle_description 
                  FROM transponder_mappings 
-                 WHERE host_id = ? AND transponder_number = ? AND is_active = 1`,
+                 WHERE host_id = ? AND transponder_number = ? AND is_active = 1
+                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
                 [hostId, transponderId],
                 (err, mapping) => {
                     if (!err && mapping) {
-                        console.log(`🔗 Transponder resolved: ${transponderId} → ${mapping.vehicle_plate} (${mapping.vehicle_description})`);
-                        resolve({
-                            plate: mapping.vehicle_plate,
-                            description: mapping.vehicle_description
-                        });
+                        // Additional safety check: skip any auto-discovered mappings
+                        if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
+                            console.log(`🔗 Transponder resolved: ${transponderId} → ${mapping.vehicle_plate} (${mapping.vehicle_description})`);
+                            resolve({
+                                plate: mapping.vehicle_plate,
+                                description: mapping.vehicle_description
+                            });
+                        } else {
+                            console.log(`🚫 Skipping auto-discovered transponder: ${transponderId}`);
+                            resolve(null);
+                        }
                     } else {
                         resolve(null);
                     }
@@ -652,22 +660,28 @@ class EnhancedTollMatcher {
 
     /**
      * Get all transponder IDs for a given plate number
+     * ONLY returns user-defined mappings (not auto-discovered)
      */
     async getTranspondersForPlate(plateNumber, hostId) {
         return new Promise((resolve) => {
             const normalizedPlate = this.normalizePlate(plateNumber);
             db.all(
-                `SELECT transponder_number 
+                `SELECT transponder_number, vehicle_description 
                  FROM transponder_mappings 
-                 WHERE host_id = ? AND vehicle_plate = ? AND is_active = 1`,
+                 WHERE host_id = ? AND vehicle_plate = ? AND is_active = 1
+                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
                 [hostId, normalizedPlate],
                 (err, mappings) => {
                     if (!err && mappings) {
-                        const transponders = mappings.map(m => m.transponder_number);
-                        if (transponders.length > 0) {
-                            console.log(`🔗 Found transponders for ${plateNumber}: ${transponders.join(', ')}`);
+                        // Filter out any auto-discovered mappings as additional safety
+                        const userDefinedTransponders = mappings
+                            .filter(m => !m.vehicle_description || !m.vehicle_description.startsWith('Auto-discovered'))
+                            .map(m => m.transponder_number);
+                            
+                        if (userDefinedTransponders.length > 0) {
+                            console.log(`🔗 Found user-defined transponders for ${plateNumber}: ${userDefinedTransponders.join(', ')}`);
                         }
-                        resolve(transponders);
+                        resolve(userDefinedTransponders);
                     } else {
                         resolve([]);
                     }
@@ -679,7 +693,7 @@ class EnhancedTollMatcher {
     /**
      * Load matching data from database
      */
-    async loadMatchingData(hostId, processAllTolls = false) {
+    async loadMatchingData(hostId, processAllTolls = false, dateFilter = null) {
         return new Promise((resolve, reject) => {
             const data = {
                 unmatchedTolls: [],
@@ -687,18 +701,37 @@ class EnhancedTollMatcher {
                 transponderMappings: []
             };
             
+            // Build date condition for tolls
+            let dateCondition = "";
+            let params = [hostId];
+            
+            if (dateFilter) {
+                if (dateFilter.filterType === 'custom' && dateFilter.fromDate && dateFilter.toDate) {
+                    // Custom date range
+                    dateCondition = " AND date(tc.toll_date/1000, 'unixepoch') BETWEEN ? AND ?";
+                    params.push(dateFilter.fromDate, dateFilter.toDate);
+                    console.log(`📅 Enhanced Matcher: Using custom date range ${dateFilter.fromDate} to ${dateFilter.toDate}`);
+                } else if (dateFilter.filterType === 'days' && dateFilter.days) {
+                    // Days back from now
+                    dateCondition = ` AND tc.toll_date > datetime('now', '-${dateFilter.days} days')`;
+                    console.log(`📅 Enhanced Matcher: Looking back ${dateFilter.days} days`);
+                }
+            } else {
+                console.log('📅 Enhanced Matcher: No date filter applied - processing all data');
+            }
+            
             // Get all tolls or just unmatched tolls based on parameter
             const tollQuery = processAllTolls ? 
                 `SELECT tc.*, ta.host_id
                  FROM toll_charges tc
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ?` :
+                 WHERE ta.host_id = ?${dateCondition}` :
                 `SELECT tc.*, ta.host_id
                  FROM toll_charges tc
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ? AND tc.is_matched = 0`;
+                 WHERE ta.host_id = ? AND tc.is_matched = 0${dateCondition}`;
             
-            db.all(tollQuery, [hostId], (err, tolls) => {
+            db.all(tollQuery, params, (err, tolls) => {
                     if (err) return reject(err);
                     data.unmatchedTolls = tolls;
                     
@@ -713,13 +746,19 @@ class EnhancedTollMatcher {
                             if (err) return reject(err);
                             data.trips = trips;
                             
-                            // Get transponder mappings
+                            // Get transponder mappings (user-defined only)
                             db.all(
-                                `SELECT * FROM transponder_mappings WHERE host_id = ?`,
+                                `SELECT * FROM transponder_mappings 
+                                 WHERE host_id = ? AND is_active = 1
+                                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
                                 [hostId],
                                 (err, mappings) => {
                                     if (err) return reject(err);
-                                    data.transponderMappings = mappings;
+                                    // Additional safety filter
+                                    data.transponderMappings = mappings.filter(m => 
+                                        !m.vehicle_description || !m.vehicle_description.startsWith('Auto-discovered')
+                                    );
+                                    console.log(`🔗 Loaded ${data.transponderMappings.length} user-defined transponder mappings for enhanced matching`);
                                     resolve(data);
                                 }
                             );

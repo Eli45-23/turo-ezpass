@@ -129,16 +129,16 @@ async function executeOptimizedSummaryQuery(hostId) {
                 (SELECT COUNT(*) FROM toll_accounts WHERE host_id = ? AND is_active = 1) as active_toll_accounts,
                 (SELECT COUNT(*) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 0) as pending_charges_count,
+                 WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as pending_charges_count,
                 (SELECT COALESCE(SUM(tc.toll_amount), 0) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 0) as pending_charges_total,
+                 WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as pending_charges_total,
                 (SELECT COUNT(*) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 1) as matched_charges_count,
+                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as matched_charges_count,
                 (SELECT COALESCE(SUM(tc.toll_amount), 0) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 1) as matched_charges_total,
+                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as matched_charges_total,
                 (SELECT COALESCE(SUM(i.total_amount), 0) FROM invoices i 
                  JOIN trips t ON i.trip_id = t.id 
                  WHERE t.host_id = ? AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))) as total_revenue,
@@ -151,19 +151,19 @@ async function executeOptimizedSummaryQuery(hostId) {
                 -- Additional toll statistics
                 (SELECT COUNT(*) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ?) as total_toll_charges,
+                 WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as total_toll_charges,
                 (SELECT COALESCE(SUM(tc.toll_amount), 0) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ?) as total_toll_amount,
+                 WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as total_toll_amount,
                 (SELECT COUNT(*) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 1) as matched_charges_count,
+                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as matched_charges_count,
                 (SELECT COUNT(DISTINCT tc.toll_location) FROM toll_charges tc 
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ?) as unique_toll_locations,
+                 WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as unique_toll_locations,
                 (SELECT COUNT(DISTINCT t.vehicle_plate) FROM trips t 
                  WHERE t.host_id = ? AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected')) AND EXISTS (
-                     SELECT 1 FROM toll_charges tc WHERE tc.trip_id = t.id
+                     SELECT 1 FROM toll_charges tc WHERE tc.trip_id = t.id AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
                  )) as vehicles_with_tolls
         `;
         
@@ -184,7 +184,7 @@ async function executeOptimizedSummaryQuery(hostId) {
                 AND (tr_turo.trip_status IS NULL OR tr_turo.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
             LEFT JOIN trips tr_id ON tc.trip_id = tr_id.id 
                 AND (tr_id.trip_status IS NULL OR tr_id.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-            WHERE ta.host_id = ?
+            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
             ORDER BY tc.toll_date DESC, tc.created_at DESC
             LIMIT 20
         `;
@@ -208,8 +208,10 @@ async function executeOptimizedSummaryQuery(hostId) {
                 // Calculate additional real-time metrics
                 const totalTollCharges = summaryResult.total_toll_charges || 0;
                 const matchedCharges = summaryResult.matched_charges_count || 0;
-                const matchRate = totalTollCharges > 0 ? 
-                    (matchedCharges / totalTollCharges * 100) : 0;
+                const pendingCharges = summaryResult.pending_charges_count || 0;
+                const tripTolls = totalTollCharges - pendingCharges;
+                const matchRate = tripTolls > 0 ? 
+                    (matchedCharges / tripTolls * 100) : 0;
                 
                 const collectionRate = summaryResult.total_revenue > 0 ?
                     (summaryResult.collected_revenue / summaryResult.total_revenue * 100) : 0;
@@ -218,6 +220,16 @@ async function executeOptimizedSummaryQuery(hostId) {
                     (summaryResult.total_toll_amount / summaryResult.total_trips) : 0;
                 
                 const summary = {
+                    // Main metrics for frontend (matching expected field names)
+                    totalTolls: totalTollCharges,
+                    matchedTolls: summaryResult.matched_charges_count || 0,
+                    personalTolls: summaryResult.pending_charges_count || 0,
+                    personalAmount: (summaryResult.pending_charges_total || 0).toFixed(2),
+                    matchedAmount: (summaryResult.matched_charges_total || 0).toFixed(2),
+                    monthlyRevenue: (summaryResult.total_revenue || 0).toFixed(2),
+                    matchingAccuracy: matchRate.toFixed(1),
+                    
+                    // Detailed metrics (keeping existing names for backward compatibility)
                     totalTrips: summaryResult.total_trips || 0,
                     activeTollAccounts: summaryResult.active_toll_accounts || 0,
                     pendingCharges: summaryResult.pending_charges_count || 0,
@@ -228,11 +240,13 @@ async function executeOptimizedSummaryQuery(hostId) {
                     collectedRevenue: summaryResult.collected_revenue || 0,
                     outstandingRevenue: summaryResult.outstanding_revenue || 0,
                     recentActivity: recentActivity,
+                    
                     // Additional real-time toll metrics
                     totalTollCharges: totalTollCharges,
                     totalTollAmount: summaryResult.total_toll_amount || 0,
                     uniqueTollLocations: summaryResult.unique_toll_locations || 0,
                     vehiclesWithTolls: summaryResult.vehicles_with_tolls || 0,
+                    
                     // Calculated percentages and averages
                     matchRate: matchRate.toFixed(1),
                     collectionRate: collectionRate.toFixed(1),
@@ -390,7 +404,7 @@ router.get('/trips/active', requireAuth, (req, res) => {
 // Get upcoming trips (future trips that haven't started yet)
 router.get('/trips/upcoming', requireAuth, (req, res) => {
     const hostId = req.session.hostId;
-    const now = new Date().toISOString();
+    const now = Date.now();
     
     db.all(
         `SELECT 
@@ -463,7 +477,11 @@ router.get('/trips/completed', requireAuth, (req, res) => {
                         tc.toll_date,
                         tc.toll_location,
                         tc.toll_amount,
-                        ta.provider
+                        tc.transaction_id,
+                        tc.plate_number,
+                        tc.transponder_id,
+                        ta.provider,
+                        ta.account_number
                      FROM toll_charges tc
                      JOIN toll_accounts ta ON tc.toll_account_id = ta.id
                      WHERE tc.trip_id = ?
@@ -548,7 +566,7 @@ router.get('/trips/:tripId/tolls', requireAuth, (req, res) => {
 // Get in-progress trips (trips currently happening)
 router.get('/trips/in-progress', requireAuth, (req, res) => {
     const hostId = req.session.hostId;
-    const now = new Date().toISOString();
+    const now = Date.now();
     
     db.all(
         `SELECT 
@@ -621,6 +639,7 @@ router.get('/tolls/personal', requireAuth, (req, res) => {
             // Format for the display function
             const formattedTolls = tolls.map(toll => ({
                 id: toll.id,
+                transaction_id: toll.transaction_id,
                 toll_date: toll.toll_date,
                 toll_time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
@@ -662,24 +681,24 @@ router.get('/tolls/matching-overview', requireAuth, (req, res) => {
         // Total tolls
         totalTolls: `SELECT COUNT(*) as count FROM toll_charges tc 
                      JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                     WHERE ta.host_id = ?`,
+                     WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)`,
         
         // Matched tolls (using is_matched flag for consistency)
         matchedTolls: `SELECT COUNT(*) as count FROM toll_charges tc 
                        JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                       WHERE ta.host_id = ? AND tc.is_matched = 1`,
+                       WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)`,
         
         // Personal driving tolls (not matched to rentals)
         personalDrivingTolls: `SELECT COUNT(*) as count FROM toll_charges tc 
                          JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                         WHERE ta.host_id = ? AND tc.is_matched = 0`,
+                         WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)`,
         
         // All matched tolls with details (removed LIMIT to show all)
         recentMatches: `SELECT tc.*, ta.provider, t.renter_name, t.turo_trip_id, t.vehicle_plate
                         FROM toll_charges tc 
                         JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
                         LEFT JOIN trips t ON tc.trip_id = t.id
-                        WHERE ta.host_id = ? AND tc.trip_id IS NOT NULL
+                        WHERE ta.host_id = ? AND tc.trip_id IS NOT NULL AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
                         ORDER BY tc.toll_date DESC`,
         
         // All personal driving tolls with details (removed LIMIT to show all)
@@ -687,7 +706,7 @@ router.get('/tolls/matching-overview', requireAuth, (req, res) => {
                           FROM toll_charges tc 
                           JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
                           LEFT JOIN transponder_mappings tm ON ((tc.plate_number = tm.vehicle_plate OR tc.transponder_id = tm.transponder_number) AND ta.host_id = tm.host_id)
-                          WHERE ta.host_id = ? AND (tc.trip_id IS NULL OR tc.is_matched = 0)
+                          WHERE ta.host_id = ? AND (tc.trip_id IS NULL OR tc.is_matched = 0) AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
                           ORDER BY tc.toll_date DESC`,
         
         // Matching accuracy by date range
@@ -698,7 +717,7 @@ router.get('/tolls/matching-overview', requireAuth, (req, res) => {
                            (COUNT(tc.trip_id) * 100.0 / COUNT(*)) as match_percentage
                          FROM toll_charges tc 
                          JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                         WHERE ta.host_id = ?
+                         WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
                          GROUP BY DATE(tc.toll_date/1000, 'unixepoch')
                          ORDER BY toll_date DESC 
                          LIMIT 30`
@@ -1430,92 +1449,18 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         
         console.log('❌ Previously deleted vehicles:', Array.from(deletedVehicles));
         
-        // Auto-discovery: Find unknown vehicles in CSV and add them (but NEVER recreate deleted ones)
+        // AUTO-DISCOVERY DISABLED: Per user request, only match against user-defined transponders
+        // The system will no longer automatically create transponder mappings for unknown vehicles
+        console.log('🚫 Auto-discovery disabled - only using user-defined transponder mappings');
+        console.log('🔍 Known vehicles from user mappings:', Array.from(knownVehicles));
+        
+        /*
+        // COMMENTED OUT: Auto-discovery code removed per user request
+        // This prevented user control over which vehicles to track
         const discoveredVehicles = new Set();
-        let nextTransponderId = 8600713750; // Start from next available
-        
-        console.log('🔍 Auto-discovery check: Known vehicles:', Array.from(knownVehicles));
-        console.log('🔍 Auto-discovery check: Deleted vehicles:', Array.from(deletedVehicles));
-        
-        for (const toll of ezpassTolls) {
-            if (toll.plateNumber) {
-                const cleanPlate = normalizeVehiclePlate(toll.plateNumber);
-                
-                // STRICT CHECK: Never auto-discover plates that have been explicitly deleted
-                if (deletedVehicles.has(cleanPlate)) {
-                    console.log('🚫 BLOCKED: Auto-discovery blocked for deleted vehicle:', cleanPlate);
-                    continue;
-                }
-                
-                if (!knownVehicles.has(cleanPlate) && !discoveredVehicles.has(cleanPlate)) {
-                    // Double-check: Make sure this plate doesn't already exist in database (active OR inactive)
-                    const existingMapping = await new Promise((resolve, reject) => {
-                        db.get(`
-                            SELECT id, is_active FROM transponder_mappings 
-                            WHERE host_id = ? AND vehicle_plate = ?
-                        `, [hostId, cleanPlate], (err, row) => {
-                            if (err) reject(err);
-                            else resolve(row);
-                        });
-                    });
-                    
-                    if (existingMapping) {
-                        if (existingMapping.is_active === 0) {
-                            console.log('🚫 BLOCKED: Vehicle was previously deleted, will NOT auto-discover:', cleanPlate);
-                        } else {
-                            console.log('ℹ️ Vehicle already exists as active:', cleanPlate);
-                        }
-                        continue;
-                    }
-                    
-                    discoveredVehicles.add(cleanPlate);
-                    console.log('🔍 Auto-discovering new vehicle (never seen before):', cleanPlate);
-                    
-                    // Add transponder mapping for new vehicle
-                    await new Promise((resolve, reject) => {
-                        db.run(`
-                            INSERT INTO transponder_mappings 
-                            (host_id, transponder_number, vehicle_plate, vehicle_description, is_active) 
-                            VALUES (?, ?, ?, ?, 1)
-                        `, [hostId, nextTransponderId.toString(), cleanPlate, `Auto-discovered - ${cleanPlate}`],
-                        function(err) {
-                            if (err) {
-                                console.warn(`⚠️ Could not create transponder mapping for ${cleanPlate}:`, err.message);
-                                resolve(); // Continue with next vehicle
-                            } else {
-                                console.log('✅ Created transponder mapping for:', cleanPlate);
-                                knownVehicles.add(cleanPlate); // Add to known vehicles for this session
-                                resolve();
-                            }
-                        });
-                    });
-                    
-                    // Add placeholder trip for new vehicle
-                    await new Promise((resolve, reject) => {
-                        db.run(`
-                            INSERT INTO trips 
-                            (host_id, turo_trip_id, renter_name, renter_email, vehicle_plate, start_date, end_date, trip_status)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        `, [hostId, `AUTO_DISCOVERED_${cleanPlate}_${Date.now()}`, 'Auto-Discovered', 'auto@discovered.system', `#${cleanPlate}`, '2024-01-01 00:00:00', '2024-12-31 23:59:59', 'personal'],
-                        function(err) {
-                            if (err) {
-                                console.warn(`⚠️ Could not create trip for ${cleanPlate}:`, err.message);
-                                resolve(); // Continue with next vehicle
-                            } else {
-                                console.log('✅ Created placeholder trip for:', cleanPlate);
-                                resolve();
-                            }
-                        });
-                    });
-                    
-                    nextTransponderId++; // Increment for next vehicle
-                }
-            }
-        }
-        
-        if (discoveredVehicles.size > 0) {
-            console.log(`🆕 Auto-discovered ${discoveredVehicles.size} new vehicles:`, Array.from(discoveredVehicles));
-        }
+        let nextTransponderId = 8600713750;
+        ... [auto-discovery logic removed] ...
+        */
         
         // 1. Insert trips from CSV into trips table (exclude cancelled trips)
         const activeTrips = turoTrips.filter(trip => {
@@ -1531,21 +1476,82 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         
         console.log(`💾 Storing ${activeTrips.length}/${turoTrips.length} active trips to database`);
         
-        for (const trip of activeTrips) {
-            await new Promise((resolve, reject) => {
-                db.run(`INSERT OR REPLACE INTO trips 
-                    (host_id, turo_trip_id, renter_name, renter_email, vehicle_plate, start_date, end_date, trip_status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [hostId, trip.turoTripId, trip.guest, trip.guest, normalizeVehiclePlate(trip.vehiclePlate), trip.startDate, trip.endDate, trip.status],
-                    function(err) {
-                        if (err) reject(err);
-                        else {
-                            dbUpdates.trips_updated++;
-                            resolve();
-                        }
-                    }
-                );
+        for (let i = 0; i < activeTrips.length; i++) {
+            const trip = activeTrips[i];
+            console.log(`🔍 DEBUG: Inserting trip ${i + 1}/${activeTrips.length}:`, {
+                hostId: hostId,
+                turoTripId: trip.turoTripId,
+                guest: trip.guest,
+                vehiclePlate: normalizeVehiclePlate(trip.vehiclePlate),
+                startDate: trip.startDate,
+                endDate: trip.endDate,
+                status: trip.status
             });
+            
+            // Verify hostId exists before insertion
+            const hostExists = await new Promise((resolve, reject) => {
+                db.get('SELECT id FROM hosts WHERE id = ?', [hostId], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(!!row);
+                });
+            });
+            
+            if (!hostExists) {
+                throw new Error(`Host ID ${hostId} does not exist in hosts table`);
+            }
+            
+            // Check if trip already exists and has invoices (preserve for toll memory system)
+            const existingTripWithInvoice = await new Promise((resolve, reject) => {
+                db.get(`
+                    SELECT t.id, COUNT(i.id) as invoice_count 
+                    FROM trips t 
+                    LEFT JOIN invoices i ON i.trip_id = t.id 
+                    WHERE t.turo_trip_id = ? 
+                    GROUP BY t.id
+                `, [trip.turoTripId], (err, row) => {
+                    if (err) reject(err);
+                    else {
+                        console.log(`🔍 DEBUG: Query result for trip ${trip.turoTripId}:`, row);
+                        resolve(row);
+                    }
+                });
+            });
+            
+            console.log(`🔍 DEBUG: Checking trip ${trip.turoTripId} for existing invoices:`, existingTripWithInvoice);
+            
+            if (existingTripWithInvoice && existingTripWithInvoice.invoice_count > 0) {
+                console.log(`⚠️ Skipping trip ${trip.turoTripId} - already exists with ${existingTripWithInvoice.invoice_count} invoice(s) (preserved for toll memory)`);
+                // Don't increment trips_updated since we're not modifying anything
+            } else {
+                console.log(`✅ Proceeding to insert trip ${trip.turoTripId} - no existing invoices`);
+                await new Promise((resolve, reject) => {
+                    db.run(`INSERT OR REPLACE INTO trips 
+                        (host_id, turo_trip_id, renter_name, renter_email, vehicle_plate, start_date, end_date, trip_status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [hostId, trip.turoTripId, trip.guest, trip.guest, normalizeVehiclePlate(trip.vehiclePlate), trip.startDate, trip.endDate, trip.status],
+                        function(err) {
+                            if (err) {
+                                console.error(`❌ Failed to insert trip ${i + 1}:`, {
+                                    error: err.message,
+                                    code: err.code,
+                                    errno: err.errno,
+                                    tripData: {
+                                        hostId: hostId,
+                                        turoTripId: trip.turoTripId,
+                                        guest: trip.guest,
+                                        vehiclePlate: normalizeVehiclePlate(trip.vehiclePlate)
+                                    }
+                                });
+                                reject(err);
+                            } else {
+                                console.log(`✅ Successfully inserted trip ${i + 1}: ${trip.turoTripId}`);
+                                dbUpdates.trips_updated++;
+                                resolve();
+                            }
+                        }
+                    );
+                });
+            }
         }
         
         // 2. Insert tolls from CSV into toll_charges table (ONLY for known vehicles)
@@ -1618,19 +1624,23 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         });
         
         for (const toll of ezpassTolls) {
-            // Check if this toll belongs to a known vehicle
-            let shouldInsert = false;
+            // FIXED: Store ALL tolls regardless of transponder mappings
+            // This allows users to upload toll data first, then add transponder mappings later
+            let shouldInsert = true; // Always insert tolls
             
+            // Log whether toll matches known vehicles (for informational purposes)
             if (toll.plateNumber) {
-                // Check if plate is in our fleet using enhanced matching
                 const cleanPlate = normalizeVehiclePlate(toll.plateNumber);
                 if (knownVehicles.has(cleanPlate)) {
-                    shouldInsert = true;
+                    console.log(`✅ Toll matches known vehicle: ${toll.plateNumber} at ${toll.location}`);
+                } else {
+                    console.log(`⚠️ Toll for unmapped vehicle: ${toll.plateNumber} at ${toll.location} (can be mapped later)`);
                 }
             } else if (toll.transponderId) {
-                // Check if transponder is in our fleet
                 if (knownTransponders.has(toll.transponderId)) {
-                    shouldInsert = true;
+                    console.log(`✅ Toll matches known transponder: ${toll.transponderId} at ${toll.location}`);
+                } else {
+                    console.log(`⚠️ Toll for unmapped transponder: ${toll.transponderId} at ${toll.location} (can be mapped later)`);
                 }
             }
             
@@ -1973,6 +1983,7 @@ router.post('/csv/process-both', requireAuth, upload.fields([
     }
 });
 
+
 // Process both Turo and E-ZPass CSV files with smart matching
 router.post('/csv/process-both-smart', requireAuth, upload.fields([
     { name: 'turo-csv', maxCount: 1 },
@@ -1984,6 +1995,13 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         console.log('🎯 Smart CSV Processing request received');
         console.log('Files:', req.files);
         console.log('Body params:', req.body);
+        console.log('🔍 DETAILED DEBUG: req.body contents:');
+        console.log('  - dateRangeType:', typeof req.body.dateRangeType, '=', req.body.dateRangeType);
+        console.log('  - dateRangeDays:', typeof req.body.dateRangeDays, '=', req.body.dateRangeDays);
+        console.log('  - startDate:', typeof req.body.startDate, '=', req.body.startDate);
+        console.log('  - endDate:', typeof req.body.endDate, '=', req.body.endDate);
+        console.log('  - processAllTolls:', typeof req.body.processAllTolls, '=', req.body.processAllTolls);
+        console.log('  - accuracyLevel:', typeof req.body.accuracyLevel, '=', req.body.accuracyLevel);
         
         // Check if both files were uploaded
         if (!req.files || !req.files['turo-csv'] || !req.files['ezpass-csv']) {
@@ -2001,17 +2019,123 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         const accuracyLevel = parseInt(req.body.accuracyLevel) || 8;
         const useSmartMatching = req.body.useSmartMatching === 'true';
         
-        // Get date filter settings
+        // Get date range settings (new format from frontend)
         let dateFilter = null;
-        console.log('🔍 DEBUG: req.body.dateFilter:', req.body.dateFilter);
-        if (req.body.dateFilter) {
+        console.log('🔍 DEBUG: Date range parameters:', {
+            dateRangeType: req.body.dateRangeType,
+            dateRangeDays: req.body.dateRangeDays,
+            startDate: req.body.startDate,
+            endDate: req.body.endDate
+        });
+        
+        // Handle new date range format from frontend
+        console.log('🔍 CHECKING DATE RANGE CONDITIONS:');
+        console.log('  - req.body.dateRangeType exists?', !!req.body.dateRangeType);
+        console.log('  - req.body.dateRangeDays exists?', !!req.body.dateRangeDays);
+        console.log('  - Both exist?', !!(req.body.dateRangeType && req.body.dateRangeDays));
+        
+        // More lenient condition check - use string comparison to handle potential type issues
+        const hasDateRangeType = req.body.dateRangeType && req.body.dateRangeType !== 'undefined';
+        const hasDateRangeDays = req.body.dateRangeDays && req.body.dateRangeDays !== 'undefined';
+        
+        if (hasDateRangeType && hasDateRangeDays) {
+            console.log('✅ Date range parameters found, processing...');
+            if (req.body.dateRangeType === 'custom' && req.body.startDate && req.body.endDate) {
+                // Server-side validation for custom date ranges
+                const startDate = new Date(req.body.startDate);
+                const endDate = new Date(req.body.endDate);
+                const now = new Date();
+                
+                // Validate date format
+                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Invalid date format. Please use YYYY-MM-DD format.'
+                    });
+                }
+                
+                // Validate date range logic
+                if (startDate > endDate) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Start date cannot be after end date.'
+                    });
+                }
+                
+                // Validate reasonable date range (not more than 2 years in the past, not in future)
+                const twoYearsAgo = new Date(now.getTime() - (2 * 365 * 24 * 60 * 60 * 1000));
+                if (startDate < twoYearsAgo) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Start date cannot be more than 2 years in the past.'
+                    });
+                }
+                
+                if (endDate > now) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'End date cannot be in the future.'
+                    });
+                }
+                
+                // Validate maximum range (not more than 1 year)
+                const maxRangeMs = 365 * 24 * 60 * 60 * 1000; // 1 year
+                if ((endDate.getTime() - startDate.getTime()) > maxRangeMs) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Date range cannot exceed 1 year.'
+                    });
+                }
+                
+                dateFilter = {
+                    filterType: 'custom',
+                    fromDate: req.body.startDate,
+                    toDate: req.body.endDate
+                };
+                console.log('📅 Using custom date range:', dateFilter);
+            } else if (req.body.dateRangeType === 'preset') {
+                // Server-side validation for preset ranges
+                const days = parseInt(req.body.dateRangeDays);
+                
+                if (isNaN(days) || days <= 0) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Invalid number of days. Must be a positive number.'
+                    });
+                }
+                
+                if (days > 730) { // Max 2 years
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Date range cannot exceed 730 days (2 years).'
+                    });
+                }
+                
+                dateFilter = {
+                    filterType: 'days',
+                    days: days
+                };
+                console.log('📅 Using preset date range:', dateFilter);
+            } else {
+                console.log('❌ Date range type not recognized:', req.body.dateRangeType);
+            }
+        } else {
+            console.log('❌ Date range parameters missing or empty:');
+            console.log('  - hasDateRangeType:', hasDateRangeType);
+            console.log('  - hasDateRangeDays:', hasDateRangeDays);
+        }
+        
+        // Fallback: Handle legacy dateFilter parameter
+        if (!dateFilter && req.body.dateFilter) {
             try {
                 dateFilter = JSON.parse(req.body.dateFilter);
-                console.log('📅 Date filter settings:', dateFilter);
+                console.log('📅 Using legacy date filter settings:', dateFilter);
             } catch (error) {
                 console.error('❌ Invalid date filter JSON:', error);
             }
-        } else {
+        }
+        
+        if (!dateFilter) {
             console.log('📅 No date filter provided - processing all data');
         }
         
@@ -2215,112 +2339,271 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
     }
 });
 
-// Clear all CSV data (trips and tolls)
+// Clear UNSUBMITTED data only (preserves toll memory system)
 router.post('/clear-data', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
     try {
-        console.log('🗑️ Clearing CSV data for host:', hostId);
+        console.log('🧽 Clearing ALL data except Invoices and Transponders - requested by host:', hostId);
         
         const results = {
-            invoice_items_deleted: 0,
-            invoices_deleted: 0,
-            toll_charges_deleted: 0,
-            trips_deleted: 0
+            toll_accounts_deleted: 0,
+            trips_without_invoices_deleted: 0,
+            toll_charges_archived: 0,
+            toll_charges_without_invoices_deleted: 0,
+            late_tolls_deleted: 0,
+            analytics_cleared: 0,
+            invoices_preserved: 0,
+            transponder_mappings_preserved: 0
         };
         
-        // Start a transaction for consistency
+        // Start a transaction and disable foreign keys temporarily
         await new Promise((resolve, reject) => {
             db.serialize(() => {
-                db.run('BEGIN TRANSACTION', (err) => {
+                db.run('PRAGMA foreign_keys = OFF', (err) => {
                     if (err) reject(err);
-                    else resolve();
+                    else {
+                        db.run('BEGIN TRANSACTION', (err) => {
+                            if (err) reject(err);
+                            else resolve();
+                        });
+                    }
                 });
             });
         });
         
-        // 1. Delete invoice_items first (references both invoices and toll_charges)
+        // Count what we're preserving (for user feedback)
+        const preservedCount = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT 
+                    (SELECT COUNT(*) FROM invoices) as invoices,
+                    (SELECT COUNT(*) FROM invoice_items) as invoice_items,
+                    (SELECT COUNT(*) FROM transponder_mappings WHERE host_id = ?) as transponder_mappings`,
+                [hostId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows[0]);
+                }
+            );
+        });
+        
+        console.log(`🛡️ PRESERVING: ${preservedCount.invoices} invoices, ${preservedCount.invoice_items} invoice items, ${preservedCount.transponder_mappings} transponder mappings`);
+        
+        // Archive toll charges referenced in invoices & delete those not in invoices
         await new Promise((resolve, reject) => {
+            // First archive toll charges that are in invoices (preserve for toll memory)
             db.run(
-                `DELETE FROM invoice_items 
-                 WHERE invoice_id IN (
-                     SELECT id FROM invoices WHERE trip_id IN (
-                         SELECT id FROM trips WHERE host_id = ?
-                     )
+                `UPDATE toll_charges 
+                 SET is_archived = 1 
+                 WHERE id IN (
+                     SELECT DISTINCT toll_charge_id 
+                     FROM invoice_items 
+                     WHERE toll_charge_id IS NOT NULL
                  )`,
-                [hostId],
                 function(err) {
                     if (err) reject(err);
                     else {
-                        results.invoice_items_deleted = this.changes;
-                        console.log(`✅ Deleted ${this.changes} invoice items`);
-                        resolve();
+                        results.toll_charges_archived = this.changes;
+                        console.log(`📁 Archived ${this.changes} toll charges for toll memory system`);
+                        
+                        // Then delete toll charges not in invoices
+                        db.run(
+                            `DELETE FROM toll_charges 
+                             WHERE id NOT IN (
+                                 SELECT DISTINCT toll_charge_id 
+                                 FROM invoice_items 
+                                 WHERE toll_charge_id IS NOT NULL
+                             )`,
+                            function(err) {
+                                if (err) reject(err);
+                                else {
+                                    results.toll_charges_without_invoices_deleted = this.changes;
+                                    console.log(`🗑️ Deleted ${this.changes} toll charges not in invoices`);
+                                    resolve();
+                                }
+                            }
+                        );
                     }
                 }
             );
         });
         
-        // 2. Delete invoices (references trips)
+        // Clear trips WITHOUT invoices AND not referenced by preserved toll_charges
         await new Promise((resolve, reject) => {
             db.run(
-                `DELETE FROM invoices 
-                 WHERE trip_id IN (
-                     SELECT id FROM trips WHERE host_id = ?
-                 )`,
+                `DELETE FROM trips 
+                 WHERE host_id = ?
+                   AND id NOT IN (SELECT DISTINCT trip_id FROM invoices WHERE trip_id IS NOT NULL)
+                   AND id NOT IN (SELECT DISTINCT trip_id FROM toll_charges WHERE trip_id IS NOT NULL)`,
                 [hostId],
                 function(err) {
                     if (err) reject(err);
                     else {
-                        results.invoices_deleted = this.changes;
-                        console.log(`✅ Deleted ${this.changes} invoices`);
+                        results.trips_without_invoices_deleted = this.changes;
+                        console.log(`🗑️ Deleted ${this.changes} trips without invoices or toll references`);
                         resolve();
                     }
                 }
             );
         });
         
-        // 3. Delete toll charges (references trips and toll_accounts)
+        // Clear ONLY unreferenced toll accounts (preserve those referenced by archived toll_charges)
         await new Promise((resolve, reject) => {
             db.run(
-                `DELETE FROM toll_charges 
-                 WHERE toll_account_id IN (
-                     SELECT id FROM toll_accounts WHERE host_id = ?
-                 )`,
+                `DELETE FROM toll_accounts 
+                 WHERE host_id = ? 
+                   AND id NOT IN (
+                       SELECT DISTINCT toll_account_id 
+                       FROM toll_charges 
+                       WHERE toll_account_id IS NOT NULL
+                         AND is_archived = 1
+                   )`,
                 [hostId],
                 function(err) {
                     if (err) reject(err);
                     else {
-                        results.toll_charges_deleted = this.changes;
-                        console.log(`✅ Deleted ${this.changes} toll charges`);
+                        results.toll_accounts_deleted = this.changes;
+                        console.log(`🗑️ Deleted ${this.changes} toll accounts (preserved those referenced by archived charges)`);
                         resolve();
                     }
                 }
             );
         });
         
-        // 4. Finally delete trips (parent record)
+        // Recreate any missing toll_accounts that are referenced by archived charges
+        await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT DISTINCT toll_account_id 
+                 FROM toll_charges 
+                 WHERE is_archived = 1 
+                   AND toll_account_id IS NOT NULL
+                   AND toll_account_id NOT IN (SELECT id FROM toll_accounts)`,
+                [],
+                (err, missingAccounts) => {
+                    if (err) reject(err);
+                    else if (missingAccounts.length === 0) {
+                        console.log('✅ All archived toll charges have valid toll_account references');
+                        resolve();
+                    } else {
+                        console.log(`🔧 Recreating ${missingAccounts.length} missing toll_accounts for archived charges`);
+                        
+                        let completed = 0;
+                        for (const account of missingAccounts) {
+                            db.run(
+                                `INSERT INTO toll_accounts (id, host_id, provider, account_number, username, password_encrypted, is_active) 
+                                 VALUES (?, ?, ?, ?, ?, ?, 0)`,
+                                [account.toll_account_id, hostId, 'ARCHIVED', `ARCHIVED-${account.toll_account_id}`, 'archived@system', 'archived_password', 0],
+                                (err) => {
+                                    if (err) {
+                                        console.warn(`⚠️ Could not recreate toll_account ${account.toll_account_id}:`, err.message);
+                                    } else {
+                                        console.log(`✅ Recreated toll_account ${account.toll_account_id}`);
+                                    }
+                                    
+                                    completed++;
+                                    if (completed === missingAccounts.length) {
+                                        resolve();
+                                    }
+                                }
+                            );
+                        }
+                    }
+                }
+            );
+        });
+        
+        // Clear late tolls detected table
         await new Promise((resolve, reject) => {
             db.run(
-                `DELETE FROM trips WHERE host_id = ?`,
+                `DELETE FROM late_tolls_detected 
+                 WHERE trip_id IN (SELECT id FROM trips WHERE host_id = ?)`,
                 [hostId],
                 function(err) {
                     if (err) reject(err);
                     else {
-                        results.trips_deleted = this.changes;
-                        console.log(`✅ Deleted ${this.changes} trips`);
+                        results.late_tolls_deleted = this.changes;
+                        console.log(`🗑️ Deleted ${this.changes} late toll detections`);
                         resolve();
                     }
                 }
             );
         });
         
-        // Commit the transaction
+        // Store preserved counts for response
+        results.invoices_preserved = preservedCount.invoices;
+        results.transponder_mappings_preserved = preservedCount.transponder_mappings;
+        
+        // Clear analytics and logs (these can be safely cleared - don't affect toll memory)
+        const analyticsTablesToClear = [
+            'analytics_metrics',
+            'automated_reports',
+            'backup_logs',
+            'bi_reports',
+            'data_checkpoints',
+            'financial_analytics',
+            'notification_events',
+            'notification_logs',
+            'notification_queue',
+            'performance_metrics',
+            'predictive_analytics',
+            'security_logs',
+            'toll_location_analytics',
+            'transaction_log',
+            'trip_status_history',
+            'trip_status_intelligence',
+            'user_trip_patterns',
+            'validation_errors',
+            'vehicle_analytics',
+            'ml_timing_patterns',
+            'login_attempts'
+            // NOTE: We preserve:
+            // - invoices & invoice_items (toll memory system for preventing double-charging!)
+            // - transponder_mappings (user vehicle configurations)
+            // - deleted_transponder_plates (user preferences)
+            // - hosts (needed for login)
+            // DELETED for fresh start: toll_accounts, trips, toll_charges not in invoices
+        ];
+        
+        let analyticsCleared = 0;
+        for (const table of analyticsTablesToClear) {
+            try {
+                await new Promise((resolve, reject) => {
+                    db.run(
+                        `DELETE FROM ${table} WHERE EXISTS (
+                            SELECT 1 FROM hosts WHERE id = ? 
+                        )`,
+                        [hostId],
+                        function(err) {
+                            if (err) {
+                                console.warn(`⚠️ Could not clear analytics table ${table}:`, err.message);
+                                resolve(); // Continue with other tables
+                            } else {
+                                analyticsCleared += this.changes;
+                                console.log(`✅ Deleted ${this.changes} analytics records from ${table}`);
+                                resolve();
+                            }
+                        }
+                    );
+                });
+            } catch (error) {
+                console.warn(`⚠️ Error clearing analytics table ${table}:`, error.message);
+            }
+        }
+        
+        results.analytics_cleared = analyticsCleared;
+        
+        // Commit the transaction and re-enable foreign keys
         await new Promise((resolve, reject) => {
             db.run('COMMIT', (err) => {
                 if (err) reject(err);
                 else {
-                    console.log('✅ Transaction committed successfully');
-                    resolve();
+                    db.run('PRAGMA foreign_keys = ON', (err) => {
+                        if (err) reject(err);
+                        else {
+                            console.log('✅ Transaction committed successfully and foreign keys re-enabled');
+                            resolve();
+                        }
+                    });
                 }
             });
         });
@@ -2332,22 +2615,27 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         
         res.json({
             success: true,
-            message: 'All CSV data cleared successfully',
+            message: `Data cleared successfully. Preserved ${results.invoices_preserved} invoices and ${results.transponder_mappings_preserved} transponder mappings.`,
             data: results
         });
         
     } catch (error) {
         console.error('❌ Error clearing data:', error);
         
-        // Rollback transaction on error
+        // Rollback transaction on error and re-enable foreign keys
         await new Promise((resolve) => {
             db.run('ROLLBACK', (err) => {
                 if (err) {
                     console.error('❌ Error rolling back transaction:', err);
-                } else {
-                    console.log('⚠️ Transaction rolled back');
                 }
-                resolve();
+                db.run('PRAGMA foreign_keys = ON', (err2) => {
+                    if (err2) {
+                        console.error('❌ Error re-enabling foreign keys:', err2);
+                    } else if (!err) {
+                        console.log('⚠️ Transaction rolled back and foreign keys re-enabled');
+                    }
+                    resolve();
+                });
             });
         });
         
@@ -2468,7 +2756,7 @@ router.post('/test-simple-matcher', requireAuth, async (req, res) => {
                 `SELECT tc.id, tc.transaction_id, tc.plate_number, tc.transponder_id, tc.toll_date, tc.toll_location, tc.toll_amount
                  FROM toll_charges tc
                  JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ? AND tc.is_matched = 0
+                 WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
                  ORDER BY tc.toll_date DESC LIMIT 50`,
                 [hostId],
                 (err, results) => {

@@ -70,8 +70,8 @@ class MLTollMatcher {
             // Load historical patterns for this host
             await this.loadVehiclePatterns(hostId);
             
-            // Get unmatched charges
-            const unmatchedCharges = await this.getUnmatchedCharges(hostId);
+            // Get unmatched charges with optional date filtering
+            const unmatchedCharges = await this.getUnmatchedCharges(hostId, options.dateFilter);
             const activeTrips = await this.getActiveTrips(hostId);
             const transponderMappings = await this.getTransponderMappings(hostId);
             
@@ -690,8 +690,26 @@ class MLTollMatcher {
         return /^\d{10,11}$/.test(plate);
     }
 
-    async getUnmatchedCharges(hostId) {
+    async getUnmatchedCharges(hostId, dateFilter = null) {
         return new Promise((resolve, reject) => {
+            let dateCondition = "AND tc.toll_date > datetime('now', '-30 days')"; // Default fallback
+            let params = [hostId];
+            
+            if (dateFilter) {
+                if (dateFilter.filterType === 'custom' && dateFilter.fromDate && dateFilter.toDate) {
+                    // Custom date range
+                    dateCondition = "AND date(tc.toll_date/1000, 'unixepoch') BETWEEN ? AND ?";
+                    params.push(dateFilter.fromDate, dateFilter.toDate);
+                    console.log(`📅 ML Matcher: Using custom date range ${dateFilter.fromDate} to ${dateFilter.toDate}`);
+                } else if (dateFilter.filterType === 'days' && dateFilter.days) {
+                    // Days back from now
+                    dateCondition = `AND tc.toll_date > datetime('now', '-${dateFilter.days} days')`;
+                    console.log(`📅 ML Matcher: Looking back ${dateFilter.days} days`);
+                }
+            } else {
+                console.log('📅 ML Matcher: Using default 30-day lookback');
+            }
+
             db.all(`
                 SELECT tc.id, tc.toll_account_id, tc.toll_date, tc.toll_location, 
                        tc.toll_amount, tc.plate_number, tc.transaction_id, 
@@ -700,10 +718,10 @@ class MLTollMatcher {
                 INNER JOIN toll_accounts ta ON tc.toll_account_id = ta.id
                 WHERE ta.host_id = ? 
                   AND tc.is_matched = 0
-                  AND tc.toll_date > datetime('now', '-30 days')
+                  ${dateCondition}
                 ORDER BY tc.toll_date DESC
                 LIMIT 500
-            `, [hostId], (err, charges) => {
+            `, params, (err, charges) => {
                 if (err) reject(err);
                 else resolve(charges);
             });

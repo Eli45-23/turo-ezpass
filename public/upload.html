@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload CSV Files - Turo Toll Tracker</title>
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    
+    <!-- Scripts -->
+    <script src="/js/ui-utils.js"></script>
+    <script src="/js/xss-utils.js"></script>
+    
+    <style>
+        /* Premium Dual Upload Page Styles */
+        :root {
+            --header-height: 72px;
+            --sidebar-width: 280px;
+            --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --card-shadow-hover: 0 4px 6px rgba(0, 0, 0, 0.07), 0 10px 15px rgba(0, 0, 0, 0.1);
+            --gradient-border: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
+        }
+
+        /* Layout Foundation */
+        .upload-layout {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            display: grid;
+            grid-template-rows: var(--header-height) 1fr;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-areas: 
+                "sidebar header"
+                "sidebar main";
+        }
+
+        /* Header */
+        .upload-header {
+            grid-area: header;
+            background: var(--panel);
+            border-bottom: 1px solid var(--hairline);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: var(--z-sticky);
+        }
+
+        .upload-title {
+            font-family: var(--font-heading);
+            font-size: var(--text-2xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+        }
+
+        .upload-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Sidebar */
+        .upload-sidebar {
+            grid-area: sidebar;
+            background: var(--panel);
+            border-right: 1px solid var(--hairline);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--hairline);
+            font-family: var(--font-heading);
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--hover);
+            color: var(--ink);
+        }
+
+        .nav-item.active {
+            background: var(--hover);
+            color: var(--accentB);
+            font-weight: var(--font-semibold);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--gradient-border);
+        }
+
+        .nav-icon {
+            font-size: var(--text-lg);
+        }
+
+
+        /* Main Content */
+        .upload-main {
+            grid-area: main;
+            padding: 2rem;
+            background: var(--bg);
+        }
+
+        .upload-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Upload Grid */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Upload Cards */
+        .upload-card {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            position: relative;
+        }
+
+        .upload-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-border);
+        }
+
+        .upload-card.turo::before {
+            background: linear-gradient(135deg, #8B5CF6, #A855F7);
+        }
+
+        .upload-card.ezpass::before {
+            background: linear-gradient(135deg, #06B6D4, #0891B2);
+        }
+
+        .card-header {
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--hairline);
+            background: var(--hover);
+        }
+
+        .card-title {
+            font-family: var(--font-heading);
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-xl);
+            color: white;
+        }
+
+        .card-icon.turo {
+            background: linear-gradient(135deg, #8B5CF6, #A855F7);
+        }
+
+        .card-icon.ezpass {
+            background: linear-gradient(135deg, #06B6D4, #0891B2);
+        }
+
+        .card-subtitle {
+            color: var(--muted);
+            font-size: var(--text-sm);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Upload Zones */
+        .upload-zone {
+            border: 2px dashed var(--hairline);
+            border-radius: var(--radius);
+            padding: 2rem 1rem;
+            text-align: center;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 1rem;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accentB);
+            background: var(--hover);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accentA);
+            background: rgba(139, 92, 246, 0.05);
+            transform: scale(1.02);
+        }
+
+        .upload-zone.has-file {
+            border-color: #10B981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accentB);
+        }
+
+        .upload-text {
+            font-family: var(--font-heading);
+            font-size: var(--text-lg);
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            color: var(--muted);
+            font-size: var(--text-sm);
+            margin-bottom: 1rem;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .choose-file-btn {
+            background: linear-gradient(135deg, var(--accentA), var(--accentB));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-sm);
+            font-weight: var(--font-semibold);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--card-shadow);
+        }
+
+        .choose-file-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        /* File Info */
+        .file-info {
+            display: none;
+            background: var(--hover);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-details {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .file-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #10B981, #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-lg);
+            color: white;
+        }
+
+        .file-name {
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            font-size: var(--text-sm);
+            margin-bottom: 0.25rem;
+        }
+
+        .file-size {
+            color: var(--muted);
+            font-size: var(--text-xs);
+        }
+
+        .btn-remove {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            color: var(--muted);
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-xs);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .btn-remove:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #EF4444;
+            color: #EF4444;
+        }
+
+        /* Controls Section */
+        .controls-section {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .controls-title {
+            font-family: var(--font-heading);
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin: 0 0 1.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 2rem;
+            align-items: end;
+        }
+
+        /* Speed Slider */
+        .speed-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .speed-label {
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            font-size: var(--text-sm);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .speed-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--hover);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accentA), var(--accentB));
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: var(--card-shadow);
+        }
+
+        .speed-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accentA), var(--accentB));
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: var(--card-shadow);
+        }
+
+        .speed-display {
+            background: var(--hover);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 0.75rem;
+            text-align: center;
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            font-size: var(--text-sm);
+        }
+
+        .speed-hint {
+            color: var(--muted);
+            font-size: var(--text-xs);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        /* Action Buttons */
+        .btn-clear {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-sm);
+            font-weight: var(--font-semibold);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-self: center;
+        }
+
+        .btn-clear:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .btn-process {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-base);
+            font-weight: var(--font-bold);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-self: center;
+        }
+
+        .btn-process:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .btn-process:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10B981;
+            color: #10B981;
+        }
+
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #EF4444;
+            color: #EF4444;
+        }
+
+        .status-message.info {
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid var(--accentB);
+            color: var(--accentB);
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            display: none;
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .progress-section.show {
+            display: block;
+        }
+
+        .progress-title {
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--hover);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accentA), var(--accentB));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: var(--muted);
+            font-size: var(--text-sm);
+            text-align: center;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .upload-layout {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+
+            .upload-sidebar {
+                display: none;
+            }
+
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .upload-header {
+                padding: 0 1rem;
+            }
+
+            .upload-main {
+                padding: 1rem;
+            }
+
+            .card-header,
+            .card-body,
+            .controls-section {
+                padding: 1.5rem;
+            }
+
+            .upload-zone {
+                padding: 1.5rem 1rem;
+                min-height: 150px;
+            }
+
+            .file-details {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+        }
+
+        /* Loading Animation */
+        .btn-loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            color: white;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Focus States */
+        .choose-file-btn:focus,
+        .btn-process:focus,
+        .btn-clear:focus,
+        .btn-remove:focus {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        .upload-zone:focus-within {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        /* Confirmation Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-fast);
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .modal-title {
+            font-family: var(--font-heading);
+            font-size: var(--text-lg);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin: 0 0 1rem 0;
+        }
+
+        .modal-text {
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-modal {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .btn-cancel {
+            background: var(--hover);
+            border: 1px solid var(--hairline);
+            color: var(--ink);
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            border: none;
+            color: white;
+        }
+
+        /* Date Range Selector Styles */
+        .date-range-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .date-range-select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            background: var(--panel);
+            color: var(--ink);
+            font-size: var(--text-sm);
+            cursor: pointer;
+        }
+
+        .date-range-select:focus {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        .custom-date-range {
+            margin-top: 0.5rem;
+            padding: 1rem;
+            background: var(--hover);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .date-input-group label {
+            font-size: var(--text-xs);
+            font-weight: var(--font-medium);
+            color: var(--muted);
+        }
+
+        .date-input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            background: var(--panel);
+            color: var(--ink);
+            font-size: var(--text-sm);
+        }
+
+        .date-input:focus {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="upload-sidebar">
+            <div class="sidebar-brand">
+                <span class="nav-icon">🚗</span>
+                Turo Toll Tracker
+            </div>
+            
+            <div class="sidebar-nav">
+                <a href="/dashboard.html" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    Overview
+                </a>
+                <a href="/trips.html" class="nav-item">
+                    <span class="nav-icon">🛣️</span>
+                    Trips
+                </a>
+                <a href="/upload.html" class="nav-item active">
+                    <span class="nav-icon">📤</span>
+                    Upload CSV Files
+                </a>
+                <a href="/analytics.html" class="nav-item">
+                    <span class="nav-icon">📈</span>
+                    Analytics
+                </a>
+                <a href="/transponders.html" class="nav-item">
+                    <span class="nav-icon">📡</span>
+                    Transponders
+                </a>
+                <a href="/invoices.html" class="nav-item">
+                    <span class="nav-icon">🧾</span>
+                    Invoices
+                </a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header class="upload-header">
+            <h1 class="upload-title">Upload CSV Files</h1>
+            
+            <div class="upload-controls">
+                <button class="btn btn-ghost" onclick="showHelp()">
+                    ❓ Help
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="upload-main">
+            <div class="upload-content">
+                <!-- Status Messages -->
+                <div class="status-message" id="status-message"></div>
+                
+                <!-- Progress Section -->
+                <div class="progress-section" id="progress-section">
+                    <div class="progress-title">
+                        ⚙️ Processing CSV Files...
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Preparing files...</div>
+                </div>
+
+                <!-- Dual Upload Grid -->
+                <div class="upload-grid">
+                    <!-- Turo CSV Upload -->
+                    <div class="upload-card turo">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <div class="card-icon turo">🚗</div>
+                                Turo Trip Data
+                            </h2>
+                            <p class="card-subtitle">Upload your Turo trip history CSV file</p>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="upload-zone" id="turo-zone" onclick="triggerFileInput('turo')" 
+                                 ondrop="handleDrop(event, 'turo')" 
+                                 ondragover="handleDragOver(event)" 
+                                 ondragleave="handleDragLeave(event)">
+                                <input type="file" class="file-input" id="turo-csv" accept=".csv">
+                                <div class="upload-icon">🚗</div>
+                                <div class="upload-text">Drop Turo CSV here</div>
+                                <div class="upload-subtext">or click to browse</div>
+                                <button class="choose-file-btn" type="button">Choose Turo CSV</button>
+                            </div>
+                            
+                            <div class="file-info" id="turo-info">
+                                <div class="file-details">
+                                    <div class="file-meta">
+                                        <div class="file-icon">📄</div>
+                                        <div>
+                                            <div class="file-name" id="turo-name"></div>
+                                            <div class="file-size" id="turo-size"></div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-remove" onclick="removeFile('turo')">
+                                        🗑️ Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- E-ZPass CSV Upload -->
+                    <div class="upload-card ezpass">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <div class="card-icon ezpass">🛣️</div>
+                                E-ZPass Toll Data
+                            </h2>
+                            <p class="card-subtitle">Upload your E-ZPass toll transaction CSV file</p>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="upload-zone" id="ezpass-zone" onclick="triggerFileInput('ezpass')" 
+                                 ondrop="handleDrop(event, 'ezpass')" 
+                                 ondragover="handleDragOver(event)" 
+                                 ondragleave="handleDragLeave(event)">
+                                <input type="file" class="file-input" id="ezpass-csv" accept=".csv">
+                                <div class="upload-icon">🛣️</div>
+                                <div class="upload-text">Drop E-ZPass CSV here</div>
+                                <div class="upload-subtext">or click to browse</div>
+                                <button class="choose-file-btn" type="button">Choose E-ZPass CSV</button>
+                            </div>
+                            
+                            <div class="file-info" id="ezpass-info">
+                                <div class="file-details">
+                                    <div class="file-meta">
+                                        <div class="file-icon">📄</div>
+                                        <div>
+                                            <div class="file-name" id="ezpass-name"></div>
+                                            <div class="file-size" id="ezpass-size"></div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-remove" onclick="removeFile('ezpass')">
+                                        🗑️ Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Section -->
+                <div class="controls-section">
+                    <h3 class="controls-title">
+                        ⚙️ Matching Controls
+                    </h3>
+                    
+                    <div class="controls-grid">
+                        <!-- Speed/Accuracy Slider -->
+                        <div class="speed-control">
+                            <label class="speed-label" for="speed-slider">
+                                🎯 Matching Speed vs Accuracy
+                            </label>
+                            <input type="range" id="speed-slider" class="speed-slider" 
+                                   min="1" max="10" value="8" 
+                                   oninput="updateSpeedDisplay(this.value)">
+                            <div class="speed-display" id="speed-display">
+                                Level 8 - High Accuracy
+                            </div>
+                            <div class="speed-hint">
+                                1 = Fast/Less Accurate, 10 = Slow/Most Accurate
+                            </div>
+                        </div>
+
+                        <!-- Date Range Selector -->
+                        <div class="date-range-control">
+                            <label class="speed-label" for="date-range-select">
+                                📅 Toll Matching Date Range
+                            </label>
+                            <select id="date-range-select" class="date-range-select" onchange="updateDateRangeDisplay()">
+                                <option value="30">Last 30 days</option>
+                                <option value="60">Last 60 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="custom">Custom range</option>
+                            </select>
+                            <div class="custom-date-range" id="custom-date-range" style="display: none;">
+                                <div class="date-input-group">
+                                    <label for="start-date">From:</label>
+                                    <input type="date" id="start-date" class="date-input">
+                                </div>
+                                <div class="date-input-group">
+                                    <label for="end-date">To:</label>
+                                    <input type="date" id="end-date" class="date-input">
+                                </div>
+                            </div>
+                            <div class="speed-hint">
+                                How far back to look for tolls to match
+                            </div>
+                        </div>
+
+                        <!-- Clear Data Button -->
+                        <div>
+                            <button class="btn-clear" onclick="confirmClearData()">
+                                🗑️ Clear All Data
+                            </button>
+                        </div>
+
+
+                        <!-- Process Button -->
+                        <div>
+                            <button class="btn-process" id="process-btn" onclick="processCSVFiles()" disabled>
+                                🎯 Run Matcher
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-content">
+            <h3 class="modal-title">⚠️ Clear All Data</h3>
+            <p class="modal-text">
+                <strong>🧽 Fresh Start Data Clearing</strong><br><br>
+                This will permanently delete ALL data except what's needed for invoices and vehicle configurations.<br><br>
+                <span style="color: #10b981;">✅ <strong>PRESERVED:</strong></span><br>
+                • All invoices and their toll data (toll memory system)<br>
+                • All transponder/vehicle mappings<br><br>
+                <span style="color: #f59e0b;">⚠️ <strong>DELETED (Fresh Start):</strong></span><br>
+                • All toll accounts (you can re-add them)<br>
+                • All trips (except those with invoices for reference)<br>
+                • All unmatched toll charges<br>
+                • All analytics data<br><br>
+                This action cannot be undone. Are you sure you want to continue?
+            </p>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-modal btn-confirm" onclick="clearAllData()">Clear Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = {
+            turo: null,
+            ezpass: null
+        };
+
+        // File selection handlers
+        function triggerFileInput(type) {
+            document.getElementById(`${type}-csv`).click();
+        }
+
+        function handleDrop(event, type) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const uploadZone = event.currentTarget;
+            uploadZone.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.endsWith('.csv')) {
+                    selectedFiles[type] = file;
+                    document.getElementById(`${type}-csv`).files = files;
+                    showFileInfo(type, file);
+                    updateProcessButton();
+                    showStatus(`${type.charAt(0).toUpperCase() + type.slice(1)} CSV selected successfully`, 'success');
+                } else {
+                    showStatus('Please drop a CSV file', 'error');
+                }
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        // File info display
+        function showFileInfo(type, file) {
+            document.getElementById(`${type}-name`).textContent = file.name;
+            document.getElementById(`${type}-size`).textContent = formatFileSize(file.size);
+            document.getElementById(`${type}-info`).classList.add('show');
+            document.getElementById(`${type}-zone`).classList.add('has-file');
+        }
+
+        function removeFile(type) {
+            selectedFiles[type] = null;
+            document.getElementById(`${type}-csv`).value = '';
+            document.getElementById(`${type}-info`).classList.remove('show');
+            document.getElementById(`${type}-zone`).classList.remove('has-file');
+            updateProcessButton();
+        }
+
+        function updateProcessButton() {
+            const processBtn = document.getElementById('process-btn');
+            const hasBothFiles = selectedFiles.turo && selectedFiles.ezpass;
+            processBtn.disabled = !hasBothFiles;
+            
+            if (hasBothFiles) {
+                processBtn.textContent = '🎯 Run Matcher';
+            } else {
+                processBtn.textContent = `🎯 Upload Both CSV Files First`;
+            }
+        }
+
+        // Speed slider
+        function updateSpeedDisplay(value) {
+            const display = document.getElementById('speed-display');
+            const level = parseInt(value);
+            
+            let text = `Level ${level} - `;
+            if (level <= 3) {
+                text += 'Fast/Low Accuracy';
+            } else if (level <= 6) {
+                text += 'Balanced';
+            } else if (level <= 8) {
+                text += 'High Accuracy';
+            } else {
+                text += 'Maximum Accuracy/Slow';
+            }
+            
+            display.textContent = text;
+        }
+
+        // Date range selector
+        function updateDateRangeDisplay() {
+            const dateRangeSelect = document.getElementById('date-range-select');
+            const customDateRange = document.getElementById('custom-date-range');
+            
+            if (dateRangeSelect.value === 'custom') {
+                customDateRange.style.display = 'block';
+                
+                // Set default dates if not already set
+                const today = new Date();
+                const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+                
+                const startDateInput = document.getElementById('start-date');
+                const endDateInput = document.getElementById('end-date');
+                
+                if (!startDateInput.value) {
+                    startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+                }
+                if (!endDateInput.value) {
+                    endDateInput.value = today.toISOString().split('T')[0];
+                }
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        }
+
+        // Get current date range settings
+        function getDateRangeSettings() {
+            const dateRangeSelect = document.getElementById('date-range-select');
+            const selectedValue = dateRangeSelect.value;
+            
+            if (selectedValue === 'custom') {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                
+                if (!startDate || !endDate) {
+                    throw new Error('Please select both start and end dates for custom range');
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    throw new Error('Start date cannot be after end date');
+                }
+                
+                return {
+                    type: 'custom',
+                    startDate: startDate,
+                    endDate: endDate,
+                    days: Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24))
+                };
+            } else {
+                return {
+                    type: 'preset',
+                    days: parseInt(selectedValue),
+                    startDate: null,
+                    endDate: null
+                };
+            }
+        }
+
+        // Clear data confirmation
+        function confirmClearData() {
+            document.getElementById('confirm-modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('confirm-modal').classList.remove('show');
+        }
+
+        async function clearAllData() {
+            console.log('🚀 clearAllData function called');
+            closeModal();
+            
+            // Show loading state on clear button
+            const clearBtn = document.querySelector('.btn-clear');
+            if (!clearBtn) {
+                console.error('❌ Clear button not found!');
+                alert('Clear button not found. Please refresh the page.');
+                return;
+            }
+            
+            const originalText = clearBtn.textContent;
+            clearBtn.textContent = '🔄 Clearing...';
+            clearBtn.disabled = true;
+            
+            // Force show status immediately with fallback
+            try {
+                console.log('📢 Attempting to show status message...');
+                showStatus('🔄 Clearing all data... This may take a few moments.', 'info');
+                
+                // Fallback: Ensure status is visible even if showStatus fails
+                setTimeout(() => {
+                    const statusEl = document.getElementById('status-message');
+                    if (statusEl && !statusEl.classList.contains('show')) {
+                        console.log('🔧 Fallback: Forcing status visibility');
+                        statusEl.textContent = '🔄 Clearing all data... This may take a few moments.';
+                        statusEl.className = 'status-message show info';
+                    }
+                }, 100);
+                
+            } catch (statusError) {
+                console.error('❌ Error showing initial status:', statusError);
+                alert('🔄 Clearing all data... This may take a few moments.');
+            }
+            
+            try {
+                console.log('🗑️ Starting clear data process...');
+                
+                const response = await fetch('/api/dashboard/clear-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                console.log('📡 Clear data response status:', response.status);
+                console.log('📡 Clear data response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('📊 Clear data result:', result);
+                
+                if (result.success) {
+                    const deletionSummary = result.data ? 
+                        `Deleted: ${result.data.trips_deleted || 0} trips, ${result.data.toll_charges_deleted || 0} tolls, ${result.data.invoices_deleted || 0} invoices` :
+                        'Database cleared successfully';
+                    
+                    const successMessage = `✅ All data cleared successfully! ${deletionSummary}`;
+                    
+                    try {
+                        showStatus(successMessage, 'success');
+                    } catch (statusError) {
+                        console.error('❌ Error showing success status:', statusError);
+                        alert(successMessage);
+                    }
+                    
+                    console.log('✅ Clear data operation completed successfully');
+                    
+                    // Clear any uploaded files as well
+                    try {
+                        removeFile('turo');
+                        removeFile('ezpass');
+                    } catch (fileError) {
+                        console.warn('⚠️ Error clearing files:', fileError);
+                    }
+                    
+                    // Show detailed results if available
+                    if (result.data) {
+                        console.log('📋 Clear data details:', result.data);
+                    }
+                } else {
+                    const errorMessage = `❌ Failed to clear data: ${result.error}`;
+                    console.error('❌ Clear data failed:', result.error);
+                    
+                    try {
+                        showStatus(errorMessage, 'error');
+                    } catch (statusError) {
+                        console.error('❌ Error showing error status:', statusError);
+                        alert(errorMessage);
+                    }
+                }
+            } catch (error) {
+                const errorMessage = `❌ Error clearing data: ${error.message}`;
+                console.error('💥 Clear data error:', error);
+                
+                try {
+                    showStatus(errorMessage, 'error');
+                } catch (statusError) {
+                    console.error('❌ Error showing error status:', statusError);
+                    alert(errorMessage);
+                }
+            } finally {
+                // Reset button state with safety check
+                try {
+                    if (clearBtn) {
+                        clearBtn.textContent = originalText;
+                        clearBtn.disabled = false;
+                    }
+                } catch (buttonError) {
+                    console.error('❌ Error resetting button:', buttonError);
+                }
+                
+                console.log('🏁 clearAllData function completed');
+            }
+        }
+
+
+        // Process CSV files
+        async function processCSVFiles() {
+            if (!selectedFiles.turo || !selectedFiles.ezpass) {
+                showStatus('Please upload both Turo and E-ZPass CSV files', 'error');
+                return;
+            }
+
+            const processBtn = document.getElementById('process-btn');
+            const originalText = processBtn.textContent;
+            
+            // Show loading state
+            processBtn.classList.add('btn-loading');
+            processBtn.disabled = true;
+            
+            // Show progress
+            showProgress();
+            
+            try {
+                // Get and validate date range settings
+                let dateRangeSettings;
+                try {
+                    dateRangeSettings = getDateRangeSettings();
+                } catch (dateError) {
+                    showStatus(`❌ Date range error: ${dateError.message}`, 'error');
+                    hideProgress();
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('turo-csv', selectedFiles.turo);
+                formData.append('ezpass-csv', selectedFiles.ezpass);
+                
+                // Add matching parameters
+                const accuracyLevel = document.getElementById('speed-slider').value;
+                formData.append('accuracyLevel', accuracyLevel);
+                formData.append('processAllTolls', 'true');
+                formData.append('useSmartMatching', 'true');
+                
+                // Add date range parameters
+                console.log('🔍 FRONTEND DEBUG: Date range settings:', dateRangeSettings);
+                console.log('📤 Sending to server:');
+                console.log('  - dateRangeType:', dateRangeSettings.type);
+                console.log('  - dateRangeDays:', dateRangeSettings.days);
+                console.log('  - startDate:', dateRangeSettings.startDate);
+                console.log('  - endDate:', dateRangeSettings.endDate);
+                
+                // Send individual parameters
+                formData.append('dateRangeType', String(dateRangeSettings.type));
+                formData.append('dateRangeDays', String(dateRangeSettings.days));
+                if (dateRangeSettings.startDate) {
+                    formData.append('startDate', String(dateRangeSettings.startDate));
+                }
+                if (dateRangeSettings.endDate) {
+                    formData.append('endDate', String(dateRangeSettings.endDate));
+                }
+                
+                // Also send as JSON backup (legacy format)
+                const dateFilterLegacy = {
+                    filterType: dateRangeSettings.type === 'custom' ? 'custom' : 'days',
+                    days: dateRangeSettings.days,
+                    fromDate: dateRangeSettings.startDate,
+                    toDate: dateRangeSettings.endDate
+                };
+                formData.append('dateFilter', JSON.stringify(dateFilterLegacy));
+                
+                console.log('📦 FormData prepared, sending request...');
+                
+                updateProgress(20, 'Uploading CSV files...');
+                
+                const response = await fetch('/api/dashboard/csv/process-both-smart', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+                
+                updateProgress(50, 'Processing data...');
+                
+                const result = await response.json();
+                
+                updateProgress(100, 'Complete!');
+                
+                if (result.success) {
+                    showStatus(`✅ Processing complete! ${result.message || 'Files processed successfully'}`, 'success');
+                    
+                    // Clear files after successful processing
+                    setTimeout(() => {
+                        removeFile('turo');
+                        removeFile('ezpass');
+                        hideProgress();
+                    }, 3000);
+                    
+                } else {
+                    showStatus(`❌ Processing failed: ${result.error}`, 'error');
+                    hideProgress();
+                }
+            } catch (error) {
+                console.error('Processing error:', error);
+                showStatus(`❌ Processing error: ${error.message}`, 'error');
+                hideProgress();
+            } finally {
+                // Reset button state
+                processBtn.classList.remove('btn-loading');
+                processBtn.disabled = false;
+                processBtn.textContent = originalText;
+                updateProcessButton();
+            }
+        }
+
+        // Progress management
+        function showProgress() {
+            document.getElementById('progress-section').classList.add('show');
+        }
+
+        function hideProgress() {
+            document.getElementById('progress-section').classList.remove('show');
+            document.getElementById('progress-fill').style.width = '0%';
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-text').textContent = text;
+        }
+
+        // Status messaging
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.className = `status-message show ${type}`;
+        }
+
+        function hideStatus() {
+            const statusEl = document.getElementById('status-message');
+            statusEl.classList.remove('show');
+        }
+
+        // Help functionality
+        function showHelp() {
+            showStatus('💡 Upload both CSV files: 1) Turo trip data 2) E-ZPass toll data. Adjust the speed/accuracy slider, then click "Run Matcher" to process and match tolls to trips.', 'info');
+        }
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+
+        // File input change handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Dual CSV upload page initialized');
+            
+            // Add change listeners for file inputs
+            document.getElementById('turo-csv').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.name.endsWith('.csv')) {
+                    selectedFiles.turo = file;
+                    showFileInfo('turo', file);
+                    updateProcessButton();
+                    showStatus('Turo CSV selected successfully', 'success');
+                } else if (file) {
+                    showStatus('Please select a CSV file', 'error');
+                }
+            });
+            
+            document.getElementById('ezpass-csv').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.name.endsWith('.csv')) {
+                    selectedFiles.ezpass = file;
+                    showFileInfo('ezpass', file);
+                    updateProcessButton();
+                    showStatus('E-ZPass CSV selected successfully', 'success');
+                } else if (file) {
+                    showStatus('Please select a CSV file', 'error');
+                }
+            });
+            
+            // Initialize speed display
+            updateSpeedDisplay(8);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,572 @@
+/* ==============================================
+   UI AUTH - NEO DARK THEME FOR SIGN-IN PAGE
+   Modern, premium authentication interface
+   ============================================== */
+
+/* ==============================================
+   MAIN LAYOUT - PRESERVE STRUCTURE
+   ============================================== */
+
+[data-theme="neo"] .auth-page {
+  min-height: 100vh;
+  background: var(--neo-bg);
+  color: var(--neo-ink);
+  font-family: var(--neo-font-body);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ==============================================
+   HERO PANEL - LEFT SIDE
+   ============================================== */
+
+[data-theme="neo"] .auth-hero {
+  background: linear-gradient(135deg, 
+    rgba(124, 58, 237, 0.15) 0%,
+    rgba(34, 211, 238, 0.15) 50%,
+    rgba(76, 201, 240, 0.15) 100%),
+    var(--neo-panel);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--neo-space-3xl);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--neo-hairline);
+}
+
+[data-theme="neo"] .auth-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 25% 75%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 75% 25%, rgba(34, 211, 238, 0.05) 0%, transparent 50%);
+  opacity: 0.8;
+}
+
+[data-theme="neo"] .auth-hero-content {
+  position: relative;
+  z-index: var(--neo-z-base);
+  max-width: 400px;
+}
+
+[data-theme="neo"] .auth-hero h1 {
+  color: var(--neo-ink);
+  font-family: var(--neo-font-heading);
+  font-size: var(--neo-text-xl);
+  font-weight: var(--neo-font-bold);
+  margin-bottom: var(--neo-space-lg);
+  letter-spacing: -0.025em;
+}
+
+[data-theme="neo"] .auth-hero p {
+  color: var(--neo-muted);
+  font-size: var(--neo-text-base);
+  line-height: 1.6;
+  margin-bottom: var(--neo-space-2xl);
+}
+
+[data-theme="neo"] .auth-features {
+  display: grid;
+  gap: var(--neo-space-lg);
+  text-align: left;
+}
+
+[data-theme="neo"] .auth-feature {
+  display: flex;
+  align-items: center;
+  gap: var(--neo-space-base);
+  color: var(--neo-muted);
+  font-size: var(--neo-text-sm);
+  opacity: 0.9;
+}
+
+[data-theme="neo"] .auth-feature-icon {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--neo-hairline);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Replace emoji icons with CSS-based icons */
+[data-theme="neo"] .auth-feature-icon::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--neo-accent-b);
+  border-radius: 50%;
+}
+
+/* ==============================================
+   FORM PANEL - RIGHT SIDE
+   ============================================== */
+
+[data-theme="neo"] .auth-form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--neo-space-3xl);
+  background: var(--neo-panel);
+}
+
+[data-theme="neo"] .auth-form-container {
+  max-width: 400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+[data-theme="neo"] .auth-header {
+  text-align: center;
+  margin-bottom: var(--neo-space-2xl);
+}
+
+[data-theme="neo"] .auth-title {
+  font-family: var(--neo-font-heading);
+  font-size: var(--neo-text-lg);
+  font-weight: var(--neo-font-bold);
+  color: var(--neo-ink);
+  margin-bottom: var(--neo-space-sm);
+  letter-spacing: -0.025em;
+}
+
+[data-theme="neo"] .auth-subtitle {
+  color: var(--neo-muted);
+  font-size: var(--neo-text-sm);
+}
+
+/* ==============================================
+   TAB NAVIGATION
+   ============================================== */
+
+[data-theme="neo"] .auth-tabs {
+  display: flex;
+  margin-bottom: var(--neo-space-2xl);
+  background: var(--neo-hover);
+  border-radius: var(--neo-radius);
+  padding: 4px;
+  border: 1px solid var(--neo-hairline);
+}
+
+[data-theme="neo"] .auth-tab {
+  flex: 1;
+  padding: var(--neo-space-base) var(--neo-space-lg);
+  background: none;
+  border: none;
+  color: var(--neo-tab-inactive-text);
+  font-family: var(--neo-font-body);
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-medium);
+  border-radius: var(--neo-radius-sm);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+  position: relative;
+}
+
+[data-theme="neo"] .auth-tab.active {
+  background: var(--neo-tab-active-bg);
+  color: var(--neo-tab-active-text);
+  box-shadow: var(--neo-shadow-sm);
+  border: 1px solid var(--neo-hairline);
+}
+
+[data-theme="neo"] .auth-tab:hover:not(.active) {
+  color: var(--neo-ink);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="neo"] .auth-tab:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+/* ==============================================
+   SSO BUTTONS
+   ============================================== */
+
+[data-theme="neo"] .sso-buttons {
+  display: grid;
+  gap: var(--neo-space-base);
+  margin-bottom: var(--neo-space-xl);
+}
+
+[data-theme="neo"] .sso-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--neo-space-base);
+  padding: var(--neo-space-lg);
+  background: var(--neo-hover);
+  border: 1px solid var(--neo-hairline);
+  border-radius: var(--neo-radius);
+  color: var(--neo-ink);
+  text-decoration: none;
+  font-family: var(--neo-font-body);
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-medium);
+  transition: all var(--neo-transition-fast);
+  cursor: pointer;
+}
+
+[data-theme="neo"] .sso-button:hover {
+  background: var(--neo-panel);
+  border-color: var(--neo-accent-b);
+  transform: var(--neo-btn-primary-hover-transform);
+  box-shadow: var(--neo-shadow-base);
+}
+
+[data-theme="neo"] .sso-button:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+[data-theme="neo"] .sso-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ==============================================
+   DIVIDER
+   ============================================== */
+
+[data-theme="neo"] .auth-divider {
+  display: flex;
+  align-items: center;
+  margin: var(--neo-space-xl) 0;
+  color: var(--neo-muted);
+  font-size: var(--neo-text-xs);
+  font-weight: var(--neo-font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-theme="neo"] .auth-divider::before,
+[data-theme="neo"] .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--neo-hairline);
+}
+
+[data-theme="neo"] .auth-divider span {
+  margin: 0 var(--neo-space-lg);
+}
+
+/* ==============================================
+   FORM ELEMENTS
+   ============================================== */
+
+[data-theme="neo"] .form-group {
+  margin-bottom: var(--neo-space-xl);
+}
+
+[data-theme="neo"] .form-label {
+  display: block;
+  color: var(--neo-label-color) !important;
+  font-family: var(--neo-font-body);
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-label-weight) !important;
+  margin-bottom: var(--neo-space-sm);
+  letter-spacing: -0.01em;
+}
+
+[data-theme="neo"] .form-input {
+  width: 100%;
+  padding: var(--neo-space-lg);
+  background: var(--neo-field-bg) !important;
+  border: 1px solid var(--neo-field-border);
+  border-radius: var(--neo-radius);
+  color: var(--neo-field-text) !important;
+  font-family: var(--neo-font-body);
+  font-size: var(--neo-text-sm);
+  transition: all var(--neo-transition-fast);
+  box-sizing: border-box;
+}
+
+[data-theme="neo"] .form-input::placeholder {
+  color: var(--neo-field-placeholder);
+  opacity: 0.8;
+}
+
+[data-theme="neo"] .form-input:hover {
+  border-color: var(--neo-field-border-hover);
+}
+
+[data-theme="neo"] .form-input:focus {
+  outline: none;
+  border-color: var(--neo-field-border-focus);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.2);
+}
+
+[data-theme="neo"] .form-help {
+  margin-top: var(--neo-space-sm);
+  color: var(--neo-help-color) !important;
+  font-size: var(--neo-help-size);
+  line-height: 1.4;
+}
+
+[data-theme="neo"] .form-error {
+  margin-top: var(--neo-space-sm);
+  color: var(--neo-error);
+  font-size: var(--neo-help-size);
+  font-weight: var(--neo-font-medium);
+}
+
+/* Form States */
+[data-theme="neo"] .form-group.error .form-input {
+  border-color: var(--neo-error);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="neo"] .form-group.success .form-input {
+  border-color: var(--neo-success);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* ==============================================
+   CHECKBOX STYLING
+   ============================================== */
+
+[data-theme="neo"] .form-checkbox {
+  width: 16px;
+  height: 16px;
+  background: var(--neo-field-bg);
+  border: 1px solid var(--neo-field-border);
+  border-radius: var(--neo-radius-sm);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+}
+
+[data-theme="neo"] .form-checkbox:checked {
+  background: var(--neo-accent-b);
+  border-color: var(--neo-accent-b);
+}
+
+[data-theme="neo"] .form-checkbox:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+/* ==============================================
+   BUTTONS
+   ============================================== */
+
+[data-theme="neo"] .btn {
+  padding: var(--neo-space-lg) var(--neo-space-xl);
+  border-radius: var(--neo-radius);
+  font-family: var(--neo-font-body);
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-semibold);
+  cursor: pointer;
+  transition: all var(--neo-transition-fast);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--neo-space-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="neo"] .btn.w-full {
+  width: 100%;
+}
+
+/* Primary Button - Gradient Border */
+[data-theme="neo"] .btn-primary {
+  background: var(--neo-panel);
+  color: var(--neo-ink);
+  border: 2px solid transparent;
+  background-image: linear-gradient(var(--neo-panel), var(--neo-panel)),
+                    linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+[data-theme="neo"] .btn-primary:hover {
+  transform: var(--neo-btn-primary-hover-transform);
+  box-shadow: var(--neo-shadow-base);
+  background-image: linear-gradient(var(--neo-hover), var(--neo-hover)),
+                    linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+}
+
+[data-theme="neo"] .btn-primary:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+[data-theme="neo"] .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading State */
+[data-theme="neo"] .btn-loading {
+  color: transparent;
+}
+
+[data-theme="neo"] .btn-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--neo-accent-b);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: neo-spin 0.8s linear infinite;
+}
+
+@keyframes neo-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ==============================================
+   INLINE ACTIONS - REMEMBER ME & FORGOT PASSWORD
+   ============================================== */
+
+[data-theme="neo"] .flex.items-center.justify-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--neo-space-lg);
+}
+
+[data-theme="neo"] .flex.items-center.gap-2 {
+  display: flex;
+  align-items: center;
+  gap: var(--neo-space-sm);
+}
+
+[data-theme="neo"] .text-sm {
+  font-size: var(--neo-text-xs);
+  color: var(--neo-muted);
+}
+
+[data-theme="neo"] .flex.items-start.gap-3 {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--neo-space-base);
+}
+
+[data-theme="neo"] .mt-1 {
+  margin-top: 4px;
+}
+
+/* ==============================================
+   FOOTER SECTION
+   ============================================== */
+
+[data-theme="neo"] .auth-footer {
+  text-align: center;
+  margin-top: var(--neo-space-2xl);
+  padding-top: var(--neo-space-2xl);
+  border-top: 1px solid var(--neo-hairline);
+}
+
+[data-theme="neo"] .auth-footer-text {
+  color: var(--neo-muted);
+  font-size: var(--neo-text-sm);
+  margin-bottom: var(--neo-space-lg);
+}
+
+[data-theme="neo"] .auth-footer-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--neo-space-xl);
+}
+
+[data-theme="neo"] .auth-footer-link {
+  color: var(--neo-link-color);
+  text-decoration: none;
+  font-size: var(--neo-text-xs);
+  font-weight: var(--neo-font-medium);
+  transition: all var(--neo-transition-fast);
+  border-radius: var(--neo-radius-sm);
+  padding: var(--neo-space-xs) var(--neo-space-sm);
+  margin: calc(-1 * var(--neo-space-xs)) calc(-1 * var(--neo-space-sm));
+}
+
+[data-theme="neo"] .auth-footer-link:hover {
+  color: var(--neo-link-hover);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+[data-theme="neo"] .auth-footer-link:focus-visible {
+  outline: 2px solid var(--neo-ring);
+  outline-offset: 2px;
+}
+
+/* ==============================================
+   TAB CONTENT VISIBILITY
+   ============================================== */
+
+[data-theme="neo"] .tab-content {
+  display: none;
+}
+
+[data-theme="neo"] .tab-content.active {
+  display: block;
+}
+
+/* ==============================================
+   RESPONSIVE DESIGN
+   ============================================== */
+
+@media (max-width: 768px) {
+  [data-theme="neo"] .auth-page {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  [data-theme="neo"] .auth-hero {
+    padding: var(--neo-space-2xl) var(--neo-space-lg);
+    min-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid var(--neo-hairline);
+  }
+  
+  [data-theme="neo"] .auth-hero h1 {
+    font-size: var(--neo-text-lg);
+  }
+  
+  [data-theme="neo"] .auth-features {
+    display: none;
+  }
+  
+  [data-theme="neo"] .auth-form-panel {
+    padding: var(--neo-space-2xl) var(--neo-space-lg);
+  }
+  
+  [data-theme="neo"] .auth-footer-links {
+    flex-wrap: wrap;
+    gap: var(--neo-space-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  [data-theme="neo"] .auth-form-panel {
+    padding: var(--neo-space-xl) var(--neo-space-base);
+  }
+  
+  [data-theme="neo"] .form-input {
+    padding: var(--neo-space-base) var(--neo-space-lg);
+  }
+  
+  [data-theme="neo"] .btn {
+    padding: var(--neo-space-base) var(--neo-space-lg);
+  }
+}

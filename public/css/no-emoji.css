@@ -1,0 +1,505 @@
+/* ==============================================
+   NO-EMOJI STYLES - HIDE EMOJI DECORATIONS
+   CSS-only emoji hiding for clean, professional look
+   ============================================== */
+
+/* ==============================================
+   HERO SECTION EMOJI REMOVAL
+   ============================================== */
+
+/* Hide the car emoji in auth logo */
+[data-theme="neo"] .auth-logo {
+  display: none;
+}
+
+/* Adjust hero spacing to compensate for removed logo */
+[data-theme="neo"] .auth-hero h1 {
+  margin-top: 0;
+}
+
+/* ==============================================
+   FEATURE ICONS EMOJI REMOVAL
+   ============================================== */
+
+/* Hide emoji content in feature icons, keep container for CSS icons */
+[data-theme="neo"] .auth-feature-icon {
+  font-size: 0; /* Hide any text/emoji content */
+  text-indent: -9999px; /* Extra insurance */
+  overflow: hidden;
+}
+
+/* Individual feature icon replacements with CSS */
+[data-theme="neo"] .auth-feature:nth-child(1) .auth-feature-icon::before {
+  /* Lightning bolt replacement for ⚡ */
+  background: linear-gradient(135deg, var(--neo-accent-b) 0%, var(--neo-accent-c) 100%);
+  clip-path: polygon(20% 0%, 60% 0%, 40% 50%, 80% 50%, 40% 100%, 0% 50%, 20% 50%);
+  border-radius: 0;
+  width: 10px;
+  height: 10px;
+}
+
+[data-theme="neo"] .auth-feature:nth-child(2) .auth-feature-icon::before {
+  /* Chart replacement for 📊 */
+  background: var(--neo-accent-a);
+  clip-path: polygon(0% 100%, 0% 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0%, 100% 0%, 100% 100%);
+  border-radius: 0;
+  width: 12px;
+  height: 10px;
+}
+
+[data-theme="neo"] .auth-feature:nth-child(3) .auth-feature-icon::before {
+  /* Dollar sign replacement for 💰 */
+  content: '$';
+  background: transparent;
+  color: var(--neo-accent-c);
+  font-weight: bold;
+  font-size: 12px;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="neo"] .auth-feature:nth-child(4) .auth-feature-icon::before {
+  /* Lock replacement for 🔒 */
+  border: 2px solid var(--neo-accent-b);
+  border-top: 3px solid var(--neo-accent-b);
+  border-radius: 2px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  background: transparent;
+  width: 6px;
+  height: 6px;
+}
+
+[data-theme="neo"] .auth-feature:nth-child(4) .auth-feature-icon::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 3px;
+  background: var(--neo-accent-b);
+  border-radius: 1px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -10%);
+}
+
+/* ==============================================
+   SSO BUTTON EMOJI REMOVAL
+   ============================================== */
+
+/* If any SSO buttons contain emoji icons, hide them */
+[data-theme="neo"] .sso-button .emoji,
+[data-theme="neo"] .sso-button [data-emoji],
+[data-theme="neo"] .sso-button .icon-emoji {
+  display: none;
+}
+
+/* ==============================================
+   FORM FIELD EMOJI REMOVAL
+   ============================================== */
+
+/* Hide any emoji bullets or decorations in form labels */
+[data-theme="neo"] .form-label .emoji,
+[data-theme="neo"] .form-label [data-emoji],
+[data-theme="neo"] .form-help .emoji,
+[data-theme="neo"] .form-help [data-emoji] {
+  display: none;
+}
+
+/* ==============================================
+   ERROR/SUCCESS STATE ICONS (CSS REPLACEMENTS)
+   ============================================== */
+
+/* Success icon replacement */
+[data-theme="neo"] .form-group.success::before {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--neo-success);
+  border-radius: 50%;
+  background: var(--neo-success);
+  z-index: 1;
+}
+
+[data-theme="neo"] .form-group.success::after {
+  content: '✓';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  z-index: 2;
+}
+
+[data-theme="neo"] .form-group.success {
+  position: relative;
+}
+
+/* Error icon replacement */
+[data-theme="neo"] .form-group.error::before {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--neo-error);
+  border-radius: 50%;
+  background: var(--neo-error);
+  z-index: 1;
+}
+
+[data-theme="neo"] .form-group.error::after {
+  content: '!';
+  position: absolute;
+  right: 17px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 2;
+}
+
+[data-theme="neo"] .form-group.error {
+  position: relative;
+}
+
+/* ==============================================
+   GENERAL EMOJI CLEANUP
+   ============================================== */
+
+/* Hide any remaining emoji elements */
+[data-theme="neo"] .emoji,
+[data-theme="neo"] [data-emoji],
+[data-theme="neo"] .icon-emoji {
+  display: none !important;
+}
+
+/* Hide emoji-like Unicode characters in pseudo-elements */
+[data-theme="neo"] *::before,
+[data-theme="neo"] *::after {
+  /* Reset any emoji content that might be set elsewhere */
+}
+
+/* Specific targeting for common emoji wrapper patterns */
+[data-theme="neo"] .icon[aria-hidden="true"],
+[data-theme="neo"] [role="img"][aria-label*="emoji"],
+[data-theme="neo"] .emoji-icon,
+[data-theme="neo"] .emoji-wrapper {
+  display: none !important;
+}
+
+/* ==============================================
+   LAYOUT COMPENSATION
+   ============================================== */
+
+/* Ensure removing emojis doesn't break layout */
+[data-theme="neo"] .auth-hero-content {
+  /* Compensate for removed logo */
+  padding-top: 0;
+}
+
+[data-theme="neo"] .auth-feature {
+  /* Maintain alignment even with replaced icons */
+  align-items: center;
+}
+
+/* ==============================================
+   DASHBOARD PAGE EMOJI REMOVAL
+   ============================================== */
+
+/* Hide sidebar navigation emoji icons */
+[data-theme="neo"] .sidebar-brand .nav-icon {
+  display: none;
+}
+
+[data-theme="neo"] .nav-item .nav-icon {
+  font-size: 0;
+  text-indent: -9999px;
+  overflow: hidden;
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+
+/* Replace navigation icons with CSS shapes */
+[data-theme="neo"] .nav-item:nth-child(1) .nav-icon::before,
+[data-theme="neo"] a[href="/dashboard.html"] .nav-icon::before {
+  /* Chart icon for Overview */
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 10px;
+  background: var(--neo-accent-b);
+  clip-path: polygon(0% 100%, 0% 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0%, 100% 0%, 100% 100%);
+  top: 3px;
+  left: 2px;
+}
+
+[data-theme="neo"] a[href="/trips.html"] .nav-icon::before {
+  /* Road icon for Trips */
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 3px;
+  background: var(--neo-accent-b);
+  border-radius: 2px;
+  top: 6.5px;
+  left: 1px;
+}
+
+[data-theme="neo"] a[href="/trips.html"] .nav-icon::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 8px;
+  background: var(--neo-accent-b);
+  border-radius: 1px;
+  top: 4px;
+  left: 7px;
+}
+
+[data-theme="neo"] a[href="/upload.html"] .nav-icon::before {
+  /* Upload arrow */
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--neo-accent-b);
+  border-left: none;
+  border-bottom: none;
+  transform: rotate(-45deg);
+  top: 6px;
+  left: 4px;
+}
+
+[data-theme="neo"] a[href="/analytics.html"] .nav-icon::before {
+  /* Analytics line chart */
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  background: var(--neo-accent-b);
+  transform: rotate(15deg);
+  top: 7px;
+  left: 2px;
+}
+
+[data-theme="neo"] a[href="/transponders.html"] .nav-icon::before {
+  /* Signal waves */
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border: 2px solid var(--neo-accent-b);
+  border-radius: 50%;
+  top: 5.5px;
+  left: 5.5px;
+}
+
+[data-theme="neo"] a[href="/transponders.html"] .nav-icon::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--neo-accent-b);
+  border-radius: 50%;
+  top: 4.5px;
+  left: 4.5px;
+}
+
+[data-theme="neo"] a[href="/invoices.html"] .nav-icon::before {
+  /* Document icon */
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 12px;
+  border: 2px solid var(--neo-accent-b);
+  border-radius: 1px;
+  top: 2px;
+  left: 3px;
+}
+
+[data-theme="neo"] a[href="/invoices.html"] .nav-icon::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 1px;
+  background: var(--neo-accent-b);
+  top: 6px;
+  left: 5px;
+  box-shadow: 0 2px 0 var(--neo-accent-b), 0 4px 0 var(--neo-accent-b);
+}
+
+/* Hide KPI card emoji icons */
+[data-theme="neo"] .kpi-icon {
+  font-size: 0;
+  text-indent: -9999px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Replace KPI icons with CSS shapes */
+[data-theme="neo"] .kpi-icon.tolls::before {
+  /* Chart icon */
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 10px;
+  background: white;
+  clip-path: polygon(0% 100%, 0% 60%, 25% 60%, 25% 40%, 50% 40%, 50% 20%, 75% 20%, 75% 0%, 100% 0%, 100% 100%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+[data-theme="neo"] .kpi-icon.driving::before {
+  /* Car outline */
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 8px;
+  border: 2px solid white;
+  border-radius: 4px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+[data-theme="neo"] .kpi-icon.driving::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  top: 50%;
+  left: 25%;
+  transform: translate(-50%, -50%);
+  box-shadow: 8px 0 0 white;
+}
+
+[data-theme="neo"] .kpi-icon.matched::before {
+  /* Checkmark */
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 10px;
+  border: 2px solid white;
+  border-left: none;
+  border-top: none;
+  transform: rotate(45deg);
+  top: 40%;
+  left: 50%;
+  transform-origin: left bottom;
+}
+
+/* Hide performance card title emojis */
+[data-theme="neo"] .card-title {
+  font-size: 0;
+  text-indent: -9999px;
+  overflow: hidden;
+  position: relative;
+  width: auto;
+  height: auto;
+  display: block;
+}
+
+[data-theme="neo"] .card-title::before {
+  content: attr(data-title);
+  font-size: var(--neo-text-lg);
+  text-indent: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+}
+
+/* Hide status icons and replace with text */
+[data-theme="neo"] .status-icon {
+  font-size: var(--neo-text-sm) !important;
+  text-indent: 0 !important;
+}
+
+/* Hide primary CTA emoji - better approach */
+[data-theme="neo"] .primary-cta {
+  color: transparent;
+  position: relative;
+}
+
+[data-theme="neo"] .primary-cta::before {
+  content: 'Upload CSVs / Run Fetch';
+  color: var(--neo-ink);
+  font-size: var(--neo-text-sm);
+  font-weight: var(--neo-font-semibold);
+  font-family: var(--neo-font-body);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+/* View action buttons - emojis removed via JavaScript when Neo theme is active */
+
+/* Hide user dropdown emoji */
+[data-theme="neo"] .dropdown-item .dropdown-icon {
+  display: none;
+}
+
+/* Hide all trend emoji arrows */
+[data-theme="neo"] .kpi-change {
+  font-size: 0;
+  text-indent: -9999px;
+  position: relative;
+  overflow: visible;
+}
+
+[data-theme="neo"] .kpi-change::before {
+  content: 'Real data';
+  font-size: var(--neo-text-xs);
+  text-indent: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+/* ==============================================
+   ACCESSIBILITY NOTES
+   ============================================== */
+
+/*
+  All emoji icons have been replaced with CSS-based alternatives:
+  
+  AUTH PAGE:
+  - ⚡ Lightning → CSS clip-path shape
+  - 📊 Chart → CSS bar chart shape  
+  - 💰 Money → CSS dollar sign
+  - 🔒 Lock → CSS lock shape
+  - 🚗 Car → Completely hidden, layout adjusted
+  
+  DASHBOARD PAGE:
+  - Navigation icons → CSS geometric shapes
+  - KPI icons → CSS outlines and shapes
+  - Status indicators → Text-based
+  - Action buttons → Text content only
+  - Trend indicators → Text labels
+  
+  Error/success states use CSS-generated checkmarks and exclamation points
+  instead of emoji for maximum accessibility and visual consistency.
+*/

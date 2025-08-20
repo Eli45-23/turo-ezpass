@@ -301,22 +301,30 @@ class SimpleTollMatcher {
     /**
      * Step 3: Load transponder mappings from database
      * Returns Map: transponderNumber -> plateNumber
+     * ONLY loads user-defined mappings (not auto-discovered)
      */
     async loadTransponderMappings(hostId) {
         return new Promise((resolve) => {
             const mappings = new Map();
             
             db.all(
-                `SELECT transponder_number, vehicle_plate 
+                `SELECT transponder_number, vehicle_plate, vehicle_description 
                  FROM transponder_mappings 
-                 WHERE host_id = ? AND is_active = 1`,
+                 WHERE host_id = ? AND is_active = 1 
+                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
                 [hostId],
                 (err, results) => {
                     if (!err && results) {
                         results.forEach(mapping => {
-                            mappings.set(mapping.transponder_number, this.normalizePlate(mapping.vehicle_plate));
+                            // Additional safety check: skip any auto-discovered mappings
+                            if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
+                                mappings.set(mapping.transponder_number, this.normalizePlate(mapping.vehicle_plate));
+                                console.log(`✅ Loaded user-defined mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate}`);
+                            } else {
+                                console.log(`🚫 Skipping auto-discovered mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate}`);
+                            }
                         });
-                        console.log(`🔗 Loaded transponder mappings:`, Array.from(mappings.entries()));
+                        console.log(`🔗 Loaded ${mappings.size} user-defined transponder mappings (excluding auto-discovered)`);
                     }
                     resolve(mappings);
                 }
@@ -402,7 +410,7 @@ class SimpleTollMatcher {
     /**
      * Resolve toll vehicle identity - handle both plates and transponders
      * Returns array of normalized plate numbers this toll could belong to
-     * ONLY returns vehicles that are in the transponder mappings (per user requirement)
+     * FIXED: Now allows direct plate matching even without transponder mappings
      */
     resolveTollVehicle(tagOrPlate, transponderMappings) {
         if (!tagOrPlate) return [];
@@ -416,14 +424,17 @@ class SimpleTollMatcher {
             vehicles.push(mappedPlate);
         }
         
-        // Check if it's a direct plate match in our transponder mappings
+        // Check if it's a direct plate match
         if (this.isPlateNumber(tagOrPlate)) {
-            // Only include this plate if it's one of our tracked vehicles
+            // FIXED: Always include direct plate matches, even without transponder mappings
+            if (!vehicles.includes(normalized)) {
+                vehicles.push(normalized);
+            }
+            
+            // Also check if it's mapped via transponder for completeness
             for (const [transponder, plate] of transponderMappings.entries()) {
                 if (this.normalizePlate(plate) === normalized) {
-                    if (!vehicles.includes(normalized)) {
-                        vehicles.push(normalized);
-                    }
+                    // Already added above, no need to add again
                     break;
                 }
             }
@@ -447,9 +458,19 @@ class SimpleTollMatcher {
                 continue;
             }
             
-            // Check time window - toll must be within trip dates (exact match)
+            // Check time window - STRICT EXACT matching only (no buffers allowed)
             if (toll.tollDate >= trip.tripStart && toll.tollDate <= trip.tripEnd) {
                 matchingTrips.push(trip);
+                console.log(`✅ EXACT MATCH: Toll date ${toll.tollDate.toISOString()} is within trip window [${trip.tripStart.toISOString()} - ${trip.tripEnd.toISOString()}]`);
+            } else {
+                // Log why it didn't match for debugging
+                if (toll.tollDate < trip.tripStart) {
+                    const hoursBefore = Math.round((trip.tripStart - toll.tollDate) / (1000 * 60 * 60));
+                    console.log(`❌ REJECTED: Toll ${toll.laneTransactionId} occurred ${hoursBefore} hours BEFORE trip ${trip.reservationId} start`);
+                } else if (toll.tollDate > trip.tripEnd) {
+                    const hoursAfter = Math.round((toll.tollDate - trip.tripEnd) / (1000 * 60 * 60));
+                    console.log(`❌ REJECTED: Toll ${toll.laneTransactionId} occurred ${hoursAfter} hours AFTER trip ${trip.reservationId} end`);
+                }
             }
         }
         
@@ -527,6 +548,14 @@ class SimpleTollMatcher {
         
         for (const match of matches) {
             try {
+                // FINAL VALIDATION: Ensure toll is EXACTLY within trip window before applying
+                if (match.toll.tollDate < match.trip.tripStart || match.toll.tollDate > match.trip.tripEnd) {
+                    console.error(`🚫 BLOCKING INVALID MATCH: Toll ${match.toll.laneTransactionId} is outside trip ${match.trip.reservationId} window`);
+                    console.error(`   Toll Date: ${match.toll.tollDate.toISOString()}`);
+                    console.error(`   Trip Window: ${match.trip.tripStart.toISOString()} - ${match.trip.tripEnd.toISOString()}`);
+                    continue; // Skip this match
+                }
+                
                 // We need to find the actual database IDs since CSV data doesn't have them
                 const tripDbId = await this.findTripDatabaseId(match.trip);
                 const tollDbId = await this.findTollDatabaseId(match.toll);

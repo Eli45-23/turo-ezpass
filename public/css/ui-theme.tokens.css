@@ -1,0 +1,137 @@
+/* ==============================================
+   UI THEME TOKENS - NEO DARK THEME
+   Modern, techy, premium design system
+   ============================================== */
+
+/* Import premium fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+[data-theme="neo"] {
+  /* ==============================================
+     CORE COLORS - EDGY DARK THEME
+     ============================================== */
+  
+  /* Background & Surfaces */
+  --neo-bg: #0B0F1A;           /* Main background - deep space */
+  --neo-panel: #0F1625;        /* Card/panel backgrounds */
+  --neo-hover: #1B2336;        /* Hover states */
+  --neo-hairline: #24304A;     /* Subtle borders */
+  
+  /* Typography Colors */
+  --neo-ink: #EAF2FF;          /* Primary text - crisp white */
+  --neo-muted: #9FB0D8;        /* Secondary text */
+  --neo-subtle: #7C8DB5;       /* Tertiary text */
+  
+  /* Accent Colors (stroke only) */
+  --neo-accent-a: #7C3AED;     /* Purple accent */
+  --neo-accent-b: #22D3EE;     /* Cyan accent */
+  --neo-accent-c: #4CC9F0;     /* Light blue accent */
+  --neo-ring: #22D3EE;         /* Focus ring color */
+  
+  /* ==============================================
+     TYPOGRAPHY SYSTEM
+     ============================================== */
+  
+  /* Font Families */
+  --neo-font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --neo-font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  
+  /* Font Scale - 28/20/16/14/12 */
+  --neo-text-xs: 0.75rem;      /* 12px */
+  --neo-text-sm: 0.875rem;     /* 14px */
+  --neo-text-base: 1rem;       /* 16px */
+  --neo-text-lg: 1.25rem;      /* 20px */
+  --neo-text-xl: 1.75rem;      /* 28px */
+  
+  /* Font Weights */
+  --neo-font-light: 300;
+  --neo-font-normal: 400;
+  --neo-font-medium: 500;
+  --neo-font-semibold: 600;
+  --neo-font-bold: 700;
+  
+  /* ==============================================
+     COMPONENT TOKENS
+     ============================================== */
+  
+  /* Form Elements */
+  --neo-field-bg: #0A0E17;         /* Input background - deeper than panel */
+  --neo-field-border: #24304A;     /* Input border - hairline */
+  --neo-field-border-hover: #3B4962; /* Input hover border */
+  --neo-field-border-focus: #22D3EE; /* Input focus border - cyan */
+  --neo-field-text: #EAF2FF;       /* Input text color */
+  --neo-field-placeholder: #7C8DB5; /* Placeholder text */
+  
+  /* Interactive Elements */
+  --neo-link-color: #4CC9F0;       /* Link color */
+  --neo-link-hover: #22D3EE;       /* Link hover color */
+  
+  /* State Colors */
+  --neo-error: #EF4444;            /* Error red */
+  --neo-success: #10B981;          /* Success green */
+  --neo-warning: #F59E0B;          /* Warning amber */
+  
+  /* ==============================================
+     LAYOUT & SPACING
+     ============================================== */
+  
+  /* Border Radius */
+  --neo-radius-sm: 6px;
+  --neo-radius: 8px;
+  --neo-radius-lg: 12px;
+  --neo-radius-xl: 16px;
+  
+  /* Spacing Scale */
+  --neo-space-xs: 0.25rem;    /* 4px */
+  --neo-space-sm: 0.5rem;     /* 8px */
+  --neo-space-base: 0.75rem;  /* 12px */
+  --neo-space-lg: 1rem;       /* 16px */
+  --neo-space-xl: 1.5rem;     /* 24px */
+  --neo-space-2xl: 2rem;      /* 32px */
+  --neo-space-3xl: 3rem;      /* 48px */
+  
+  /* Shadows - Soft, not heavy */
+  --neo-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --neo-shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --neo-shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  
+  /* ==============================================
+     MOTION & INTERACTION
+     ============================================== */
+  
+  /* Transitions - 200-220ms ease-out */
+  --neo-transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --neo-transition-base: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Z-index Scale */
+  --neo-z-base: 1;
+  --neo-z-dropdown: 10;
+  --neo-z-sticky: 20;
+  --neo-z-modal: 50;
+  
+  /* ==============================================
+     COMPONENT-SPECIFIC TOKENS
+     ============================================== */
+  
+  /* Buttons */
+  --neo-btn-primary-bg: transparent;
+  --neo-btn-primary-border: linear-gradient(135deg, var(--neo-accent-a), var(--neo-accent-b));
+  --neo-btn-primary-text: var(--neo-ink);
+  --neo-btn-primary-hover-transform: translateY(-1px);
+  
+  --neo-btn-secondary-bg: transparent;
+  --neo-btn-secondary-border: var(--neo-hairline);
+  --neo-btn-secondary-text: var(--neo-ink);
+  
+  /* Tab Navigation */
+  --neo-tab-active-bg: var(--neo-panel);
+  --neo-tab-inactive-bg: transparent;
+  --neo-tab-active-text: var(--neo-ink);
+  --neo-tab-inactive-text: var(--neo-muted);
+  
+  /* Form Labels & Help Text */
+  --neo-label-color: var(--neo-ink);
+  --neo-label-weight: var(--neo-font-semibold);
+  --neo-help-color: var(--neo-muted);
+  --neo-help-size: var(--neo-text-xs);
+}
