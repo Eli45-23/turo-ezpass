@@ -1459,19 +1459,25 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         console.log('🏷️ Known transponders:', Array.from(knownTransponders));
         
         // Get list of previously deleted/deactivated vehicles to avoid recreating them
-        const deletedVehicles = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT DISTINCT vehicle_plate FROM transponder_mappings WHERE host_id = ? AND is_active = 0
-                UNION
-                SELECT DISTINCT vehicle_plate FROM deleted_transponder_plates WHERE host_id = ?
-            `, [hostId, hostId], (err, rows) => {
-                if (err) reject(err);
-                else {
-                    const plates = rows.map(row => normalizeVehiclePlate(row.vehicle_plate));
-                    resolve(new Set(plates));
-                }
-            });
-        });
+        const { data: deletedMappings, error: deletedMappingsError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('vehicle_plate')
+            .eq('host_id', hostId)
+            .eq('is_active', false);
+            
+        const { data: deletedPlates, error: deletedPlatesError } = await supabaseAdmin
+            .from('deleted_transponder_plates')
+            .select('vehicle_plate')
+            .eq('host_id', hostId);
+        
+        if (deletedMappingsError || deletedPlatesError) {
+            console.warn('⚠️ Could not fetch deleted vehicles - continuing without this check');
+        }
+        
+        const deletedVehicles = new Set([
+            ...(deletedMappings || []).map(row => normalizeVehiclePlate(row.vehicle_plate)),
+            ...(deletedPlates || []).map(row => normalizeVehiclePlate(row.vehicle_plate))
+        ]);
         
         console.log('❌ Previously deleted vehicles:', Array.from(deletedVehicles));
         
