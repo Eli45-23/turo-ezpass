@@ -1697,9 +1697,18 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                     // Validate toll amount (must be > 0 and <= 200 per database constraint)
                                     if (!toll.amount || toll.amount <= 0 || toll.amount > 200) {
                                         console.log(`⚠️ Skipping invalid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
+                                        console.log('🔍 Toll details:', {
+                                            amount: toll.amount,
+                                            type: typeof toll.amount,
+                                            location: toll.location,
+                                            date: toll.transactionDate,
+                                            plate: toll.plateNumber
+                                        });
                                         dbUpdates.tolls_skipped = (dbUpdates.tolls_skipped || 0) + 1;
                                         resolve();
                                         return;
+                                    } else {
+                                        console.log(`✅ Valid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
                                     }
                                     
                                     // Try INSERT with transponder_id first, fallback if column doesn't exist

@@ -21,8 +21,29 @@ class SimpleTollMatcher {
         console.log('  - hostId:', hostId);
         console.log('  - trips type:', typeof trips, 'isArray:', Array.isArray(trips));
         console.log('  - tolls type:', typeof tolls, 'isArray:', Array.isArray(tolls));
-        console.log('  - trips:', trips);
-        console.log('  - tolls:', tolls);
+        console.log('  - trips count:', trips?.length || 0);
+        console.log('  - tolls count:', tolls?.length || 0);
+        
+        if (trips?.length > 0) {
+            console.log('  - Sample trip data:', {
+                id: trips[0].id || trips[0].turoTripId,
+                vehicle: trips[0].vehicle_plate || trips[0].vehiclePlate,
+                start: trips[0].start_date || trips[0].startDate,
+                end: trips[0].end_date || trips[0].endDate,
+                guest: trips[0].renter_name || trips[0].guest
+            });
+        }
+        
+        if (tolls?.length > 0) {
+            console.log('  - Sample toll data:', {
+                id: tolls[0].laneId || tolls[0].transaction_id,
+                amount: tolls[0].amount || tolls[0].toll_amount,
+                date: tolls[0].transactionDate || tolls[0].toll_date,
+                plate: tolls[0].plateNumber || tolls[0].plate_number,
+                transponder: tolls[0].transponderId || tolls[0].transponder_id
+            });
+        }
+        
         console.log(`📊 Processing ${trips?.length || 0} trips and ${tolls?.length || 0} tolls`);
         
         // PRE-PROCESSING FILTER: Remove any cancelled trips before any processing
@@ -50,6 +71,31 @@ class SimpleTollMatcher {
             console.log(`🛡️ Pre-filtering removed ${originalTripCount - filteredTrips.length} cancelled trips. Processing ${filteredTrips.length} active trips.`);
         }
         
+        // Early exit if no data to process
+        if (!filteredTrips || filteredTrips.length === 0) {
+            console.log('❌ EARLY EXIT: No trips to process after filtering');
+            return {
+                matches: [],
+                unmatchedTolls: tolls || [],
+                matchedCount: 0,
+                totalCharges: tolls?.length || 0,
+                averageConfidence: 0,
+                details: { noTripsAfterFiltering: true }
+            };
+        }
+        
+        if (!tolls || tolls.length === 0) {
+            console.log('❌ EARLY EXIT: No tolls to process');
+            return {
+                matches: [],
+                unmatchedTolls: [],
+                matchedCount: 0,
+                totalCharges: 0,
+                averageConfidence: 0,
+                details: { noTollsProvided: true }
+            };
+        }
+        
         progressCallback({
             step: 'initializing',
             message: 'Starting simple toll matching...',
@@ -59,15 +105,27 @@ class SimpleTollMatcher {
         // Step 1: Extract and normalize trip data
         const tripData = this.extractTripData(filteredTrips);
         console.log(`✅ Step 1: Extracted ${tripData.length} trip records`);
+        if (tripData.length > 0) {
+            console.log('🔍 Sample extracted trip:', tripData[0]);
+        }
         
         // Step 2: Extract and normalize toll data  
         const tollData = this.extractTollData(tolls);
         console.log(`✅ Step 2: Extracted ${tollData.length} toll records`);
+        if (tollData.length > 0) {
+            console.log('🔍 Sample extracted toll:', tollData[0]);
+        }
         
         // Step 3: Load transponder mappings for known vehicles
         const transponderMappings = await this.loadTransponderMappings(hostId);
         console.log(`✅ Step 3: Loaded ${transponderMappings.size} transponder mappings`);
         console.log('🔍 DEBUG: Available transponder mappings:', Array.from(transponderMappings.entries()));
+        
+        // Early exit if no transponder mappings
+        if (transponderMappings.size === 0) {
+            console.log('⚠️ WARNING: No transponder mappings found! This will prevent matching.');
+            console.log('📝 To fix: Add vehicle/transponder mappings in the Transponders section');
+        }
         
         progressCallback({
             step: 'matching',

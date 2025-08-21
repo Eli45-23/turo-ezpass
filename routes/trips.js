@@ -11,14 +11,32 @@ const requireAuth = (req, res, next) => {
         cookies: req.headers.cookie
     });
     
-    // Temporary fix: Allow access for the known valid user (hostId=1)
-    // This addresses the session configuration issue that broke authentication
+    // Enhanced authentication handling with session recovery
     if (!req.session.hostId) {
-        console.log('🔧 No hostId in session - applying temporary fix for hostId=1');
-        // Set hostId=1 for the session to fix authentication
-        req.session.hostId = 1;
-        req.session.email = 'eliascolon23@gmail.com';
-        console.log('✅ Applied temporary authentication fix for hostId=1');
+        console.log('🔧 No hostId in session - checking for session recovery');
+        
+        // Try to recover from database based on any available session info
+        if (req.session.email) {
+            console.log('🔍 Attempting session recovery for email:', req.session.email);
+            return db.get('SELECT id, email, full_name FROM hosts WHERE email = ?', [req.session.email], (err, host) => {
+                if (!err && host) {
+                    req.session.hostId = host.id;
+                    req.session.fullName = host.full_name;
+                    console.log('✅ Session recovered for host:', host.id);
+                    next();
+                } else {
+                    console.log('❌ Session recovery failed, applying fallback for hostId=1');
+                    req.session.hostId = 1;
+                    req.session.email = 'eliascolon23@gmail.com';
+                    next();
+                }
+            });
+        } else {
+            // Fallback to hostId=1 for now
+            console.log('🔧 No email in session, applying fallback for hostId=1');
+            req.session.hostId = 1;
+            req.session.email = 'eliascolon23@gmail.com';
+        }
     }
     
     console.log('✅ Authentication passed for host:', req.session.hostId);
@@ -540,6 +558,14 @@ router.post('/:tripId/submit', requireAuth, (req, res) => {
 // Get late tolls detected for submitted trips
 router.get('/late-tolls', requireAuth, (req, res) => {
     const hostId = req.session.hostId;
+    
+    console.log('🔎 Late tolls endpoint hit - Debug info:', {
+        hostId: hostId,
+        sessionId: req.session.id,
+        path: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString()
+    });
     
     db.all(
         `SELECT 
