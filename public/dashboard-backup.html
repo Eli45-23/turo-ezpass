@@ -1,18 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="neo">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Turo Toll Tracker</title>
-    
-    <!-- Design System -->
-    <link rel="stylesheet" href="/css/design-system.css">
-    <link rel="stylesheet" href="/css/components.css">
-    
-    <!-- Neo Dark Theme -->
-    <link rel="stylesheet" href="/css/ui-theme.tokens.css">
-    <link rel="stylesheet" href="/css/ui-dashboard.css">
-    <link rel="stylesheet" href="/css/no-emoji.css">
+    <title>Turo Toll Tracker - Quantum Matrix Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,616 +16,788 @@
     <script src="/js/accessibility.js"></script>
     
     <style>
-        /* Premium Dashboard Design System */
         :root {
-            --header-height: 72px;
-            --sidebar-width: 280px;
-            --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-            --card-shadow-hover: 0 4px 6px rgba(0, 0, 0, 0.07), 0 10px 15px rgba(0, 0, 0, 0.1);
-            --gradient-border: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
+            --space-cadet: #2D1B69;
+            --english-violet: #553C8B;
+            --sunglow: #FFC857;
+            --dark-cyan: #17A2B8;
+            --paynes-gray: #495057;
         }
 
-        /* Layout Foundation */
-        .dashboard-layout {
-            min-height: 100vh;
-            background: var(--bg);
-            color: var(--ink);
-            display: grid;
-            grid-template-rows: var(--header-height) 1fr;
-            grid-template-columns: var(--sidebar-width) 1fr;
-            grid-template-areas: 
-                "sidebar header"
-                "sidebar main";
-        }
-
-        /* Header */
-        .dashboard-header {
-            grid-area: header;
-            background: var(--panel);
-            border-bottom: 1px solid var(--hairline);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2rem;
-            position: sticky;
-            top: 0;
-            z-index: var(--z-sticky);
-        }
-
-        .dashboard-title {
-            font-family: var(--font-heading);
-            font-size: var(--text-2xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-        }
-
-        .dashboard-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-
-        .primary-cta {
-            background: linear-gradient(135deg, var(--accentA), var(--accentB));
-            color: white;
-            border: none;
-            padding: 0.75rem 1.25rem;
-            border-radius: var(--radius-sm);
-            font-size: var(--text-sm);
-            font-weight: var(--font-semibold);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            box-shadow: var(--card-shadow);
-        }
-
-        .primary-cta:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--card-shadow-hover);
-        }
-
-        .user-menu {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-
-        .user-menu:hover {
-            background: var(--hover);
-        }
-
-        .user-avatar {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accentA), var(--accentB));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: var(--font-semibold);
-            font-size: var(--text-sm);
-        }
-        
-        /* User Dropdown Menu */
-        .user-dropdown {
-            position: absolute;
-            top: calc(100% + 0.5rem);
-            right: 0;
-            min-width: 200px;
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-0.5rem);
-            transition: all var(--transition-fast);
-            z-index: var(--z-dropdown);
-        }
-        
-        .user-dropdown.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        
-        .user-dropdown-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--hairline);
-        }
-        
-        .user-email {
-            font-size: var(--text-sm);
-            color: var(--muted);
+        * {
             margin: 0;
-        }
-        
-        .user-dropdown-content {
-            padding: 0.5rem 0;
-        }
-        
-        .dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: none;
-            border: none;
-            text-align: left;
-            font-size: var(--text-sm);
-            color: var(--ink);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-        
-        .dropdown-item:hover {
-            background: var(--hover);
-        }
-        
-        .dropdown-item.danger {
-            color: #EF4444;
-        }
-        
-        .dropdown-item.danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-        }
-        
-        .dropdown-icon {
-            font-size: var(--text-base);
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* Sidebar */
-        .dashboard-sidebar {
-            grid-area: sidebar;
-            background: var(--panel);
-            border-right: 1px solid var(--hairline);
-            display: flex;
-            flex-direction: column;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
+        body {
+            font-family: 'Inter', sans-serif !important;
+            background: 
+                linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
+            min-height: 100vh !important;
+            color: white !important;
+            overflow-x: hidden !important;
+            position: relative !important;
         }
 
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--hairline);
-            font-family: var(--font-heading);
-            font-size: var(--text-xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
+        /* Quantum Matrix Background */
+        .quantum-background {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: -1 !important;
+            overflow: hidden !important;
         }
 
-        .sidebar-nav {
-            flex: 1;
-            padding: 1.5rem 0;
+        .hexagon-grid {
+            position: absolute !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-image: 
+                repeating-linear-gradient(
+                    30deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(255, 200, 87, 0.05) 52px,
+                    rgba(255, 200, 87, 0.05) 54px
+                ),
+                repeating-linear-gradient(
+                    150deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(23, 162, 184, 0.05) 52px,
+                    rgba(23, 162, 184, 0.05) 54px
+                ),
+                repeating-linear-gradient(
+                    270deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(255, 200, 87, 0.05) 52px,
+                    rgba(255, 200, 87, 0.05) 54px
+                ) !important;
+            animation: quantumGrid 20s linear infinite !important;
+        }
+
+        .data-node {
+            position: absolute !important;
+            width: 8px !important;
+            height: 8px !important;
+            background: var(--sunglow) !important;
+            border-radius: 50% !important;
+            box-shadow: 0 0 20px rgba(255, 200, 87, 0.6) !important;
+            animation: dataFlow 4s ease-in-out infinite !important;
+        }
+
+        .node-1 {
+            top: 20% !important;
+            left: 15% !important;
+            animation-delay: 0s !important;
+        }
+
+        .node-2 {
+            top: 30% !important;
+            right: 25% !important;
+            animation-delay: 1s !important;
+        }
+
+        .node-3 {
+            bottom: 40% !important;
+            left: 35% !important;
+            animation-delay: 2s !important;
+        }
+
+        .node-4 {
+            bottom: 25% !important;
+            right: 20% !important;
+            animation-delay: 3s !important;
+        }
+
+        .node-5 {
+            top: 60% !important;
+            left: 60% !important;
+            animation-delay: 1.5s !important;
+        }
+
+        .quantum-line {
+            position: absolute !important;
+            height: 1px !important;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 200, 87, 0.3), 
+                rgba(23, 162, 184, 0.3), 
+                transparent) !important;
+            animation: quantumPulse 3s ease-in-out infinite !important;
+        }
+
+        .line-1 {
+            width: 200px !important;
+            top: 25% !important;
+            left: 20% !important;
+            transform: rotate(25deg) !important;
+        }
+
+        .line-2 {
+            width: 150px !important;
+            top: 65% !important;
+            right: 30% !important;
+            transform: rotate(-45deg) !important;
+            animation-delay: 1s !important;
+        }
+
+        .line-3 {
+            width: 180px !important;
+            bottom: 30% !important;
+            left: 40% !important;
+            transform: rotate(60deg) !important;
+            animation-delay: 2s !important;
+        }
+
+        /* Layout Structure */
+        .app-layout {
+            display: flex !important;
+            min-height: 100vh !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+
+        /* Quantum Sidebar Navigation */
+        .sidebar {
+            width: 280px !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border-right: 1px solid rgba(255, 200, 87, 0.3) !important;
+            padding: 2rem 0 !important;
+            position: fixed !important;
+            height: 100vh !important;
+            left: 0 !important;
+            top: 0 !important;
+            overflow-y: auto !important;
+        }
+
+        .sidebar::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 20px,
+                    rgba(255, 200, 87, 0.02) 22px,
+                    rgba(255, 200, 87, 0.02) 24px
+                ) !important;
+            z-index: -1 !important;
+        }
+
+        .sidebar-title {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            color: var(--sunglow) !important;
+            padding: 0 2rem !important;
+            margin-bottom: 3rem !important;
+            letter-spacing: 2px !important;
+            text-transform: uppercase !important;
+        }
+
+        .nav-menu {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
 
         .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            color: var(--muted);
-            text-decoration: none;
-            font-size: var(--text-sm);
-            font-weight: var(--font-medium);
-            transition: all var(--transition-fast);
-            position: relative;
+            margin-bottom: 0.5rem !important;
         }
 
-        .nav-item:hover {
-            background: var(--hover);
-            color: var(--ink);
+        .nav-link {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            padding: 1rem 2rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            text-decoration: none !important;
+            transition: all 0.3s ease !important;
+            border-left: 2px solid transparent !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
         }
 
-        .nav-item.active {
-            background: var(--hover);
-            color: var(--accentB);
-            font-weight: var(--font-semibold);
+        .nav-link::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 0 !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+            transition: width 0.3s ease !important;
         }
 
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: var(--gradient-border);
+        .nav-link:hover::before {
+            width: 100% !important;
         }
 
-        .nav-icon {
-            font-size: var(--text-lg);
+        .nav-link:hover {
+            color: white !important;
+            border-left-color: var(--sunglow) !important;
         }
 
+        .nav-link.active {
+            color: var(--sunglow) !important;
+            border-left-color: var(--sunglow) !important;
+        }
+
+        .nav-link.active::before {
+            width: 100% !important;
+            background: rgba(255, 200, 87, 0.15) !important;
+        }
 
         /* Main Content */
-        .dashboard-main {
-            grid-area: main;
-            padding: 2rem;
-            background: var(--bg);
+        .main-content {
+            flex: 1 !important;
+            margin-left: 280px !important;
+            position: relative !important;
         }
 
-        .dashboard-content {
-            max-width: 1400px;
-            margin: 0 auto;
+        /* Dashboard Container */
+        .dashboard-container {
+            max-width: 1400px !important;
+            margin: 0 auto !important;
+            padding: 2rem !important;
+            position: relative !important;
         }
 
-        /* KPI Grid */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+        /* Quantum Header */
+        .dashboard-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 3rem !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 15px !important;
+            padding: 1.5rem 2rem !important;
+            box-shadow: 
+                0 0 50px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+            position: relative !important;
+            overflow: hidden !important;
         }
 
-        .kpi-card {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: all var(--transition-fast);
-            box-shadow: var(--card-shadow);
+        .dashboard-header::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -50% !important;
+            left: -50% !important;
+            width: 200% !important;
+            height: 200% !important;
+            background: 
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    rgba(255, 200, 87, 0.03) 30deg,
+                    transparent 60deg
+                ) !important;
+            animation: quantumSpin 15s linear infinite !important;
+            z-index: -1 !important;
         }
 
-        .kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--card-shadow-hover);
+        .dashboard-title {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f, var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            text-shadow: 0 0 30px rgba(255, 200, 87, 0.4) !important;
+            letter-spacing: 2px !important;
         }
 
-        .kpi-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--gradient-border);
+        .upload-btn {
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            border: 1px solid rgba(255, 200, 87, 0.5) !important;
+            padding: 1rem 2rem !important;
+            border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
         }
 
-        .kpi-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
+        .upload-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent) !important;
+            transition: left 0.5s ease !important;
         }
 
-        .kpi-title {
-            font-size: var(--text-sm);
-            font-weight: var(--font-medium);
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .upload-btn:hover::before {
+            left: 100% !important;
         }
 
-        .kpi-icon {
-            width: 2rem;
-            height: 2rem;
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: var(--text-lg);
-            color: white;
+        .upload-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 25px rgba(255, 200, 87, 0.4) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
         }
 
-        .kpi-icon.tolls { background: linear-gradient(135deg, #8B5CF6, #A855F7); }
-        .kpi-icon.driving { background: linear-gradient(135deg, #06B6D4, #0891B2); }
-        .kpi-icon.matched { background: linear-gradient(135deg, #10B981, #059669); }
-        .kpi-icon.revenue { background: linear-gradient(135deg, #F59E0B, #D97706); }
-
-        .kpi-value {
-            font-family: var(--font-heading);
-            font-size: var(--text-4xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-            margin-bottom: 0.5rem;
-            line-height: 1;
+        /* Quantum User Profile Avatar */
+        .user-profile {
+            position: relative !important;
         }
 
-        .kpi-subtitle {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            margin-bottom: 0.75rem;
+        .user-avatar {
+            width: 45px !important;
+            height: 45px !important;
+            border-radius: 8px !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 700 !important;
+            font-size: 1.2rem !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            border: 1px solid rgba(255, 200, 87, 0.5) !important;
+            box-shadow: 0 5px 15px rgba(255, 200, 87, 0.2) !important;
+            position: relative !important;
+            overflow: hidden !important;
         }
 
-        .kpi-change {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-size: var(--text-xs);
-            font-weight: var(--font-medium);
+        .user-avatar::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent) !important;
+            transition: left 0.5s ease !important;
         }
 
-        .kpi-change.positive {
-            color: #10B981;
+        .user-avatar:hover::before {
+            left: 100% !important;
         }
 
-        .kpi-change.negative {
-            color: #EF4444;
+        .user-avatar:hover {
+            transform: translateY(-2px) scale(1.05) !important;
+            box-shadow: 0 8px 25px rgba(255, 200, 87, 0.4) !important;
+            border-color: var(--sunglow) !important;
+        }
+        
+        .dropdown-menu {
+            position: absolute !important;
+            top: 55px !important;
+            right: 0 !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 0 !important;
+            min-width: 160px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: translateY(-10px) !important;
+            transition: all 0.3s ease !important;
+            z-index: 1000 !important;
         }
 
-        .kpi-change.neutral {
-            color: var(--muted);
+        .dropdown-menu.show {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) !important;
         }
 
-        /* Performance Section */
-        .performance-section {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+        .dropdown-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.8rem !important;
+            padding: 0.75rem 1.5rem !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            text-decoration: none !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.9rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+            background: none !important;
+            border: none !important;
+            width: 100% !important;
+            text-align: left !important;
         }
 
-        .performance-card {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
+        .dropdown-item::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 0 !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+            transition: width 0.3s ease !important;
         }
 
-        .card-header {
-            padding: 1.5rem 1.5rem 1rem;
-            border-bottom: 1px solid var(--hairline);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .dropdown-item:hover::before {
+            width: 100% !important;
         }
 
-        .card-title {
-            font-family: var(--font-heading);
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
+        .dropdown-item:hover {
+            color: white !important;
         }
 
-        .card-controls {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .header-actions {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
         }
 
-        .segmented-control {
-            display: flex;
-            background: var(--hover);
-            border-radius: var(--radius-sm);
-            padding: 0.25rem;
+        /* Quantum Stats Cards */
+        .stats-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+            gap: 2rem !important;
+            margin-bottom: 3rem !important;
         }
 
-        .segment-option {
-            padding: 0.375rem 0.75rem;
-            font-size: var(--text-xs);
-            font-weight: var(--font-medium);
-            color: var(--muted);
-            background: none;
-            border: none;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--transition-fast);
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            border-radius: 15px !important;
+            padding: 2rem !important;
+            transition: all 0.4s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
         }
 
-        .segment-option.active {
-            background: var(--panel);
-            color: var(--ink);
-            box-shadow: var(--card-shadow);
+        .stat-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 2px !important;
+            background: linear-gradient(90deg,
+                transparent,
+                var(--sunglow),
+                var(--dark-cyan),
+                transparent) !important;
+            animation: quantumScanner 3s ease-in-out infinite !important;
         }
 
-        .performance-metrics {
-            padding: 1.5rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
+        .stat-card::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 10px !important;
+            right: 10px !important;
+            width: 6px !important;
+            height: 6px !important;
+            background: var(--sunglow) !important;
+            border-radius: 50% !important;
+            box-shadow: 0 0 10px rgba(255, 200, 87, 0.8) !important;
+            animation: dataFlow 2s ease-in-out infinite !important;
         }
 
-        .metric-group {
-            text-align: center;
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02) !important;
+            box-shadow: 
+                0 20px 40px rgba(255, 200, 87, 0.15),
+                0 0 50px rgba(255, 200, 87, 0.1) !important;
+            border-color: rgba(255, 200, 87, 0.5) !important;
         }
 
-        .metric-value {
-            font-family: var(--font-heading);
-            font-size: var(--text-3xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-            margin-bottom: 0.25rem;
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 3rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 0 0 20px rgba(255, 200, 87, 0.3) !important;
+            letter-spacing: 2px !important;
         }
 
-        .metric-label {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            font-weight: var(--font-medium);
+        .stat-label {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.9rem !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            margin-bottom: 0.5rem !important;
+            font-weight: 500 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
         }
 
-        .metric-progress {
-            margin-top: 1rem;
-            height: 0.5rem;
-            background: var(--hover);
-            border-radius: 0.25rem;
-            overflow: hidden;
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.8rem !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            text-transform: uppercase !important;
+        }
+
+        /* Quantum Performance Matrix */
+        .performance-matrix {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 15px !important;
+            padding: 2.5rem !important;
+            margin-bottom: 3rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .performance-matrix::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(255, 200, 87, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(23, 162, 184, 0.05) 0%, transparent 50%) !important;
+            z-index: -1 !important;
+        }
+
+        .matrix-title {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+            color: var(--sunglow) !important;
+        }
+
+        .matrix-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+            gap: 2rem !important;
+        }
+
+        .matrix-item {
+            text-align: center !important;
+            position: relative !important;
+            padding: 1.5rem !important;
+            border: 1px solid rgba(255, 200, 87, 0.1) !important;
+            border-radius: 10px !important;
+            background: rgba(255, 255, 255, 0.01) !important;
+        }
+
+        .matrix-value {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 2.5rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 1rem !important;
+            letter-spacing: 2px !important;
+        }
+
+        .progress-bar {
+            width: 100% !important;
+            height: 8px !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+            margin-bottom: 0.5rem !important;
+            position: relative !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
         }
 
         .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accentA), var(--accentB));
-            border-radius: 0.25rem;
-            transition: width var(--transition-base);
+            height: 100% !important;
+            background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan)) !important;
+            border-radius: 10px !important;
+            transition: width 2s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
         }
 
-        /* Status List */
-        .status-list {
-            padding: 1.5rem;
+        .progress-fill::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.5),
+                transparent) !important;
+            animation: quantumFlow 2s ease-in-out infinite !important;
         }
 
-        .status-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--hairline);
+        .matrix-label {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.8rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
         }
 
-        .status-item:last-child {
-            border-bottom: none;
+        /* Quantum Action Buttons */
+        .action-buttons {
+            display: flex !important;
+            gap: 1.5rem !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
         }
 
-        .status-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
+        .action-btn {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            padding: 1rem 2rem !important;
+            border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            backdrop-filter: blur(20px) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            text-decoration: none !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
         }
 
-        .status-icon {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: var(--text-sm);
-            font-weight: var(--font-semibold);
+        .action-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 200, 87, 0.2),
+                transparent) !important;
+            transition: left 0.5s ease !important;
         }
 
-        .status-icon.success {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10B981;
+        .action-btn:hover::before {
+            left: 100% !important;
         }
 
-        .status-icon.processing {
-            background: rgba(245, 158, 11, 0.1);
-            color: #F59E0B;
+        .action-btn:hover {
+            background: rgba(255, 200, 87, 0.1) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 20px rgba(255, 200, 87, 0.2) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
         }
 
-        .status-details h4 {
-            font-size: var(--text-sm);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            margin: 0 0 0.25rem 0;
+        /* Quantum Animations */
+        @keyframes quantumGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
         }
 
-        .status-details p {
-            font-size: var(--text-xs);
-            color: var(--muted);
-            margin: 0;
+        @keyframes dataFlow {
+            0%, 100% { 
+                transform: scale(1); 
+                opacity: 0.6; 
+                box-shadow: 0 0 20px rgba(255, 200, 87, 0.6); 
+            }
+            50% { 
+                transform: scale(1.5); 
+                opacity: 1; 
+                box-shadow: 0 0 30px rgba(255, 200, 87, 1); 
+            }
         }
 
-        .status-chip {
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: var(--text-xs);
-            font-weight: var(--font-medium);
-            background: var(--hover);
-            color: var(--muted);
+        @keyframes quantumPulse {
+            0%, 100% { opacity: 0.3; transform: scaleX(1); }
+            50% { opacity: 0.8; transform: scaleX(1.2); }
         }
 
-        .status-chip.optimal {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10B981;
+        @keyframes quantumSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .status-chip.just-now {
-            background: rgba(34, 211, 238, 0.1);
-            color: var(--accentB);
+        @keyframes quantumScanner {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400px); }
         }
 
-        /* View Actions */
-        .view-actions {
-            display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
+        @keyframes quantumFlow {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
 
-        .view-button {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius-sm);
-            color: var(--ink);
-            text-decoration: none;
-            font-size: var(--text-sm);
-            font-weight: var(--font-medium);
-            transition: all var(--transition-fast);
-            box-shadow: var(--card-shadow);
-        }
-
-        .view-button:hover {
-            background: var(--hover);
-            border-color: var(--accentB);
-            transform: translateY(-1px);
-            box-shadow: var(--card-shadow-hover);
-        }
-
-        .view-button.primary {
-            background: var(--accentB);
-            color: white;
-            border-color: var(--accentB);
-        }
-
-        .view-button.primary:hover {
-            background: var(--accentA);
-            border-color: var(--accentA);
-        }
-
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 1024px) {
-            .dashboard-layout {
-                grid-template-columns: 1fr;
-                grid-template-areas: 
-                    "header"
-                    "main";
+            .sidebar {
+                transform: translateX(-100%) !important;
+                transition: transform 0.3s ease !important;
             }
-
-            .dashboard-sidebar {
-                display: none;
-            }
-
-            .performance-section {
-                grid-template-columns: 1fr;
-            }
-
-            .kpi-grid {
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            
+            .main-content {
+                margin-left: 0 !important;
             }
         }
 
         @media (max-width: 768px) {
-            .dashboard-header {
-                padding: 0 1rem;
+            .dashboard-container { padding: 1rem !important; }
+            .dashboard-header { 
+                flex-direction: column !important; 
+                gap: 1rem !important; 
+                text-align: center !important; 
             }
-
-            .dashboard-main {
-                padding: 1rem;
+            .header-actions {
+                flex-direction: column !important;
+                gap: 1rem !important;
             }
-
-            .kpi-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-
-            .dashboard-controls {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .primary-cta {
-                width: 100%;
-                justify-content: center;
-            }
+            .stats-grid { grid-template-columns: 1fr !important; }
+            .matrix-grid { grid-template-columns: 1fr !important; }
+            .quantum-line, .data-node { display: none !important; }
         }
 
         /* Focus States */
@@ -672,205 +837,143 @@
     </style>
 </head>
 <body>
-    <div class="dashboard-layout">
-        <!-- Sidebar Navigation -->
-        <nav class="dashboard-sidebar">
-            <div class="sidebar-brand">
-                <span class="nav-icon">🚗</span>
-                Turo Toll Tracker
-            </div>
-            
-            <div class="sidebar-nav">
-                <a href="/dashboard.html" class="nav-item active">
-                    <span class="nav-icon">📊</span>
-                    Overview
-                </a>
-                <a href="/trips.html" class="nav-item">
-                    <span class="nav-icon">🛣️</span>
-                    Trips
-                </a>
-                <a href="/upload.html" class="nav-item">
-                    <span class="nav-icon">📤</span>
-                    Upload CSV Files
-                </a>
-                <a href="/analytics.html" class="nav-item">
-                    <span class="nav-icon">📈</span>
-                    Analytics
-                </a>
-                <a href="/transponders.html" class="nav-item">
-                    <span class="nav-icon">📡</span>
-                    Transponders
-                </a>
-                <a href="/invoices.html" class="nav-item">
-                    <span class="nav-icon">🧾</span>
-                    Invoices
-                </a>
-            </div>
-        </nav>
+    <div class="quantum-background">
+        <div class="hexagon-grid"></div>
+        <div class="data-node node-1"></div>
+        <div class="data-node node-2"></div>
+        <div class="data-node node-3"></div>
+        <div class="data-node node-4"></div>
+        <div class="data-node node-5"></div>
+        <div class="quantum-line line-1"></div>
+        <div class="quantum-line line-2"></div>
+        <div class="quantum-line line-3"></div>
+    </div>
 
-        <!-- Header -->
-        <header class="dashboard-header">
-            <h1 class="dashboard-title">Dashboard Overview</h1>
-            
-            <div class="dashboard-controls">
-                <button class="primary-cta" id="uploadCTA">
-                    📤 Upload CSVs / Run Fetch
-                </button>
-                
-                <div class="user-menu" id="userMenu">
-                    <div class="user-avatar">E</div>
-                    <div class="user-dropdown" id="userDropdown">
-                        <div class="user-dropdown-header">
-                            <p class="user-email" id="userEmail">eliascolon23@gmail.com</p>
-                        </div>
-                        <div class="user-dropdown-content">
-                            <button class="dropdown-item danger" id="signOutBtn">
-                                <span class="dropdown-icon">🚪</span>
-                                Sign Out
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+    <div class="app-layout">
+        <!-- Quantum Sidebar Navigation -->
+        <aside class="sidebar">
+            <h1 class="sidebar-title">TURO_TOLL_TRACKER</h1>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="/dashboard.html" class="nav-link active">
+                            <i data-lucide="bar-chart-3"></i>
+                            OVERVIEW
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/trips.html" class="nav-link">
+                            <i data-lucide="route"></i>
+                            TRIPS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/upload.html" class="nav-link">
+                            <i data-lucide="upload"></i>
+                            UPLOAD_CSV
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/analytics.html" class="nav-link">
+                            <i data-lucide="activity"></i>
+                            ANALYTICS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/transponders.html" class="nav-link">
+                            <i data-lucide="radio"></i>
+                            TRANSPONDERS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/invoices.html" class="nav-link">
+                            <i data-lucide="file-text"></i>
+                            INVOICES
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
 
         <!-- Main Content -->
-        <main class="dashboard-main">
-            <div class="dashboard-content">
-                <!-- KPI Cards -->
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Total Tolls</div>
-                            <div class="kpi-icon tolls">📊</div>
-                        </div>
-                        <div class="kpi-value" id="total-tolls">-</div>
-                        <div class="kpi-subtitle" id="total-tolls-subtitle">Loading...</div>
-                        <div class="kpi-change neutral" id="total-tolls-change">
-                            ➡️ Loading...
-                        </div>
-                    </div>
-
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Personal Driving Tolls</div>
-                            <div class="kpi-icon driving">🚗</div>
-                        </div>
-                        <div class="kpi-value" id="personal-tolls">-</div>
-                        <div class="kpi-subtitle" id="personal-tolls-subtitle">Loading...</div>
-                        <div class="kpi-change neutral" id="personal-tolls-change">
-                            ➡️ Loading...
+        <main class="main-content">
+            <div class="dashboard-container">
+                <header class="dashboard-header">
+                    <h1 class="dashboard-title">DASHBOARD_OVERVIEW</h1>
+                    <div class="header-actions">
+                        <button class="upload-btn" id="uploadCTA">
+                            <i data-lucide="database"></i>
+                            UPLOAD_CSV / RUN_FETCH
+                        </button>
+                        <div class="user-profile">
+                            <div class="user-avatar" id="userMenu">E</div>
+                            <div class="dropdown-menu" id="userDropdown">
+                                <button class="dropdown-item" id="signOutBtn">
+                                    <i data-lucide="log-out"></i>
+                                    SIGN_OUT
+                                </button>
+                            </div>
                         </div>
                     </div>
+                </header>
 
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Matched Tolls</div>
-                            <div class="kpi-icon matched">✅</div>
-                        </div>
-                        <div class="kpi-value" id="matched-tolls">-</div>
-                        <div class="kpi-subtitle" id="matched-tolls-subtitle">Loading...</div>
-                        <div class="kpi-change neutral" id="matched-tolls-change">
-                            ➡️ Loading...
-                        </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-tolls">-</div>
+                        <div class="stat-label">TOTAL_TOLLS</div>
+                        <div class="stat-value" id="total-tolls-subtitle">LOADING...</div>
                     </div>
-
+                    <div class="stat-card">
+                        <div class="stat-number" id="personal-tolls">-</div>
+                        <div class="stat-label">PERSONAL_TOLLS</div>
+                        <div class="stat-value" id="personal-tolls-subtitle">LOADING...</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="matched-tolls">-</div>
+                        <div class="stat-label">MATCHED_TOLLS</div>
+                        <div class="stat-value" id="matched-tolls-subtitle">LOADING...</div>
+                    </div>
                 </div>
 
-                <!-- Performance & Status Section -->
-                <div class="performance-section">
-                    <!-- Toll Matching Performance -->
-                    <div class="performance-card">
-                        <div class="card-header">
-                            <h2 class="card-title" data-title="Toll Matching Performance">🎯 Toll Matching Performance</h2>
-                            <div class="card-controls">
-                                <div class="segmented-control">
-                                    <button class="segment-option active">Live Data</button>
-                                    <button class="segment-option">Historical</button>
-                                </div>
+                <div class="performance-matrix">
+                    <h2 class="matrix-title">
+                        <i data-lucide="cpu"></i>
+                        PERFORMANCE_MATRIX
+                    </h2>
+                    <div class="matrix-grid">
+                        <div class="matrix-item">
+                            <div class="matrix-value" id="matching-accuracy">-</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="accuracy-progress" style="width: 0%"></div>
                             </div>
+                            <div class="matrix-label">MATCH_ACCURACY</div>
                         </div>
-                        
-                        <div class="performance-metrics">
-                            <div class="metric-group">
-                                <div class="metric-value" id="matching-accuracy">-</div>
-                                <div class="metric-label">Matching Accuracy</div>
-                                <div class="metric-progress">
-                                    <div class="progress-fill" id="accuracy-progress" style="width: 0%"></div>
-                                </div>
+                        <div class="matrix-item">
+                            <div class="matrix-value" id="performance-total-tolls">-</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="tolls-progress" style="width: 0%"></div>
                             </div>
-                            
-                            <div class="metric-group">
-                                <div class="metric-value" id="performance-total-tolls">-</div>
-                                <div class="metric-label">Total Tolls</div>
-                                <div class="metric-progress">
-                                    <div class="progress-fill" id="tolls-progress" style="width: 0%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Processing Status -->
-                    <div class="performance-card">
-                        <div class="card-header">
-                            <h2 class="card-title" data-title="Processing Status">⚙️ Processing Status</h2>
-                        </div>
-                        
-                        <div class="status-list">
-                            <div class="status-item">
-                                <div class="status-info">
-                                    <div class="status-icon success">95%</div>
-                                    <div class="status-details">
-                                        <h4>Auto-Match Rate</h4>
-                                        <p>Toll matching performance</p>
-                                    </div>
-                                </div>
-                                <div class="status-chip optimal">Optimal</div>
-                            </div>
-                            
-                            <div class="status-item">
-                                <div class="status-info">
-                                    <div class="status-icon success">✓</div>
-                                    <div class="status-details">
-                                        <h4>System Health</h4>
-                                        <p>All systems operational</p>
-                                    </div>
-                                </div>
-                                <div class="status-chip optimal">Optimal</div>
-                            </div>
-                            
-                            <div class="status-item">
-                                <div class="status-info">
-                                    <div class="status-icon processing">⏰</div>
-                                    <div class="status-details">
-                                        <h4>Last Updated</h4>
-                                        <p>Data synchronized</p>
-                                    </div>
-                                </div>
-                                <div class="status-chip just-now">Just now</div>
-                            </div>
+                            <div class="matrix-label">TOTAL_COUNT</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- View Actions -->
-                <div class="view-actions">
-                    <a href="/trips.html?filter=matched" class="view-button primary" id="view-matched-link">
-                        📋 View Matched (0)
-                    </a>
-                    <a href="/trips.html?filter=personal" class="view-button" id="view-personal-link">
-                        🚗 Personal Driving (0)
-                    </a>
+                <div class="action-buttons">
+                    <a href="/trips.html?filter=matched" class="action-btn" id="view-matched-link">VIEW_MATCHED(0)</a>
+                    <a href="/trips.html?filter=personal" class="action-btn" id="view-personal-link">PERSONAL_DRIVING(0)</a>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
         // Dashboard functionality
         console.log('🚀 Dashboard script loading...');
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('✅ DOM Content Loaded - initializing dashboard...');
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('✅ DOM Content Loaded - checking authentication first...');
             console.log('🔍 DEBUG: Page load info:', {
                 url: window.location.href,
                 pathname: window.location.pathname,
@@ -878,20 +981,95 @@
                 timestamp: new Date().toISOString()
             });
             
+            // Check authentication before initializing dashboard
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) {
+                console.log('⚠️ User not authenticated, redirecting to login...');
+                window.location.href = '/';
+                return;
+            }
+            
+            console.log('✅ User authenticated, initializing dashboard...');
+            
+            // Initialize Lucide icons again after DOM is loaded
+            lucide.createIcons();
+            
             initializeDashboard();
             setupEventListeners();
             loadDashboardData();
         });
 
         function initializeDashboard() {
-            // Add loading states to KPI cards briefly for visual feedback
-            const kpiCards = document.querySelectorAll('.kpi-card');
-            kpiCards.forEach(card => {
+            // Add loading states to stat cards briefly for visual feedback
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
                 card.classList.add('loading');
                 setTimeout(() => card.classList.remove('loading'), 1000);
             });
         }
 
+        // Check if user is authenticated
+        async function checkAuthentication() {
+            try {
+                console.log('🔐 Checking authentication status...');
+                
+                // Check for stored Supabase token
+                const storedToken = localStorage.getItem('supabase_token');
+                const storedSession = localStorage.getItem('supabase_session');
+                
+                console.log('🔍 Stored auth data:', {
+                    hasToken: !!storedToken,
+                    hasSession: !!storedSession,
+                    tokenLength: storedToken?.length || 0
+                });
+                
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Add Authorization header if we have a Supabase token
+                if (storedToken) {
+                    headers['Authorization'] = `Bearer ${storedToken}`;
+                    console.log('🎫 Using stored Supabase token for auth check');
+                } else {
+                    console.log('⚠️ No stored token found, falling back to cookies');
+                }
+                
+                const response = await fetch('/api/auth/status', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers
+                });
+                
+                console.log('🔍 Auth check response:', {
+                    status: response.status,
+                    ok: response.ok,
+                    statusText: response.statusText
+                });
+                
+                if (!response.ok) {
+                    console.log('⚠️ Auth check failed with status:', response.status);
+                    return false;
+                }
+                
+                const data = await response.json();
+                console.log('🔍 Auth status data:', data);
+                
+                if (data.success && data.authenticated) {
+                    console.log('✅ User is authenticated:', data.host);
+                    // Store user info for use throughout the app
+                    window.currentUser = data.host;
+                    return true;
+                } else {
+                    console.log('⚠️ User is not authenticated');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Auth check error:', error);
+                return false;
+            }
+        }
+        
         function setupEventListeners() {
 
             // Upload CTA
@@ -902,7 +1080,7 @@
                 });
             }
             
-            // User menu dropdown
+            // Quantum user dropdown functionality
             const userMenu = document.getElementById('userMenu');
             const userDropdown = document.getElementById('userDropdown');
             const signOutBtn = document.getElementById('signOutBtn');
@@ -916,7 +1094,8 @@
                 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
-                    if (!userMenu.contains(e.target)) {
+                    const userProfile = document.querySelector('.user-profile');
+                    if (!userProfile.contains(e.target)) {
                         userDropdown.classList.remove('show');
                     }
                 });
@@ -927,52 +1106,21 @@
                 }
             }
 
-            // Segmented control
-            const segmentOptions = document.querySelectorAll('.segment-option');
-            segmentOptions.forEach(option => {
-                option.addEventListener('click', (e) => {
-                    // Remove active class from siblings
-                    const siblings = e.target.parentNode.querySelectorAll('.segment-option');
-                    siblings.forEach(sibling => sibling.classList.remove('active'));
-                    
-                    // Add active class to clicked option
-                    e.target.classList.add('active');
-                    
-                    // Update performance data
-                    updatePerformanceData(e.target.textContent);
-                });
-            });
 
-            // KPI card hover effects
-            const kpiCards = document.querySelectorAll('.kpi-card');
-            kpiCards.forEach(card => {
+            // Stat card hover effects
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
                 card.addEventListener('mouseenter', () => {
-                    card.style.transform = 'translateY(-4px)';
+                    card.style.transform = 'translateY(-5px) scale(1.02)';
                 });
                 
                 card.addEventListener('mouseleave', () => {
-                    card.style.transform = 'translateY(-2px)';
+                    card.style.transform = 'translateY(0)';
                 });
             });
         }
 
 
-        function updatePerformanceData(mode) {
-            const metrics = document.querySelectorAll('.metric-value');
-            const progressBars = document.querySelectorAll('.progress-fill');
-            
-            if (mode === 'Live Data') {
-                metrics[0].textContent = '100.0%';
-                metrics[1].textContent = '100';
-                progressBars[0].style.width = '100%';
-                progressBars[1].style.width = '83%';
-            } else {
-                metrics[0].textContent = '98.5%';
-                metrics[1].textContent = '847';
-                progressBars[0].style.width = '98.5%';
-                progressBars[1].style.width = '92%';
-            }
-        }
 
         async function loadDashboardData() {
             try {
@@ -1066,22 +1214,19 @@
                 }
             }
             
-            // Update KPI cards with null checks
+            // Update Quantum Matrix stat cards with real data
             safeUpdate('total-tolls', data.totalTolls || 0);
-            safeUpdate('total-tolls-subtitle', data.totalTolls > 0 ? 'Active tolls' : 'No tolls');
-            safeUpdate('total-tolls-change', '📊 Real data');
+            safeUpdate('total-tolls-subtitle', data.totalTolls > 0 ? 'ACTIVE_STATUS' : 'NO_TOLLS');
             
             safeUpdate('personal-tolls', data.personalTolls || 0);
-            safeUpdate('personal-tolls-subtitle', data.personalAmount ? `$${data.personalAmount}` : '$0.00');
-            safeUpdate('personal-tolls-change', '🚗 Real data');
+            safeUpdate('personal-tolls-subtitle', data.personalAmount ? `$${data.personalAmount}_USD` : '$0.00_USD');
             
             safeUpdate('matched-tolls', data.matchedTolls || 0);
-            safeUpdate('matched-tolls-subtitle', data.matchedAmount ? `$${data.matchedAmount}` : '$0.00');
-            safeUpdate('matched-tolls-change', '✅ Real data');
+            safeUpdate('matched-tolls-subtitle', data.matchedAmount ? `$${data.matchedAmount}_USD` : '$0.00_USD');
             
             
-            // Update performance metrics with safe updates
-            const accuracy = data.matchingAccuracy || 0;
+            // Update Quantum Matrix performance metrics
+            const accuracy = parseFloat(data.matchingAccuracy) || 0;
             safeUpdate('matching-accuracy', `${accuracy}%`);
             
             const accuracyProgress = document.getElementById('accuracy-progress');
@@ -1096,12 +1241,16 @@
                 tollsProgressElement.style.width = `${tollsProgress}%`;
             }
             
-            // Update navigation badge (safely)
-            safeUpdate('trips-badge', data.totalTrips || 0);
-            
             // Update view action links (safely)
-            safeUpdate('view-matched-link', `📋 View Matched (${data.matchedTolls || 0})`);
-            safeUpdate('view-personal-link', `🚗 Personal Driving (${data.personalTolls || 0})`);
+            const viewMatchedLink = document.getElementById('view-matched-link');
+            const viewPersonalLink = document.getElementById('view-personal-link');
+            
+            if (viewMatchedLink) {
+                viewMatchedLink.textContent = `VIEW_MATCHED(${data.matchedTolls || 0})`;
+            }
+            if (viewPersonalLink) {
+                viewPersonalLink.textContent = `PERSONAL_DRIVING(${data.personalTolls || 0})`;
+            }
             
             console.log('✅ Dashboard updated with real data');
         }

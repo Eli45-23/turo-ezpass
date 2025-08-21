@@ -416,7 +416,7 @@
             box-shadow: 0 8px 25px rgba(255, 200, 87, 0.4) !important;
             border-color: var(--sunglow) !important;
         }
-        
+
         .dropdown-menu {
             position: absolute !important;
             top: 55px !important;
@@ -455,10 +455,6 @@
             text-transform: uppercase !important;
             letter-spacing: 1px !important;
             position: relative !important;
-            background: none !important;
-            border: none !important;
-            width: 100% !important;
-            text-align: left !important;
         }
 
         .dropdown-item::before {
@@ -702,9 +698,6 @@
             text-transform: uppercase !important;
             letter-spacing: 1px !important;
             text-decoration: none !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.5rem !important;
         }
 
         .action-btn::before {
@@ -799,41 +792,6 @@
             .matrix-grid { grid-template-columns: 1fr !important; }
             .quantum-line, .data-node { display: none !important; }
         }
-
-        /* Focus States */
-        .primary-cta:focus,
-        .view-button:focus,
-        .nav-item:focus {
-            outline: 2px solid var(--ring);
-            outline-offset: 2px;
-        }
-
-        /* Loading States */
-        .kpi-card.loading {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .kpi-card.loading::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
     </style>
 </head>
 <body>
@@ -908,10 +866,10 @@
                         <div class="user-profile">
                             <div class="user-avatar" id="userMenu">E</div>
                             <div class="dropdown-menu" id="userDropdown">
-                                <button class="dropdown-item" id="signOutBtn">
+                                <a href="#" class="dropdown-item" id="signOutBtn">
                                     <i data-lucide="log-out"></i>
                                     SIGN_OUT
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -919,17 +877,17 @@
 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-number" id="total-tolls">-</div>
+                        <div class="stat-number" id="total-tolls">0</div>
                         <div class="stat-label">TOTAL_TOLLS</div>
                         <div class="stat-value" id="total-tolls-subtitle">LOADING...</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="personal-tolls">-</div>
+                        <div class="stat-number" id="personal-tolls">0</div>
                         <div class="stat-label">PERSONAL_TOLLS</div>
                         <div class="stat-value" id="personal-tolls-subtitle">LOADING...</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="matched-tolls">-</div>
+                        <div class="stat-number" id="matched-tolls">0</div>
                         <div class="stat-label">MATCHED_TOLLS</div>
                         <div class="stat-value" id="matched-tolls-subtitle">LOADING...</div>
                     </div>
@@ -942,14 +900,14 @@
                     </h2>
                     <div class="matrix-grid">
                         <div class="matrix-item">
-                            <div class="matrix-value" id="matching-accuracy">-</div>
+                            <div class="matrix-value" id="matching-accuracy">0%</div>
                             <div class="progress-bar">
                                 <div class="progress-fill" id="accuracy-progress" style="width: 0%"></div>
                             </div>
                             <div class="matrix-label">MATCH_ACCURACY</div>
                         </div>
                         <div class="matrix-item">
-                            <div class="matrix-value" id="performance-total-tolls">-</div>
+                            <div class="matrix-value" id="performance-total-tolls">0</div>
                             <div class="progress-bar">
                                 <div class="progress-fill" id="tolls-progress" style="width: 0%"></div>
                             </div>
@@ -1071,7 +1029,6 @@
         }
         
         function setupEventListeners() {
-
             // Upload CTA
             const uploadCTA = document.getElementById('uploadCTA');
             if (uploadCTA) {
@@ -1106,7 +1063,6 @@
                 }
             }
 
-
             // Stat card hover effects
             const statCards = document.querySelectorAll('.stat-card');
             statCards.forEach(card => {
@@ -1119,8 +1075,6 @@
                 });
             });
         }
-
-
 
         async function loadDashboardData() {
             try {
@@ -1173,13 +1127,6 @@
                     throw new Error(data.error || 'Failed to load dashboard data');
                 }
                 
-                // Update timestamp
-                const timestampElements = document.querySelectorAll('.status-details p');
-                if (timestampElements.length > 0) {
-                    timestampElements[timestampElements.length - 1].textContent = 
-                        `Updated ${new Date().toLocaleTimeString()}`;
-                }
-                
                 console.log('✅ Dashboard data loaded successfully');
             } catch (error) {
                 console.error('❌ Failed to load dashboard data:', error);
@@ -1200,15 +1147,7 @@
             function safeUpdate(elementId, textContent) {
                 const element = document.getElementById(elementId);
                 if (element) {
-                    // Strip emojis if Neo theme is active
-                    const isNeoTheme = document.documentElement.getAttribute('data-theme') === 'neo';
-                    if (isNeoTheme) {
-                        // Remove emoji characters from text
-                        const cleanText = String(textContent).replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
-                        element.textContent = cleanText;
-                    } else {
-                        element.textContent = textContent;
-                    }
+                    element.textContent = textContent;
                 } else {
                     console.error(`❌ Element with ID '${elementId}' not found`);
                 }
@@ -1223,7 +1162,6 @@
             
             safeUpdate('matched-tolls', data.matchedTolls || 0);
             safeUpdate('matched-tolls-subtitle', data.matchedAmount ? `$${data.matchedAmount}_USD` : '$0.00_USD');
-            
             
             // Update Quantum Matrix performance metrics
             const accuracy = parseFloat(data.matchingAccuracy) || 0;
@@ -1261,81 +1199,18 @@
             // Show error states
             document.getElementById('total-tolls').textContent = 'Error';
             document.getElementById('total-tolls-subtitle').textContent = 'Failed to load data';
-            document.getElementById('total-tolls-change').textContent = '❌ Error loading';
             
             document.getElementById('personal-tolls').textContent = 'Error';
             document.getElementById('personal-tolls-subtitle').textContent = 'Failed to load data';
-            document.getElementById('personal-tolls-change').textContent = '❌ Error loading';
             
             document.getElementById('matched-tolls').textContent = 'Error';
             document.getElementById('matched-tolls-subtitle').textContent = 'Failed to load data';
-            document.getElementById('matched-tolls-change').textContent = '❌ Error loading';
-            
             
             // Update performance metrics
             document.getElementById('matching-accuracy').textContent = 'Error';
             document.getElementById('performance-total-tolls').textContent = 'Error';
         }
 
-        // Accessibility improvements
-        function setupAccessibility() {
-            // Add keyboard navigation for cards
-            const cards = document.querySelectorAll('.kpi-card, .view-button');
-            cards.forEach(card => {
-                card.setAttribute('tabindex', '0');
-                card.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        card.click();
-                    }
-                });
-            });
-
-            // Announce data changes to screen readers
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.type === 'childList' || mutation.type === 'characterData') {
-                        const target = mutation.target;
-                        if (target.classList?.contains('kpi-value') || target.classList?.contains('metric-value')) {
-                            // Announce value changes
-                            const announcement = `Value updated to ${target.textContent}`;
-                            announceToScreenReader(announcement);
-                        }
-                    }
-                });
-            });
-
-            // Observe KPI value changes
-            document.querySelectorAll('.kpi-value, .metric-value').forEach(element => {
-                observer.observe(element, { childList: true, characterData: true, subtree: true });
-            });
-        }
-
-        function announceToScreenReader(message) {
-            const announcer = document.createElement('div');
-            announcer.setAttribute('aria-live', 'polite');
-            announcer.setAttribute('aria-atomic', 'true');
-            announcer.className = 'sr-only';
-            announcer.textContent = message;
-            document.body.appendChild(announcer);
-            setTimeout(() => document.body.removeChild(announcer), 1000);
-        }
-
-        // Initialize accessibility features
-        setupAccessibility();
-
-        // Performance monitoring
-        if ('PerformanceObserver' in window) {
-            const observer = new PerformanceObserver((list) => {
-                list.getEntries().forEach((entry) => {
-                    if (entry.entryType === 'navigation') {
-                        console.log(`Dashboard loaded in ${entry.loadEventEnd - entry.loadEventStart}ms`);
-                    }
-                });
-            });
-            observer.observe({ entryTypes: ['navigation'] });
-        }
-        
         // Sign out functionality
         async function handleSignOut() {
             const signOutBtn = document.getElementById('signOutBtn');
@@ -1347,56 +1222,31 @@
                 signOutBtn.innerHTML = '<span class="dropdown-icon">⏳</span>Signing out...';
                 signOutBtn.disabled = true;
                 
-                // Get CSRF token
-                const csrfResponse = await fetch('/api/auth/csrf-token', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
+                // Clear stored tokens
+                localStorage.removeItem('supabase_token');
+                localStorage.removeItem('supabase_session');
                 
-                if (!csrfResponse.ok) {
-                    throw new Error('Failed to get CSRF token');
-                }
-                
-                const csrfData = await csrfResponse.json();
-                
-                if (!csrfData.success) {
-                    throw new Error(csrfData.error || 'Failed to get CSRF token');
-                }
-                
-                // Send logout request
-                const logoutResponse = await fetch('/api/auth/logout', {
+                // Call logout endpoint
+                const response = await fetch('/api/auth/logout', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfData.csrfToken
-                    },
                     credentials: 'include',
-                    body: JSON.stringify({
-                        csrfToken: csrfData.csrfToken
-                    })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
-                const logoutData = await logoutResponse.json();
-                
-                if (logoutData.success) {
-                    // Successful logout - redirect to login page
+                if (response.ok) {
+                    console.log('✅ Logout successful');
                     window.location.href = '/';
                 } else {
-                    throw new Error(logoutData.error || 'Sign out failed');
+                    console.error('❌ Logout failed');
+                    // Still redirect on failure as tokens are cleared
+                    window.location.href = '/';
                 }
-                
             } catch (error) {
-                console.error('Sign out error:', error);
-                
-                // Restore button state
-                signOutBtn.innerHTML = '<span class="dropdown-icon">🚪</span>Sign Out';
-                signOutBtn.disabled = false;
-                
-                // Show error message
-                alert('Failed to sign out: ' + error.message);
-                
-                // Close dropdown
-                userDropdown.classList.remove('show');
+                console.error('❌ Logout error:', error);
+                // Still redirect on error as tokens are cleared
+                window.location.href = '/';
             }
         }
     </script>

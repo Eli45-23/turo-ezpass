@@ -9,8 +9,8 @@
  * - API response caching
  */
 
-const CACHE_NAME = 'turo-tolls-v1.0.0';
-const API_CACHE_NAME = 'turo-tolls-api-v1.0.0';
+const CACHE_NAME = 'turo-tolls-v1.1.0';
+const API_CACHE_NAME = 'turo-tolls-api-v1.1.0';
 const BACKGROUND_SYNC_TAG = 'background-sync-toll-data';
 
 // Files to cache for offline functionality
