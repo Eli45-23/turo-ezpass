@@ -772,72 +772,13 @@
             100% { left: 100%; }
         }
 
-        /* Mobile Hamburger Menu */
-        .mobile-menu-btn {
-            display: none !important;
-            position: fixed !important;
-            top: 1rem !important;
-            left: 1rem !important;
-            z-index: 1001 !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            backdrop-filter: blur(30px) !important;
-            border: 1px solid rgba(255, 200, 87, 0.3) !important;
-            border-radius: 8px !important;
-            width: 48px !important;
-            height: 48px !important;
-            cursor: pointer !important;
-            color: white !important;
-            font-size: 1.2rem !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-        }
-
-        .mobile-menu-btn:hover {
-            background: rgba(255, 200, 87, 0.1) !important;
-            border-color: var(--sunglow) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(255, 200, 87, 0.3) !important;
-        }
-
-        .mobile-overlay {
-            display: none !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: rgba(0, 0, 0, 0.5) !important;
-            z-index: 999 !important;
-            opacity: 0 !important;
-            transition: opacity 0.3s ease !important;
-        }
-
-        .mobile-overlay.show {
-            opacity: 1 !important;
-        }
-
         /* Responsive */
         @media (max-width: 1024px) {
-            .mobile-menu-btn {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            }
-
             .sidebar {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                height: 100vh !important;
-                z-index: 1000 !important;
                 transform: translateX(-100%) !important;
                 transition: transform 0.3s ease !important;
             }
-
-            .sidebar.open {
-                transform: translateX(0) !important;
-            }
-
+            
             .main-content {
                 margin-left: 0 !important;
             }
@@ -857,168 +798,9 @@
             .stats-grid { grid-template-columns: 1fr !important; }
             .matrix-grid { grid-template-columns: 1fr !important; }
             .quantum-line, .data-node { display: none !important; }
-            
-            /* Touch-friendly sizing for mobile */
-            .nav-link {
-                min-height: 48px !important;
-                padding: 1rem 1.5rem !important;
-                margin-bottom: 0.25rem !important;
-            }
-            
-            .upload-btn, .view-button, .primary-cta {
-                min-height: 48px !important;
-                padding: 1rem 1.5rem !important;
-                font-size: 1rem !important;
-            }
-            
-            .user-avatar {
-                width: 48px !important;
-                height: 48px !important;
-                font-size: 1.2rem !important;
-            }
-            
-            .dropdown-item {
-                min-height: 48px !important;
-                padding: 1rem 1.5rem !important;
-                font-size: 1rem !important;
-            }
-            
-            .stat-card {
-                padding: 2rem 1.5rem !important;
-                min-height: 120px !important;
-            }
-            
-            /* Mobile content density optimization */
-            .dashboard-title {
-                font-size: 1.8rem !important;
-                margin-bottom: 1rem !important;
-            }
-            
-            .stat-number {
-                font-size: 2rem !important;
-                margin-bottom: 0.5rem !important;
-            }
-            
-            .stat-label {
-                font-size: 0.9rem !important;
-            }
-            
-            .sidebar-title {
-                font-size: 1rem !important;
-                padding: 1rem !important;
-            }
-            
-            .dashboard-container {
-                padding: 0.5rem !important;
-            }
-            
-            .dashboard-header {
-                padding: 1rem !important;
-                margin-bottom: 1.5rem !important;
-            }
-            
-            .stats-grid {
-                gap: 1rem !important;
-                margin-bottom: 2rem !important;
-            }
-            
-            /* Mobile table scrolling */
-            .table-container, .data-table-wrapper {
-                overflow-x: auto !important;
-                -webkit-overflow-scrolling: touch !important;
-                border-radius: 8px !important;
-                border: 1px solid rgba(255, 200, 87, 0.2) !important;
-            }
-            
-            .table-container::-webkit-scrollbar {
-                height: 8px !important;
-            }
-            
-            .table-container::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.1) !important;
-                border-radius: 4px !important;
-            }
-            
-            .table-container::-webkit-scrollbar-thumb {
-                background: rgba(255, 200, 87, 0.5) !important;
-                border-radius: 4px !important;
-            }
-            
-            table {
-                min-width: 600px !important;
-                width: 100% !important;
-            }
-            
-            th, td {
-                padding: 1rem 0.75rem !important;
-                white-space: nowrap !important;
-            }
         }
 
-        /* Mobile Form Optimization */
-        input, textarea, select {
-            font-size: 16px !important; /* Prevent zoom on iOS */
-            border-radius: 8px !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        input:focus, textarea:focus, select:focus {
-            outline: none !important;
-            border-color: var(--sunglow) !important;
-            box-shadow: 0 0 0 2px rgba(255, 200, 87, 0.2) !important;
-        }
-        
-        button, .btn {
-            cursor: pointer !important;
-            border-radius: 8px !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        /* Modal Mobile Optimization */
-        @media (max-width: 768px) {
-            .modal, .dialog {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                margin: 1rem auto !important;
-                border-radius: 12px !important;
-            }
-            
-            .modal-header, .dialog-header {
-                padding: 1.5rem !important;
-            }
-            
-            .modal-body, .dialog-body {
-                padding: 1rem 1.5rem !important;
-                max-height: 70vh !important;
-                overflow-y: auto !important;
-            }
-            
-            .modal-footer, .dialog-footer {
-                padding: 1rem 1.5rem 1.5rem !important;
-                gap: 1rem !important;
-            }
-        }
-
-        /* Touch & Focus States */
-        .nav-link, .upload-btn, .view-button, .primary-cta, .user-avatar, .dropdown-item, .stat-card {
-            -webkit-tap-highlight-color: rgba(255, 200, 87, 0.3) !important;
-            transition: all 0.2s ease !important;
-        }
-        
-        .nav-link:active, .upload-btn:active, .view-button:active, .primary-cta:active, .user-avatar:active, .dropdown-item:active {
-            transform: scale(0.98) !important;
-            background-color: rgba(255, 200, 87, 0.1) !important;
-        }
-        
-        .stat-card:active {
-            transform: scale(0.99) !important;
-        }
-        
-        .mobile-menu-btn:active {
-            transform: scale(0.95) !important;
-            background: rgba(255, 200, 87, 0.2) !important;
-        }
-
+        /* Focus States */
         .primary-cta:focus,
         .view-button:focus,
         .nav-item:focus {
@@ -1067,15 +849,9 @@
         <div class="quantum-line line-3"></div>
     </div>
 
-    <!-- Mobile Menu Controls -->
-    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu">
-        <i data-lucide="menu"></i>
-    </button>
-    <div class="mobile-overlay" id="mobileOverlay"></div>
-
     <div class="app-layout">
         <!-- Quantum Sidebar Navigation -->
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar">
             <h1 class="sidebar-title">TURO_TOLL_TRACKER</h1>
             <nav>
                 <ul class="nav-menu">
@@ -1429,68 +1205,6 @@
             document.getElementById('performance-total-tolls').textContent = 'Error';
         }
 
-        // Mobile Menu Setup
-        function setupMobileMenu() {
-            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            if (!mobileMenuBtn || !sidebar || !overlay) return;
-            
-            // Toggle mobile menu
-            function toggleMobileMenu() {
-                const isOpen = sidebar.classList.contains('open');
-                
-                if (isOpen) {
-                    // Close menu
-                    sidebar.classList.remove('open');
-                    overlay.style.display = 'none';
-                    overlay.classList.remove('show');
-                    mobileMenuBtn.setAttribute('aria-expanded', 'false');
-                    document.body.style.overflow = '';
-                } else {
-                    // Open menu
-                    sidebar.classList.add('open');
-                    overlay.style.display = 'block';
-                    setTimeout(() => overlay.classList.add('show'), 10);
-                    mobileMenuBtn.setAttribute('aria-expanded', 'true');
-                    document.body.style.overflow = 'hidden';
-                }
-            }
-            
-            // Event listeners
-            mobileMenuBtn.addEventListener('click', toggleMobileMenu);
-            overlay.addEventListener('click', toggleMobileMenu);
-            
-            // Close menu when clicking nav links
-            const navLinks = sidebar.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                    if (window.innerWidth <= 1024) {
-                        toggleMobileMenu();
-                    }
-                });
-            });
-            
-            // Close menu on escape key
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-                    toggleMobileMenu();
-                }
-            });
-            
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                if (window.innerWidth > 1024 && sidebar.classList.contains('open')) {
-                    sidebar.classList.remove('open');
-                    overlay.style.display = 'none';
-                    overlay.classList.remove('show');
-                    document.body.style.overflow = '';
-                    mobileMenuBtn.setAttribute('aria-expanded', 'false');
-                }
-            });
-        }
-
         // Accessibility improvements
         function setupAccessibility() {
             // Add keyboard navigation for cards
@@ -1535,9 +1249,6 @@
             setTimeout(() => document.body.removeChild(announcer), 1000);
         }
 
-        // Initialize mobile menu
-        setupMobileMenu();
-        
         // Initialize accessibility features
         setupAccessibility();
 
