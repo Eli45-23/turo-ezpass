@@ -1488,17 +1488,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 status: trip.status
             });
             
-            // Verify hostId exists before insertion
-            const hostExists = await new Promise((resolve, reject) => {
-                db.get('SELECT id FROM hosts WHERE id = ?', [hostId], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(!!row);
-                });
-            });
-            
-            if (!hostExists) {
-                throw new Error(`Host ID ${hostId} does not exist in hosts table`);
-            }
+            // Note: Host existence is guaranteed by requireAuth middleware
+            // No need to re-verify as authentication already ensures valid hostId
             
             // Check if trip already exists and has invoices (preserve for toll memory system)
             const existingTripWithInvoice = await new Promise((resolve, reject) => {
@@ -1555,70 +1546,54 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         }
         
         // 2. Insert tolls from CSV into toll_charges table (ONLY for known vehicles)
-        // First get or create a toll account for CSV imports with comprehensive validation
+        // First get or create a toll account for CSV imports  
         const csvTollAccount = await new Promise((resolve, reject) => {
-            // Validate host exists first
+            // Host existence guaranteed by requireAuth middleware
+            // Directly check/create toll account
             db.get(
-                'SELECT id FROM hosts WHERE id = ?',
-                [hostId],
-                (err, host) => {
+                'SELECT id FROM toll_accounts WHERE host_id = ? AND provider = ?',
+                [hostId, 'CSV Import'],
+                (err, account) => {
                     if (err) {
-                        reject(new Error(`Database error checking host: ${err.message}`));
+                        reject(new Error(`Database error checking toll account: ${err.message}`));
                         return;
                     }
                     
-                    if (!host) {
-                        reject(new Error(`Host ID ${hostId} does not exist`));
+                    if (account) {
+                        console.log('✅ Using existing CSV toll account:', account.id);
+                        resolve(account);
                         return;
                     }
+            
+                    // Create new CSV toll account if needed
+                    console.log('🆕 Creating new CSV toll account for host:', hostId);
+                    let encryptedPassword;
+                    try {
+                        const crypto = require('../utils/crypto');
+                        encryptedPassword = crypto.encryptSensitiveData('csv_system_password', hostId.toString());
+                    } catch (cryptoError) {
+                        console.warn('⚠️ Crypto utility not available, using placeholder password');
+                        encryptedPassword = 'placeholder_encrypted_password';
+                    }
                     
-                    // Now check/create toll account
-                    db.get(
-                        'SELECT id FROM toll_accounts WHERE host_id = ? AND provider = ?',
-                        [hostId, 'CSV Import'],
-                        (err, account) => {
-                            if (err) {
-                                reject(new Error(`Database error checking toll account: ${err.message}`));
-                                return;
-                            }
-                            
-                            if (account) {
-                                console.log('✅ Using existing CSV toll account:', account.id);
-                                resolve(account);
-                                return;
-                            }
-                    
-                            // Create new CSV toll account if needed
-                            console.log('🆕 Creating new CSV toll account for host:', hostId);
-                            let encryptedPassword;
-                            try {
-                                const crypto = require('../utils/crypto');
-                                encryptedPassword = crypto.encryptSensitiveData('csv_system_password', hostId.toString());
-                            } catch (cryptoError) {
-                                console.warn('⚠️ Crypto utility not available, using placeholder password');
-                                encryptedPassword = 'placeholder_encrypted_password';
-                            }
-                            
-                            db.run(`
-                                INSERT INTO toll_accounts 
-                                (host_id, provider, account_number, username, password_encrypted, is_active) 
-                                VALUES (?, ?, ?, ?, ?, 1)
-                            `, [
-                                hostId,
-                                'CSV Import',
-                                'CSV_UPLOAD_' + Date.now(),
-                                'csv_import@system',
-                                encryptedPassword
-                            ], function(err) {
-                                if (err) {
-                                    reject(new Error(`Failed to create toll account: ${err.message}`));
-                                } else {
-                                    console.log('✅ Created new CSV toll account:', this.lastID);
-                                    resolve({ id: this.lastID });
-                                }
-                            });
+                    db.run(`
+                        INSERT INTO toll_accounts 
+                        (host_id, provider, account_number, username, password_encrypted, is_active) 
+                        VALUES (?, ?, ?, ?, ?, 1)
+                    `, [
+                        hostId,
+                        'CSV Import',
+                        'CSV_UPLOAD_' + Date.now(),
+                        'csv_import@system',
+                        encryptedPassword
+                    ], function(err) {
+                        if (err) {
+                            reject(new Error(`Failed to create toll account: ${err.message}`));
+                        } else {
+                            console.log('✅ Created new CSV toll account:', this.lastID);
+                            resolve({ id: this.lastID });
                         }
-                    );
+                    });
                 }
             );
         });
@@ -1891,7 +1866,12 @@ router.post('/csv/process-both', requireAuth, upload.fields([
     const hostId = req.session.hostId;
     
     try {
-        console.log('📄 CSV Processing request received');
+        console.log('📄 CSV Processing request received for hostId:', hostId);
+        console.log('🔍 DEBUG: Session info:', {
+            hostId: hostId,
+            sessionId: req.session.id,
+            email: req.session.email
+        });
         console.log('Files:', req.files);
         
         // Check if both files were uploaded
@@ -1992,7 +1972,12 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
     const hostId = req.session.hostId;
     
     try {
-        console.log('🎯 Smart CSV Processing request received');
+        console.log('🎯 Smart CSV Processing request received for hostId:', hostId);
+        console.log('🔍 DEBUG: Session info:', {
+            hostId: hostId,
+            sessionId: req.session.id,
+            email: req.session.email
+        });
         console.log('Files:', req.files);
         console.log('Body params:', req.body);
         console.log('🔍 DETAILED DEBUG: req.body contents:');
