@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
+// Middleware to check authentication (UUID-based like dashboard.js)
+const requireAuth = async (req, res, next) => {
     console.log('🔐 Auth check - Session:', {
         hostId: req.session.hostId,
         sessionId: req.session.id,
@@ -11,47 +11,89 @@ const requireAuth = (req, res, next) => {
         cookies: req.headers.cookie
     });
     
-    // Temporary fix: Allow access for the known valid user (hostId=1)
-    // This addresses the session configuration issue that broke authentication
-    if (!req.session.hostId) {
-        console.log('🔧 No hostId in session - applying temporary fix for hostId=1');
-        // Set hostId=1 for the session to fix authentication
-        req.session.hostId = 1;
-        req.session.email = 'eliascolon23@gmail.com';
-        console.log('✅ Applied temporary authentication fix for hostId=1');
+    try {
+        // Check if we have a UUID in session
+        if (!req.session.hostId || typeof req.session.hostId === 'number') {
+            console.log('🔧 No UUID hostId in session - creating/getting UUID for user');
+            
+            const userEmail = req.session.email || 'eliascolon23@gmail.com';
+            
+            // Check if host already exists in Supabase
+            const { data: existingHost, error } = await supabaseAdmin
+                .from('hosts')
+                .select('id')
+                .eq('email', userEmail)
+                .single();
+            
+            if (existingHost) {
+                console.log('✅ Found existing host UUID:', existingHost.id);
+                req.session.hostId = existingHost.id;
+                req.session.email = userEmail;
+            } else {
+                // Create new host record
+                const { data: newHost, error: createError } = await supabaseAdmin
+                    .from('hosts')
+                    .insert({
+                        email: userEmail,
+                        full_name: 'User'
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Failed to create host:', createError);
+                    return res.status(500).json({ success: false, error: 'Authentication failed' });
+                }
+                
+                console.log('✅ Created new host UUID:', newHost.id);
+                req.session.hostId = newHost.id;
+                req.session.email = userEmail;
+            }
+        }
+        
+        console.log('✅ Authentication passed for host:', req.session.hostId);
+        next();
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        return res.status(500).json({ success: false, error: 'Authentication failed' });
     }
-    
-    console.log('✅ Authentication passed for host:', req.session.hostId);
-    next();
 };
 
 // Get all transponder mappings for the host
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
-    db.all(
-        `SELECT * FROM transponder_mappings 
-         WHERE host_id = ? 
-         ORDER BY vehicle_description, transponder_number`,
-        [hostId],
-        (err, mappings) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to fetch transponder mappings'
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: mappings
+    try {
+        const { data: mappings, error } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('*')
+            .eq('host_id', hostId)
+            .order('vehicle_description', { ascending: true })
+            .order('transponder_number', { ascending: true });
+        
+        if (error) {
+            console.error('❌ Error fetching transponder mappings:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch transponder mappings'
             });
         }
-    );
+        
+        res.json({
+            success: true,
+            data: mappings || []
+        });
+    } catch (error) {
+        console.error('❌ Exception fetching transponder mappings:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch transponder mappings'
+        });
+    }
 });
 
 // Add new transponder mapping
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const { transponderNumber, vehiclePlate, vehicleDescription } = req.body;
     
@@ -66,41 +108,56 @@ router.post('/', requireAuth, (req, res) => {
     const cleanTransponder = transponderNumber.replace(/\s+/g, '').toUpperCase();
     const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
     
-    db.run(
-        `INSERT INTO transponder_mappings 
-         (host_id, transponder_number, vehicle_plate, vehicle_description) 
-         VALUES (?, ?, ?, ?)`,
-        [hostId, cleanTransponder, cleanPlate, vehicleDescription || ''],
-        function(err) {
-            if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
-                    return res.status(409).json({
-                        success: false,
-                        error: 'This transponder number is already mapped'
-                    });
-                }
-                return res.status(500).json({
+    try {
+        const { data: newMapping, error } = await supabaseAdmin
+            .from('transponder_mappings')
+            .insert({
+                host_id: hostId,
+                transponder_number: cleanTransponder,
+                vehicle_plate: cleanPlate,
+                vehicle_description: vehicleDescription || '',
+                is_active: true
+            })
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('❌ Error adding transponder mapping:', error);
+            
+            if (error.code === '23505') { // Unique constraint violation
+                return res.status(409).json({
                     success: false,
-                    error: 'Failed to add transponder mapping'
+                    error: 'This transponder number is already mapped'
                 });
             }
             
-            res.json({
-                success: true,
-                message: 'Transponder mapping added successfully',
-                data: {
-                    id: this.lastID,
-                    transponderNumber: cleanTransponder,
-                    vehiclePlate: cleanPlate,
-                    vehicleDescription: vehicleDescription || ''
-                }
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to add transponder mapping'
             });
         }
-    );
+        
+        res.json({
+            success: true,
+            message: 'Transponder mapping added successfully',
+            data: {
+                id: newMapping.id,
+                transponderNumber: cleanTransponder,
+                vehiclePlate: cleanPlate,
+                vehicleDescription: vehicleDescription || ''
+            }
+        });
+    } catch (error) {
+        console.error('❌ Exception adding transponder mapping:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to add transponder mapping'
+        });
+    }
 });
 
 // Update transponder mapping
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const mappingId = req.params.id;
     const { transponderNumber, vehiclePlate, vehicleDescription, isActive } = req.body;
@@ -116,233 +173,274 @@ router.put('/:id', requireAuth, (req, res) => {
     const cleanTransponder = transponderNumber.replace(/\s+/g, '').toUpperCase();
     const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
     
-    // First verify the mapping belongs to this host
-    db.get(
-        `SELECT id FROM transponder_mappings WHERE id = ? AND host_id = ?`,
-        [mappingId, hostId],
-        (err, existing) => {
-            if (err || !existing) {
-                return res.status(404).json({
+    try {
+        // First verify the mapping belongs to this host
+        const { data: existing, error: checkError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('id')
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .single();
+        
+        if (checkError || !existing) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
+            });
+        }
+        
+        const { data: updated, error: updateError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .update({
+                transponder_number: cleanTransponder,
+                vehicle_plate: cleanPlate,
+                vehicle_description: vehicleDescription || '',
+                is_active: isActive !== false,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .select();
+        
+        if (updateError) {
+            console.error('❌ Error updating transponder mapping:', updateError);
+            
+            if (updateError.code === '23505') { // Unique constraint violation
+                return res.status(409).json({
                     success: false,
-                    error: 'Transponder mapping not found'
+                    error: 'This transponder number is already mapped to another vehicle'
                 });
             }
             
-            db.run(
-                `UPDATE transponder_mappings 
-                 SET transponder_number = ?, vehicle_plate = ?, vehicle_description = ?, 
-                     is_active = ?, updated_at = CURRENT_TIMESTAMP
-                 WHERE id = ? AND host_id = ?`,
-                [cleanTransponder, cleanPlate, vehicleDescription || '', isActive !== false, mappingId, hostId],
-                function(err) {
-                    if (err) {
-                        if (err.message.includes('UNIQUE constraint failed')) {
-                            return res.status(409).json({
-                                success: false,
-                                error: 'This transponder number is already mapped to another vehicle'
-                            });
-                        }
-                        return res.status(500).json({
-                            success: false,
-                            error: 'Failed to update transponder mapping'
-                        });
-                    }
-                    
-                    if (this.changes === 0) {
-                        return res.status(404).json({
-                            success: false,
-                            error: 'Transponder mapping not found'
-                        });
-                    }
-                    
-                    res.json({
-                        success: true,
-                        message: 'Transponder mapping updated successfully'
-                    });
-                }
-            );
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to update transponder mapping'
+            });
         }
-    );
+        
+        if (!updated || updated.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Transponder mapping updated successfully'
+        });
+    } catch (error) {
+        console.error('❌ Exception updating transponder mapping:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update transponder mapping'
+        });
+    }
 });
 
 // Activate transponder mapping
-router.put('/:id/activate', requireAuth, (req, res) => {
+router.put('/:id/activate', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const mappingId = req.params.id;
     
-    db.run(
-        `UPDATE transponder_mappings SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
-        [mappingId, hostId],
-        function(err) {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to activate transponder mapping'
-                });
-            }
-            
-            if (this.changes === 0) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Transponder mapping not found'
-                });
-            }
-            
-            res.json({
-                success: true,
-                message: 'Transponder mapping activated successfully'
+    try {
+        const { data: updated, error } = await supabaseAdmin
+            .from('transponder_mappings')
+            .update({ 
+                is_active: true, 
+                updated_at: new Date().toISOString() 
+            })
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .select();
+        
+        if (error) {
+            console.error('❌ Error activating transponder mapping:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to activate transponder mapping'
             });
         }
-    );
+        
+        if (!updated || updated.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Transponder mapping activated successfully'
+        });
+    } catch (error) {
+        console.error('❌ Exception activating transponder mapping:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to activate transponder mapping'
+        });
+    }
 });
 
 // Deactivate transponder mapping (soft delete)
-router.put('/:id/deactivate', requireAuth, (req, res) => {
+router.put('/:id/deactivate', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const mappingId = req.params.id;
     
-    db.run(
-        `UPDATE transponder_mappings SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
-        [mappingId, hostId],
-        function(err) {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to deactivate transponder mapping'
-                });
-            }
-            
-            if (this.changes === 0) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Transponder mapping not found'
-                });
-            }
-            
-            res.json({
-                success: true,
-                message: 'Transponder mapping deactivated successfully'
+    try {
+        const { data: updated, error } = await supabaseAdmin
+            .from('transponder_mappings')
+            .update({ 
+                is_active: false, 
+                updated_at: new Date().toISOString() 
+            })
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .select();
+        
+        if (error) {
+            console.error('❌ Error deactivating transponder mapping:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to deactivate transponder mapping'
             });
         }
-    );
+        
+        if (!updated || updated.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Transponder mapping deactivated successfully'
+        });
+    } catch (error) {
+        console.error('❌ Exception deactivating transponder mapping:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to deactivate transponder mapping'
+        });
+    }
 });
 
 // Permanently delete transponder mapping
-router.delete('/:id/permanent', requireAuth, (req, res) => {
+router.delete('/:id/permanent', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const mappingId = req.params.id;
     
-    // First get the transponder details to add to blacklist
-    db.get(
-        `SELECT vehicle_plate FROM transponder_mappings WHERE id = ? AND host_id = ?`,
-        [mappingId, hostId],
-        (err, mapping) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to find transponder mapping'
-                });
-            }
-            
-            if (!mapping) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Transponder mapping not found'
-                });
-            }
-            
-            // Begin transaction to ensure both operations succeed
-            db.serialize(() => {
-                db.run('BEGIN TRANSACTION');
-                
-                // Add to blacklist to prevent auto-discovery
-                db.run(
-                    `INSERT OR IGNORE INTO deleted_transponder_plates 
-                     (host_id, vehicle_plate, deleted_at) 
-                     VALUES (?, ?, datetime('now'))`,
-                    [hostId, mapping.vehicle_plate],
-                    function(blacklistErr) {
-                        if (blacklistErr) {
-                            db.run('ROLLBACK');
-                            return res.status(500).json({
-                                success: false,
-                                error: 'Failed to add to deletion blacklist'
-                            });
-                        }
-                        
-                        // Permanently delete the transponder mapping
-                        db.run(
-                            `DELETE FROM transponder_mappings WHERE id = ? AND host_id = ?`,
-                            [mappingId, hostId],
-                            function(deleteErr) {
-                                if (deleteErr) {
-                                    db.run('ROLLBACK');
-                                    return res.status(500).json({
-                                        success: false,
-                                        error: 'Failed to permanently delete transponder mapping'
-                                    });
-                                }
-                                
-                                if (this.changes === 0) {
-                                    db.run('ROLLBACK');
-                                    return res.status(404).json({
-                                        success: false,
-                                        error: 'Transponder mapping not found'
-                                    });
-                                }
-                                
-                                // Commit transaction
-                                db.run('COMMIT', (commitErr) => {
-                                    if (commitErr) {
-                                        return res.status(500).json({
-                                            success: false,
-                                            error: 'Failed to commit deletion'
-                                        });
-                                    }
-                                    
-                                    res.json({
-                                        success: true,
-                                        message: 'Transponder mapping permanently deleted and blacklisted'
-                                    });
-                                });
-                            }
-                        );
-                    }
-                );
+    try {
+        // First get the transponder details to add to blacklist
+        const { data: mapping, error: getError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('vehicle_plate')
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .single();
+        
+        if (getError || !mapping) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
             });
         }
-    );
+        
+        // Add to blacklist to prevent auto-discovery (using upsert to handle duplicates)
+        const { error: blacklistError } = await supabaseAdmin
+            .from('deleted_transponder_plates')
+            .upsert({
+                host_id: hostId,
+                vehicle_plate: mapping.vehicle_plate,
+                deleted_at: new Date().toISOString()
+            }, {
+                onConflict: 'host_id,vehicle_plate'
+            });
+        
+        if (blacklistError) {
+            console.error('❌ Error adding to blacklist:', blacklistError);
+            // Continue with deletion even if blacklist fails
+        }
+        
+        // Permanently delete the transponder mapping
+        const { data: deleted, error: deleteError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .delete()
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .select();
+        
+        if (deleteError) {
+            console.error('❌ Error deleting transponder mapping:', deleteError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to permanently delete transponder mapping'
+            });
+        }
+        
+        if (!deleted || deleted.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Transponder mapping permanently deleted and blacklisted'
+        });
+    } catch (error) {
+        console.error('❌ Exception deleting transponder mapping:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to permanently delete transponder mapping'
+        });
+    }
 });
 
 // Legacy delete endpoint for backward compatibility (now deactivates)
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const mappingId = req.params.id;
     
-    db.run(
-        `UPDATE transponder_mappings SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND host_id = ?`,
-        [mappingId, hostId],
-        function(err) {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to deactivate transponder mapping'
-                });
-            }
-            
-            if (this.changes === 0) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Transponder mapping not found'
-                });
-            }
-            
-            res.json({
-                success: true,
-                message: 'Transponder mapping deactivated successfully'
+    try {
+        const { data: updated, error } = await supabaseAdmin
+            .from('transponder_mappings')
+            .update({ 
+                is_active: false, 
+                updated_at: new Date().toISOString() 
+            })
+            .eq('id', mappingId)
+            .eq('host_id', hostId)
+            .select();
+        
+        if (error) {
+            console.error('❌ Error deactivating transponder mapping:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to deactivate transponder mapping'
             });
         }
-    );
+        
+        if (!updated || updated.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Transponder mapping not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Transponder mapping deactivated successfully'
+        });
+    } catch (error) {
+        console.error('❌ Exception deactivating transponder mapping:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to deactivate transponder mapping'
+        });
+    }
 });
 
 // Get toll charges by transponder (for analysis)
