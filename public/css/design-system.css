@@ -4,22 +4,29 @@
    ============================================== */
 
 /* Import fonts */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 
 /* ==============================================
    DESIGN TOKENS - IMPLEMENT EXACTLY
    ============================================== */
 :root {
-  /* Colors - Dark Theme */
-  --bg: #0B0F1A;           /* Background */
-  --panel: #0F1625;        /* Panels */
-  --hover: #1B2336;        /* Hover states */
-  --hairline: #24304A;     /* Borders */
+  /* Quantum Matrix Color Scheme */
+  --space-cadet: #2D1B69;
+  --english-violet: #553C8B;
+  --sunglow: #FFC857;
+  --dark-cyan: #17A2B8;
+  --paynes-gray: #495057;
+  
+  /* Colors - Quantum Dark Theme */
+  --bg: linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%);
+  --panel: rgba(255, 255, 255, 0.02);        /* Glassmorphism panels */
+  --hover: rgba(255, 200, 87, 0.1);        /* Quantum hover states */
+  --hairline: rgba(255, 200, 87, 0.3);     /* Quantum borders */
   
   /* Text Colors */
-  --ink: #E6ECF8;          /* Primary text */
-  --muted: #9FB0D8;        /* Secondary text */
-  --subtle: #7C8DB5;       /* Tertiary text */
+  --ink: #FFFFFF;          /* Pure white text */
+  --muted: rgba(255, 255, 255, 0.8);        /* Secondary text */
+  --subtle: rgba(255, 255, 255, 0.6);       /* Tertiary text */
   
   /* Enhanced Accessibility Text Colors - Much Brighter */
   --label-text: #FFFFFF;      /* Pure white for labels - maximum contrast */
@@ -33,11 +40,11 @@
   --tab-inactive: #94A3B8;    /* Brighter inactive tabs - 4.1:1 */
   --divider-text: #CBD5E1;    /* Brighter divider text - 6.8:1 */
   
-  /* Accent Colors */
-  --accentA: #7C3AED;      /* Purple */
-  --accentB: #22D3EE;      /* Cyan */
-  --accentC: #4CC9F0;      /* Light blue */
-  --ring: #22D3EE;         /* Focus ring */
+  /* Quantum Accent Colors */
+  --accentA: var(--sunglow);      /* Quantum gold */
+  --accentB: var(--dark-cyan);      /* Quantum cyan */
+  --accentC: var(--english-violet);      /* Quantum violet */
+  --ring: var(--sunglow);         /* Quantum focus ring */
   
   /* Enhanced Field & UI Colors */
   --field-bg: #0A0E17;        /* Darker than panel for depth */
@@ -351,4 +358,511 @@ p, .body {
 .hover-lift:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+/* ==============================================
+   QUANTUM MATRIX THEME ENHANCEMENTS
+   ============================================== */
+
+/* Override body background for Quantum Matrix */
+body {
+  background: var(--bg) !important;
+  font-family: 'Inter', sans-serif !important;
+  color: var(--ink) !important;
+  position: relative !important;
+  overflow-x: hidden !important;
+}
+
+/* Dynamic Mesh Background */
+body::before {
+  content: '' !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-image: 
+    linear-gradient(rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(17, 157, 164, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 157, 164, 0.08) 1px, transparent 1px) !important;
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+  animation: meshMove 30s linear infinite !important;
+  z-index: -2 !important;
+  pointer-events: none !important;
+}
+
+/* Dynamic Mesh Floating Shapes and Connection Lines */
+body::after {
+  content: '' !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: 
+    /* Connection Lines */
+    linear-gradient(90deg, transparent 0%, rgba(255, 200, 87, 0.3) 50%, transparent 100%) 0 20%/70% 1px no-repeat,
+    linear-gradient(90deg, transparent 0%, rgba(17, 157, 164, 0.3) 50%, transparent 100%) 10% 45%/60% 1px no-repeat,
+    linear-gradient(90deg, transparent 0%, rgba(255, 200, 87, 0.3) 50%, transparent 100%) 20% 70%/65% 1px no-repeat,
+    /* Floating Shapes */
+    radial-gradient(ellipse 100px 100px at 8% 12%, rgba(255, 200, 87, 0.15) 0%, transparent 70%),
+    radial-gradient(circle 40px at 88% 20%, rgba(17, 157, 164, 0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 25px 75px at 10% 85%, rgba(75, 63, 114, 0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 60px 25px at 92% 75%, rgba(25, 100, 126, 0.15) 0%, transparent 70%),
+    radial-gradient(circle 35px at 4% 40%, rgba(255, 200, 87, 0.2) 0%, transparent 70%),
+    radial-gradient(circle 45px at 85% 50%, rgba(17, 157, 164, 0.15) 0%, transparent 70%) !important;
+  animation: floatingShapes 20s ease-in-out infinite, lineFlow 8s ease-in-out infinite !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* Dynamic Mesh Animations */
+@keyframes meshMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+@keyframes floatingShapes {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  25% { 
+    transform: scale(1.1) rotate(90deg);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: scale(0.9) rotate(180deg);
+    opacity: 1;
+  }
+  75% { 
+    transform: scale(1.05) rotate(270deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes meshFloat1 {
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+  25% { transform: translate(-20px, -25px) rotate(5deg); }
+  50% { transform: translate(15px, -35px) rotate(-3deg); }
+  75% { transform: translate(-10px, -20px) rotate(7deg); }
+}
+
+@keyframes meshFloat2 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-40px, 40px) scale(1.1); }
+}
+
+@keyframes meshFloat3 {
+  0%, 100% { transform: rotate(0deg) translate(0px, 0px); }
+  50% { transform: rotate(180deg) translate(20px, -30px); }
+}
+
+@keyframes meshFloat4 {
+  0%, 100% { transform: translate(0px, 0px) scaleX(1); }
+  50% { transform: translate(30px, -20px) scaleX(1.2); }
+}
+
+@keyframes meshRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes meshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes lineFlow {
+  0%, 100% { 
+    background-position: 0 20%, 10% 45%, 20% 70%;
+    opacity: 0.6;
+  }
+  50% { 
+    background-position: 100% 20%, 90% 45%, 80% 70%;
+    opacity: 1;
+  }
+}
+
+/* Quantum Glassmorphism for panels */
+.dashboard-layout {
+  backdrop-filter: blur(10px) !important;
+}
+
+/* Dynamic Mesh Sidebar */
+.dashboard-sidebar {
+  background: linear-gradient(135deg, 
+    rgba(75, 63, 114, 0.25) 0%, 
+    rgba(25, 100, 126, 0.2) 50%, 
+    rgba(31, 32, 65, 0.3) 100%) !important;
+  backdrop-filter: blur(30px) !important;
+  border-right: 2px solid transparent !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.dashboard-sidebar::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: -2px !important;
+  bottom: 0 !important;
+  width: 2px !important;
+  background: linear-gradient(180deg, 
+    var(--sunglow) 0%, 
+    var(--dark-cyan) 25%, 
+    transparent 50%, 
+    var(--english-violet) 75%, 
+    var(--sunglow) 100%) !important;
+  background-size: 100% 300% !important;
+  animation: meshGradientBorder 12s ease-in-out infinite !important;
+  z-index: 1 !important;
+}
+
+/* Quantum Typography for Navigation */
+.sidebar-brand {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+  color: var(--sunglow) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  font-size: 1.2rem !important;
+}
+
+.nav-item {
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  font-size: 0.9rem !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.nav-item::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 0 !important;
+  background: var(--hover) !important;
+  transition: width 0.3s ease !important;
+  z-index: -1 !important;
+}
+
+.nav-item:hover::before,
+.nav-item.active::before {
+  width: 100% !important;
+}
+
+.nav-item.active {
+  color: var(--sunglow) !important;
+  border-left-color: var(--sunglow) !important;
+}
+
+/* Dynamic Mesh Header */
+.dashboard-header {
+  background: linear-gradient(135deg, 
+    rgba(75, 63, 114, 0.25) 0%, 
+    rgba(25, 100, 126, 0.2) 50%, 
+    rgba(31, 32, 65, 0.3) 100%) !important;
+  backdrop-filter: blur(30px) !important;
+  border-bottom: 2px solid transparent !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.dashboard-header::before {
+  content: '' !important;
+  position: absolute !important;
+  bottom: -2px !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, 
+    var(--sunglow) 0%, 
+    var(--dark-cyan) 25%, 
+    transparent 50%, 
+    var(--english-violet) 75%, 
+    var(--sunglow) 100%) !important;
+  background-size: 300% 100% !important;
+  animation: meshGradientBorder 8s ease-in-out infinite !important;
+}
+
+.dashboard-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  color: var(--ink) !important;
+}
+
+/* Quantum User Avatar */
+.user-avatar {
+  background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+  color: var(--space-cadet) !important;
+  border-radius: 8px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.user-avatar::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent) !important;
+  transition: left 0.5s ease !important;
+}
+
+.user-avatar:hover::before {
+  left: 100% !important;
+}
+
+/* Dynamic Mesh KPI Cards */
+.kpi-card {
+  background: linear-gradient(135deg, 
+    rgba(75, 63, 114, 0.25) 0%, 
+    rgba(25, 100, 126, 0.2) 50%, 
+    rgba(31, 32, 65, 0.3) 100%) !important;
+  backdrop-filter: blur(30px) !important;
+  border: 2px solid transparent !important;
+  border-radius: 15px !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.kpi-card::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  padding: 2px !important;
+  background: linear-gradient(45deg, 
+    var(--sunglow) 0%, 
+    var(--dark-cyan) 25%, 
+    transparent 50%, 
+    var(--english-violet) 75%, 
+    var(--sunglow) 100%) !important;
+  background-size: 300% 300% !important;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  mask-composite: xor !important;
+  -webkit-mask-composite: xor !important;
+  animation: meshGradientBorder 8s ease-in-out infinite !important;
+}
+
+/* Gradient border animation */
+@keyframes meshGradientBorder {
+  0%, 100% { 
+    background-position: 0% 50%; 
+    opacity: 0.8;
+  }
+  50% { 
+    background-position: 100% 50%; 
+    opacity: 1;
+  }
+}
+
+.kpi-value {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  letter-spacing: 2px !important;
+}
+
+/* Dynamic Mesh Performance Cards */
+.performance-card {
+  background: linear-gradient(135deg, 
+    rgba(75, 63, 114, 0.25) 0%, 
+    rgba(25, 100, 126, 0.2) 50%, 
+    rgba(31, 32, 65, 0.3) 100%) !important;
+  backdrop-filter: blur(30px) !important;
+  border: 2px solid transparent !important;
+  border-radius: 15px !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.performance-card::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  padding: 2px !important;
+  background: linear-gradient(45deg, 
+    var(--sunglow) 0%, 
+    var(--dark-cyan) 25%, 
+    transparent 50%, 
+    var(--english-violet) 75%, 
+    var(--sunglow) 100%) !important;
+  background-size: 300% 300% !important;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  mask-composite: xor !important;
+  -webkit-mask-composite: xor !important;
+  animation: meshGradientBorder 10s ease-in-out infinite !important;
+}
+
+.card-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  font-size: 1.2rem !important;
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  letter-spacing: 2px !important;
+}
+
+/* Quantum Progress Bars */
+.progress-fill {
+  background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan)) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.progress-fill::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.5),
+    transparent) !important;
+  animation: quantumFlow 2s ease-in-out infinite !important;
+}
+
+/* Quantum Buttons */
+.primary-cta {
+  background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+  color: var(--space-cadet) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.primary-cta::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent) !important;
+  transition: left 0.5s ease !important;
+}
+
+.primary-cta:hover::before {
+  left: 100% !important;
+}
+
+.view-button {
+  background: var(--panel) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--hairline) !important;
+  color: var(--ink) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.view-button::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 0 !important;
+  background: var(--hover) !important;
+  transition: width 0.3s ease !important;
+}
+
+.view-button:hover::before {
+  width: 100% !important;
+}
+
+.view-button.primary {
+  background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+  color: var(--space-cadet) !important;
+}
+
+/* Quantum Animations */
+@keyframes quantumScanner {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400px); }
+}
+
+@keyframes quantumFlow {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Quantum Dropdown */
+.user-dropdown {
+  background: var(--panel) !important;
+  backdrop-filter: blur(30px) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 8px !important;
+}
+
+.dropdown-item {
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  font-size: 0.9rem !important;
+  position: relative !important;
+}
+
+.dropdown-item::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 0 !important;
+  background: var(--hover) !important;
+  transition: width 0.3s ease !important;
+}
+
+.dropdown-item:hover::before {
+  width: 100% !important;
 }
