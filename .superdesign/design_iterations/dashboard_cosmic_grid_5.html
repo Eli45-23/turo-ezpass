@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Nebula Drift Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --space-cadet: #2D1B69;
+            --english-violet: #553C8B;
+            --sunglow: #FFC857;
+            --dark-cyan: #17A2B8;
+            --paynes-gray: #495057;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif !important;
+            background: 
+                radial-gradient(ellipse at top, var(--english-violet) 0%, var(--space-cadet) 50%),
+                radial-gradient(ellipse at bottom, #1a0e3d 0%, var(--space-cadet) 50%) !important;
+            min-height: 100vh !important;
+            color: white !important;
+            overflow-x: hidden !important;
+            position: relative !important;
+        }
+
+        /* Nebula Background */
+        .nebula-background {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: -1 !important;
+            overflow: hidden !important;
+        }
+
+        .star {
+            position: absolute !important;
+            background: white !important;
+            border-radius: 50% !important;
+            animation: starTwinkle 3s ease-in-out infinite !important;
+        }
+
+        .star.small {
+            width: 1px !important;
+            height: 1px !important;
+        }
+
+        .star.medium {
+            width: 2px !important;
+            height: 2px !important;
+        }
+
+        .star.large {
+            width: 3px !important;
+            height: 3px !important;
+        }
+
+        .nebula-cloud {
+            position: absolute !important;
+            border-radius: 50% !important;
+            filter: blur(40px) !important;
+            animation: nebulaDrift 20s ease-in-out infinite !important;
+        }
+
+        .cloud-1 {
+            width: 400px !important;
+            height: 300px !important;
+            background: radial-gradient(ellipse, rgba(255, 200, 87, 0.1) 0%, transparent 70%) !important;
+            top: 10% !important;
+            left: 10% !important;
+        }
+
+        .cloud-2 {
+            width: 350px !important;
+            height: 250px !important;
+            background: radial-gradient(ellipse, rgba(23, 162, 184, 0.08) 0%, transparent 70%) !important;
+            top: 40% !important;
+            right: 15% !important;
+            animation-delay: 5s !important;
+            animation-duration: 25s !important;
+        }
+
+        .cloud-3 {
+            width: 300px !important;
+            height: 200px !important;
+            background: radial-gradient(ellipse, rgba(255, 200, 87, 0.06) 0%, transparent 70%) !important;
+            bottom: 20% !important;
+            left: 30% !important;
+            animation-delay: 10s !important;
+            animation-duration: 30s !important;
+        }
+
+        .floating-dust {
+            position: absolute !important;
+            width: 2px !important;
+            height: 2px !important;
+            background: rgba(255, 200, 87, 0.3) !important;
+            border-radius: 50% !important;
+            animation: dustFloat 15s linear infinite !important;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            max-width: 1400px !important;
+            margin: 0 auto !important;
+            padding: 2rem !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+
+        /* Ethereal Header */
+        .dashboard-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 3rem !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            backdrop-filter: blur(40px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            border-radius: 25px !important;
+            padding: 2rem 2.5rem !important;
+            box-shadow: 
+                0 20px 60px rgba(255, 200, 87, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .dashboard-header::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: 
+                radial-gradient(circle at 30% 30%, rgba(255, 200, 87, 0.02) 0%, transparent 70%),
+                radial-gradient(circle at 70% 70%, rgba(23, 162, 184, 0.02) 0%, transparent 70%) !important;
+            animation: headerGlow 8s ease-in-out infinite !important;
+            z-index: -1 !important;
+        }
+
+        .dashboard-title {
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-size: 2.5rem !important;
+            font-weight: 300 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f, var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            text-shadow: 0 0 40px rgba(255, 200, 87, 0.3) !important;
+            letter-spacing: 3px !important;
+            animation: titleFloat 6s ease-in-out infinite !important;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, rgba(255, 200, 87, 0.8), rgba(255, 220, 127, 0.9)) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.3rem 2.8rem !important;
+            border-radius: 20px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.5s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.8rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+            backdrop-filter: blur(10px) !important;
+            box-shadow: 0 10px 30px rgba(255, 200, 87, 0.2) !important;
+        }
+
+        .upload-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-radius: 50% !important;
+            transition: all 0.8s ease !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+        .upload-btn:hover::before {
+            width: 400px !important;
+            height: 400px !important;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-5px) scale(1.05) !important;
+            box-shadow: 0 20px 50px rgba(255, 200, 87, 0.3) !important;
+            filter: brightness(1.1) !important;
+        }
+
+        /* Ethereal Stats Cards */
+        .stats-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)) !important;
+            gap: 2.5rem !important;
+            margin-bottom: 4rem !important;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(40px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.15) !important;
+            border-radius: 30px !important;
+            padding: 3rem 2.5rem !important;
+            transition: all 0.6s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .stat-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -50% !important;
+            left: -50% !important;
+            width: 200% !important;
+            height: 200% !important;
+            background: 
+                radial-gradient(circle, rgba(255, 200, 87, 0.03) 0%, transparent 70%) !important;
+            animation: cardGlow 12s ease-in-out infinite !important;
+            z-index: -1 !important;
+        }
+
+        .stat-card::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 1px !important;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 200, 87, 0.5),
+                transparent) !important;
+            opacity: 0 !important;
+            transition: opacity 0.6s ease !important;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02) !important;
+            box-shadow: 
+                0 30px 80px rgba(255, 200, 87, 0.1),
+                0 0 60px rgba(255, 200, 87, 0.05) !important;
+            border-color: rgba(255, 200, 87, 0.3) !important;
+        }
+
+        .stat-card:hover::after {
+            opacity: 1 !important;
+        }
+
+        .stat-number {
+            font-size: 4rem !important;
+            font-weight: 200 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 1rem !important;
+            text-shadow: 0 0 30px rgba(255, 200, 87, 0.2) !important;
+            animation: numberGlow 4s ease-in-out infinite alternate !important;
+            letter-spacing: 2px !important;
+        }
+
+        .stat-label {
+            font-size: 1.1rem !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            margin-bottom: 0.8rem !important;
+            font-weight: 300 !important;
+            letter-spacing: 1px !important;
+        }
+
+        .stat-value {
+            font-size: 1rem !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-weight: 300 !important;
+        }
+
+        /* Dreamy Performance Matrix */
+        .performance-matrix {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(40px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            border-radius: 30px !important;
+            padding: 3.5rem !important;
+            margin-bottom: 4rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .performance-matrix::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 200, 87, 0.03) 0%, transparent 70%),
+                radial-gradient(circle at 80% 70%, rgba(23, 162, 184, 0.03) 0%, transparent 70%) !important;
+            animation: matrixFlow 15s ease-in-out infinite !important;
+            z-index: -1 !important;
+        }
+
+        .matrix-title {
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-size: 2rem !important;
+            font-weight: 300 !important;
+            margin-bottom: 3rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1.5rem !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            letter-spacing: 2px !important;
+        }
+
+        .matrix-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+            gap: 3rem !important;
+        }
+
+        .matrix-item {
+            text-align: center !important;
+            position: relative !important;
+            padding: 2rem !important;
+            border: 1px solid rgba(255, 200, 87, 0.1) !important;
+            border-radius: 20px !important;
+            background: rgba(255, 255, 255, 0.01) !important;
+            backdrop-filter: blur(20px) !important;
+        }
+
+        .matrix-value {
+            font-size: 3.5rem !important;
+            font-weight: 200 !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 2rem !important;
+            letter-spacing: 3px !important;
+            animation: valueFloat 5s ease-in-out infinite !important;
+        }
+
+        .progress-bar {
+            width: 100% !important;
+            height: 6px !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-radius: 20px !important;
+            overflow: hidden !important;
+            margin-bottom: 1.5rem !important;
+            position: relative !important;
+        }
+
+        .progress-fill {
+            height: 100% !important;
+            background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan)) !important;
+            border-radius: 20px !important;
+            transition: width 3s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+            box-shadow: 0 0 20px rgba(255, 200, 87, 0.3) !important;
+        }
+
+        .progress-fill::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.4),
+                transparent) !important;
+            animation: progressShimmer 3s ease-in-out infinite !important;
+        }
+
+        .matrix-label {
+            font-size: 1rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-weight: 300 !important;
+            letter-spacing: 1px !important;
+        }
+
+        /* Floating Action Buttons */
+        .action-buttons {
+            display: flex !important;
+            gap: 2rem !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.03) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            padding: 1.5rem 3rem !important;
+            border-radius: 20px !important;
+            font-weight: 300 !important;
+            cursor: pointer !important;
+            transition: all 0.6s ease !important;
+            backdrop-filter: blur(30px) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            letter-spacing: 1px !important;
+        }
+
+        .action-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+            border-radius: 50% !important;
+            transition: all 0.8s ease !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+        .action-btn:hover::before {
+            width: 400px !important;
+            height: 400px !important;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 200, 87, 0.05) !important;
+            border-color: rgba(255, 200, 87, 0.4) !important;
+            transform: translateY(-5px) !important;
+            box-shadow: 0 15px 40px rgba(255, 200, 87, 0.15) !important;
+            color: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        /* Ethereal Animations */
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes nebulaDrift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(-20px, -30px) scale(1.05); }
+            50% { transform: translate(30px, -20px) scale(0.95); }
+            75% { transform: translate(-15px, 25px) scale(1.02); }
+        }
+
+        @keyframes dustFloat {
+            0% { transform: translateY(100vh) translateX(0px); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) translateX(100px); opacity: 0; }
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+
+        @keyframes cardGlow {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+
+        @keyframes numberGlow {
+            0% { filter: drop-shadow(0 0 20px rgba(255, 200, 87, 0.2)); }
+            100% { filter: drop-shadow(0 0 40px rgba(255, 200, 87, 0.4)); }
+        }
+
+        @keyframes matrixFlow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes valueFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes progressShimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-container { padding: 1rem !important; }
+            .dashboard-header { 
+                flex-direction: column !important; 
+                gap: 1.5rem !important; 
+                text-align: center !important; 
+                padding: 1.5rem !important; 
+            }
+            .stats-grid { grid-template-columns: 1fr !important; }
+            .matrix-grid { grid-template-columns: 1fr !important; }
+            .nebula-cloud { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nebula-background">
+        <!-- Stars -->
+        <div class="star small" style="top: 10%; left: 20%; animation-delay: 0s;"></div>
+        <div class="star medium" style="top: 15%; left: 60%; animation-delay: 1s;"></div>
+        <div class="star large" style="top: 25%; left: 80%; animation-delay: 2s;"></div>
+        <div class="star small" style="top: 35%; left: 30%; animation-delay: 0.5s;"></div>
+        <div class="star medium" style="top: 45%; left: 70%; animation-delay: 1.5s;"></div>
+        <div class="star small" style="top: 55%; left: 40%; animation-delay: 2.5s;"></div>
+        <div class="star large" style="top: 65%; left: 85%; animation-delay: 0.3s;"></div>
+        <div class="star small" style="top: 75%; left: 25%; animation-delay: 1.8s;"></div>
+        <div class="star medium" style="top: 85%; left: 65%; animation-delay: 2.2s;"></div>
+        <div class="star small" style="top: 20%; left: 90%; animation-delay: 0.8s;"></div>
+        
+        <!-- Nebula Clouds -->
+        <div class="nebula-cloud cloud-1"></div>
+        <div class="nebula-cloud cloud-2"></div>
+        <div class="nebula-cloud cloud-3"></div>
+        
+        <!-- Floating Dust -->
+        <div class="floating-dust" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="floating-dust" style="left: 30%; animation-delay: 3s;"></div>
+        <div class="floating-dust" style="left: 50%; animation-delay: 6s;"></div>
+        <div class="floating-dust" style="left: 70%; animation-delay: 9s;"></div>
+        <div class="floating-dust" style="left: 90%; animation-delay: 12s;"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1 class="dashboard-title">TURO TOLL TRACKER</h1>
+            <button class="upload-btn">
+                <i data-lucide="cloud-upload"></i>
+                Upload CSVs / Run Fetch
+            </button>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">69</div>
+                <div class="stat-label">TOTAL TOLLS</div>
+                <div class="stat-value">Active tolls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">50</div>
+                <div class="stat-label">PERSONAL DRIVING TOLLS</div>
+                <div class="stat-value">$1154.90</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">19</div>
+                <div class="stat-label">MATCHED TOLLS</div>
+                <div class="stat-value">$87.39</div>
+            </div>
+        </div>
+
+        <div class="performance-matrix">
+            <h2 class="matrix-title">
+                <i data-lucide="sparkles"></i>
+                PERFORMANCE MATRIX
+            </h2>
+            <div class="matrix-grid">
+                <div class="matrix-item">
+                    <div class="matrix-value">100%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <div class="matrix-label">Matching Accuracy</div>
+                </div>
+                <div class="matrix-item">
+                    <div class="matrix-value">69</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 85%"></div>
+                    </div>
+                    <div class="matrix-label">Total Tolls</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn">View Matched (19)</button>
+            <button class="action-btn">Personal Driving (50)</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

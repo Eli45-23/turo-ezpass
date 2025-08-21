@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Geometric Hero</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: var(--space-cadet) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .geometric-background {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .geometric-shape {
+            position: absolute !important;
+            opacity: 0.1 !important;
+            animation: geometricFloat 15s ease-in-out infinite !important;
+        }
+        
+        .shape-1 {
+            top: 10% !important;
+            left: 10% !important;
+            width: 200px !important;
+            height: 200px !important;
+            background: var(--sunglow) !important;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
+            animation-delay: 0s !important;
+        }
+        
+        .shape-2 {
+            top: 60% !important;
+            right: 10% !important;
+            width: 150px !important;
+            height: 150px !important;
+            background: var(--dark-cyan) !important;
+            border-radius: 50% !important;
+            animation-delay: 5s !important;
+        }
+        
+        .shape-3 {
+            bottom: 20% !important;
+            left: 15% !important;
+            width: 180px !important;
+            height: 180px !important;
+            background: var(--english-violet) !important;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%) !important;
+            animation-delay: 2s !important;
+        }
+        
+        .shape-4 {
+            top: 30% !important;
+            right: 30% !important;
+            width: 120px !important;
+            height: 120px !important;
+            background: var(--paynes-gray) !important;
+            transform: rotate(45deg) !important;
+            animation-delay: 7s !important;
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: linear-gradient(135deg, var(--english-violet), var(--paynes-gray)) !important;
+            border: 2px solid var(--sunglow) !important;
+            border-radius: 8px !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 2rem !important;
+            color: white !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            animation: slideDown 0.8s ease-out !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            background: linear-gradient(135deg, white 0%, var(--sunglow) 50%, var(--dark-cyan) 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: slideUp 1s ease-out 0.2s both !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem) !important;
+            margin-bottom: 3rem !important;
+            opacity: 0.9 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: slideUp 1s ease-out 0.4s both !important;
+        }
+        
+        .login-card {
+            background: linear-gradient(135deg, 
+                rgba(75, 63, 114, 0.9) 0%, 
+                rgba(25, 100, 126, 0.8) 50%, 
+                rgba(31, 32, 65, 0.9) 100%) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 2px solid transparent !important;
+            background-clip: padding-box !important;
+            position: relative !important;
+            border-radius: 16px !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            box-shadow: 0 25px 50px rgba(31, 32, 65, 0.5) !important;
+            animation: cardReveal 0.8s ease-out 0.6s both !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -2px !important;
+            left: -2px !important;
+            right: -2px !important;
+            bottom: -2px !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan), var(--english-violet)) !important;
+            border-radius: 16px !important;
+            z-index: -1 !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 800 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            font-weight: 500 !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 2px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 8px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            transition: all 0.3s ease !important;
+            font-weight: 500 !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            background: rgba(255, 255, 255, 0.15) !important;
+            box-shadow: 0 0 20px rgba(255, 200, 87, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+            transform: scale(1.02) !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: linear-gradient(135deg, var(--sunglow) 0%, #ffdc7f 100%) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.5rem !important;
+            border-radius: 8px !important;
+            font-size: 1.125rem !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) !important;
+            transition: left 0.6s ease !important;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-4px) scale(1.02) !important;
+            box-shadow: 0 20px 40px rgba(255, 200, 87, 0.4) !important;
+        }
+        
+        .signin-btn:hover::before {
+            left: 100% !important;
+        }
+        
+        .divider {
+            text-align: center !important;
+            margin: 2rem 0 !important;
+            position: relative !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .divider::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 2px !important;
+            background: linear-gradient(90deg, transparent, var(--dark-cyan), transparent) !important;
+        }
+        
+        .divider span {
+            background: linear-gradient(135deg, var(--english-violet), var(--paynes-gray)) !important;
+            padding: 0.5rem 2rem !important;
+            border-radius: 20px !important;
+            border: 1px solid var(--dark-cyan) !important;
+        }
+        
+        .social-buttons {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 1rem !important;
+            margin-bottom: 2rem !important;
+        }
+        
+        .social-btn {
+            background: linear-gradient(135deg, rgba(17, 157, 164, 0.3), rgba(25, 100, 126, 0.3)) !important;
+            border: 2px solid var(--dark-cyan) !important;
+            color: white !important;
+            padding: 1rem !important;
+            border-radius: 8px !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+        
+        .social-btn:hover {
+            background: linear-gradient(135deg, rgba(17, 157, 164, 0.5), rgba(25, 100, 126, 0.5)) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 25px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .hero-stats {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 2rem !important;
+            margin-top: 3rem !important;
+            animation: slideUp 1s ease-out 0.8s both !important;
+        }
+        
+        .stat-item {
+            text-align: center !important;
+            background: linear-gradient(135deg, rgba(255, 200, 87, 0.1), rgba(17, 157, 164, 0.1)) !important;
+            border: 2px solid transparent !important;
+            background-clip: padding-box !important;
+            position: relative !important;
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stat-item::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -2px !important;
+            left: -2px !important;
+            right: -2px !important;
+            bottom: -2px !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+            border-radius: 12px !important;
+            z-index: -1 !important;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-5px) scale(1.05) !important;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem !important;
+            font-weight: 900 !important;
+            color: var(--sunglow) !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 0.875rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        /* Animations */
+        @keyframes geometricFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(20px, -20px) rotate(90deg); }
+            50% { transform: translate(-20px, -40px) rotate(180deg); }
+            75% { transform: translate(-40px, 20px) rotate(270deg); }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes cardReveal {
+            from { opacity: 0; transform: scale(0.8) rotateY(20deg); }
+            to { opacity: 1; transform: scale(1) rotateY(0deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .hero-stats { grid-template-columns: 1fr !important; }
+            .social-buttons { grid-template-columns: 1fr !important; }
+            .geometric-shape { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="geometric-background">
+            <div class="geometric-shape shape-1"></div>
+            <div class="geometric-shape shape-2"></div>
+            <div class="geometric-shape shape-3"></div>
+            <div class="geometric-shape shape-4"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="hexagon" style="width: 1rem; height: 1rem;"></i>
+                Professional Platform
+            </div>
+            
+            <h1 class="hero-title">
+                DRIVE FORWARD<br>
+                TRACK SMART
+            </h1>
+            
+            <p class="hero-subtitle">
+                Advanced toll tracking with geometric precision and professional analytics.
+            </p>
+            
+            <div class="login-card">
+                <h2 class="form-title">Access Portal</h2>
+                <p class="form-subtitle">Enter your credentials</p>
+                
+                <form>
+                    <input type="email" class="form-input" placeholder="Email Address" required>
+                    <input type="password" class="form-input" placeholder="Password" required>
+                    
+                    <button type="submit" class="signin-btn">Launch System</button>
+                </form>
+                
+                <div class="divider">
+                    <span>Alternative Access</span>
+                </div>
+                
+                <div class="social-buttons">
+                    <button class="social-btn">
+                        <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                        Google
+                    </button>
+                    <button class="social-btn">
+                        <i data-lucide="square" style="width: 1rem; height: 1rem;"></i>
+                        Microsoft
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">Precision</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">$5M+</div>
+                    <div class="stat-label">Tracked</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">25K+</div>
+                    <div class="stat-label">Hosts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

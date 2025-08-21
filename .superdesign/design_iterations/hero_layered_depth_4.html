@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Depth Hero</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+            perspective: 1000px !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: var(--space-cadet) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .layer-background {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .depth-layer {
+            position: absolute !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-size: cover !important;
+            background-position: center !important;
+            opacity: 0.8 !important;
+        }
+        
+        .layer-1 {
+            background: linear-gradient(135deg, 
+                rgba(31, 32, 65, 0.9) 0%, 
+                rgba(75, 63, 114, 0.7) 50%, 
+                rgba(25, 100, 126, 0.8) 100%) !important;
+            transform: translateZ(0px) !important;
+            animation: layerFloat1 20s ease-in-out infinite !important;
+        }
+        
+        .layer-2 {
+            background: radial-gradient(circle at 30% 70%, 
+                rgba(255, 200, 87, 0.2) 0%, 
+                transparent 50%) !important;
+            transform: translateZ(100px) !important;
+            animation: layerFloat2 25s ease-in-out infinite !important;
+        }
+        
+        .layer-3 {
+            background: radial-gradient(circle at 70% 30%, 
+                rgba(17, 157, 164, 0.3) 0%, 
+                transparent 60%) !important;
+            transform: translateZ(200px) !important;
+            animation: layerFloat3 30s ease-in-out infinite !important;
+        }
+        
+        .depth-cards {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 2 !important;
+        }
+        
+        .floating-card {
+            position: absolute !important;
+            background: rgba(75, 63, 114, 0.2) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(10px) !important;
+            padding: 1rem !important;
+            opacity: 0.6 !important;
+            transform-style: preserve-3d !important;
+        }
+        
+        .card-1 {
+            width: 120px !important;
+            height: 80px !important;
+            top: 15% !important;
+            left: 10% !important;
+            transform: translateZ(50px) rotateY(15deg) !important;
+            animation: cardFloat1 12s ease-in-out infinite !important;
+        }
+        
+        .card-2 {
+            width: 100px !important;
+            height: 100px !important;
+            top: 60% !important;
+            right: 15% !important;
+            transform: translateZ(80px) rotateY(-20deg) !important;
+            animation: cardFloat2 15s ease-in-out infinite !important;
+        }
+        
+        .card-3 {
+            width: 140px !important;
+            height: 70px !important;
+            bottom: 20% !important;
+            left: 20% !important;
+            transform: translateZ(30px) rotateY(10deg) !important;
+            animation: cardFloat3 18s ease-in-out infinite !important;
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+            transform-style: preserve-3d !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: rgba(25, 100, 126, 0.3) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid var(--paynes-gray) !important;
+            border-radius: 30px !important;
+            padding: 0.75rem 2rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            color: var(--paynes-gray) !important;
+            animation: badgeRise 0.8s ease-out !important;
+            transform: translateZ(50px) !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            background: linear-gradient(135deg, 
+                white 0%, 
+                var(--sunglow) 25%, 
+                var(--dark-cyan) 50%, 
+                var(--paynes-gray) 75%, 
+                white 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: titleDepth 1s ease-out 0.2s both !important;
+            transform: translateZ(100px) !important;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem) !important;
+            margin-bottom: 3rem !important;
+            opacity: 0.9 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: subtitleDepth 1s ease-out 0.4s both !important;
+            transform: translateZ(75px) !important;
+        }
+        
+        .login-card {
+            background: linear-gradient(145deg, 
+                rgba(31, 32, 65, 0.8) 0%, 
+                rgba(75, 63, 114, 0.6) 50%, 
+                rgba(25, 100, 126, 0.7) 100%) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 2px solid transparent !important;
+            border-radius: 24px !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            box-shadow: 0 30px 60px rgba(31, 32, 65, 0.7), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            animation: cardDepthReveal 0.8s ease-out 0.6s both !important;
+            transform: translateZ(150px) !important;
+            position: relative !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -2px !important;
+            left: -2px !important;
+            right: -2px !important;
+            bottom: -2px !important;
+            background: linear-gradient(145deg, 
+                var(--sunglow), 
+                var(--dark-cyan), 
+                var(--paynes-gray), 
+                var(--sunglow)) !important;
+            border-radius: 24px !important;
+            z-index: -1 !important;
+            opacity: 0.6 !important;
+            animation: borderDepthGlow 4s ease-in-out infinite !important;
+        }
+        
+        .login-card::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 10px !important;
+            left: 10px !important;
+            right: 10px !important;
+            bottom: 10px !important;
+            background: radial-gradient(circle at center, 
+                rgba(255, 200, 87, 0.1) 0%, 
+                transparent 70%) !important;
+            border-radius: 16px !important;
+            z-index: -1 !important;
+            opacity: 0.5 !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 800 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            text-align: center !important;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.3) !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            text-align: center !important;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem !important;
+            position: relative !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(25, 100, 126, 0.4) !important;
+            border-radius: 12px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            transition: all 0.4s ease !important;
+            font-weight: 500 !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2) !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 0 30px rgba(255, 200, 87, 0.4), 
+                        inset 0 2px 10px rgba(0,0,0,0.1) !important;
+            transform: translateZ(10px) !important;
+        }
+        
+        .form-options {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 2rem !important;
+            font-size: 0.875rem !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: linear-gradient(145deg, 
+                var(--sunglow) 0%, 
+                #ffdc7f 30%, 
+                var(--dark-cyan) 70%, 
+                var(--sunglow) 100%) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            font-size: 1.125rem !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+            transition: all 0.4s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+            overflow: hidden !important;
+            box-shadow: 0 10px 25px rgba(255, 200, 87, 0.4) !important;
+        }
+        
+        .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent) !important;
+            transition: left 0.8s ease !important;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-5px) translateZ(20px) !important;
+            box-shadow: 0 25px 50px rgba(255, 200, 87, 0.6), 
+                        0 0 60px rgba(17, 157, 164, 0.4) !important;
+        }
+        
+        .signin-btn:hover::before {
+            left: 100% !important;
+        }
+        
+        .divider {
+            text-align: center !important;
+            margin: 2rem 0 !important;
+            position: relative !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+        }
+        
+        .divider::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 1px !important;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(25, 100, 126, 0.6), 
+                rgba(255, 200, 87, 0.4), 
+                rgba(25, 100, 126, 0.6), 
+                transparent) !important;
+        }
+        
+        .divider span {
+            background: linear-gradient(145deg, 
+                rgba(31, 32, 65, 0.8), 
+                rgba(75, 63, 114, 0.6)) !important;
+            padding: 0.5rem 2rem !important;
+            border-radius: 15px !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .social-buttons {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .social-btn {
+            background: rgba(25, 100, 126, 0.3) !important;
+            border: 1px solid var(--paynes-gray) !important;
+            color: white !important;
+            padding: 1rem !important;
+            border-radius: 12px !important;
+            transition: all 0.4s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            font-weight: 600 !important;
+            backdrop-filter: blur(10px) !important;
+            box-shadow: 0 5px 15px rgba(25, 100, 126, 0.2) !important;
+        }
+        
+        .social-btn:hover {
+            background: rgba(25, 100, 126, 0.5) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-3px) translateZ(10px) !important;
+            box-shadow: 0 15px 30px rgba(25, 100, 126, 0.4) !important;
+        }
+        
+        .signup-link {
+            text-align: center !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 0.875rem !important;
+        }
+        
+        .signup-link a {
+            color: var(--sunglow) !important;
+            text-decoration: none !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .signup-link a:hover {
+            color: #ffdc7f !important;
+            text-shadow: 0 0 10px rgba(255, 200, 87, 0.5) !important;
+        }
+        
+        .hero-stats {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 2rem !important;
+            margin-top: 3rem !important;
+            animation: statsDepth 1s ease-out 0.8s both !important;
+            transform: translateZ(75px) !important;
+        }
+        
+        .stat-item {
+            text-align: center !important;
+            background: rgba(25, 100, 126, 0.2) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 16px !important;
+            padding: 1.5rem !important;
+            backdrop-filter: blur(15px) !important;
+            transition: all 0.4s ease !important;
+            box-shadow: 0 10px 25px rgba(25, 100, 126, 0.3) !important;
+        }
+        
+        .stat-item:hover {
+            background: rgba(25, 100, 126, 0.3) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-8px) translateZ(20px) !important;
+            box-shadow: 0 20px 40px rgba(25, 100, 126, 0.5) !important;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem !important;
+            font-weight: 900 !important;
+            color: var(--sunglow) !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 0 5px 15px rgba(255, 200, 87, 0.5) !important;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+        
+        /* Animations */
+        @keyframes layerFloat1 {
+            0%, 100% { transform: translateZ(0px) translateY(0px); }
+            50% { transform: translateZ(0px) translateY(-20px); }
+        }
+        
+        @keyframes layerFloat2 {
+            0%, 100% { transform: translateZ(100px) translateX(0px); }
+            50% { transform: translateZ(100px) translateX(30px); }
+        }
+        
+        @keyframes layerFloat3 {
+            0%, 100% { transform: translateZ(200px) translateY(0px); }
+            50% { transform: translateZ(200px) translateY(-30px); }
+        }
+        
+        @keyframes cardFloat1 {
+            0%, 100% { transform: translateZ(50px) rotateY(15deg) translateY(0px); }
+            50% { transform: translateZ(50px) rotateY(15deg) translateY(-15px); }
+        }
+        
+        @keyframes cardFloat2 {
+            0%, 100% { transform: translateZ(80px) rotateY(-20deg) translateX(0px); }
+            50% { transform: translateZ(80px) rotateY(-20deg) translateX(20px); }
+        }
+        
+        @keyframes cardFloat3 {
+            0%, 100% { transform: translateZ(30px) rotateY(10deg) translateY(0px); }
+            50% { transform: translateZ(30px) rotateY(10deg) translateY(-10px); }
+        }
+        
+        @keyframes badgeRise {
+            from { opacity: 0; transform: translateZ(50px) translateY(30px); }
+            to { opacity: 1; transform: translateZ(50px) translateY(0px); }
+        }
+        
+        @keyframes titleDepth {
+            from { opacity: 0; transform: translateZ(100px) translateY(40px); }
+            to { opacity: 1; transform: translateZ(100px) translateY(0px); }
+        }
+        
+        @keyframes subtitleDepth {
+            from { opacity: 0; transform: translateZ(75px) translateY(30px); }
+            to { opacity: 0.9; transform: translateZ(75px) translateY(0px); }
+        }
+        
+        @keyframes cardDepthReveal {
+            from { opacity: 0; transform: translateZ(150px) translateY(50px) rotateX(20deg); }
+            to { opacity: 1; transform: translateZ(150px) translateY(0px) rotateX(0deg); }
+        }
+        
+        @keyframes borderDepthGlow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes statsDepth {
+            from { opacity: 0; transform: translateZ(75px) translateY(30px); }
+            to { opacity: 1; transform: translateZ(75px) translateY(0px); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { perspective: none !important; }
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; transform: none !important; }
+            .hero-stats { grid-template-columns: 1fr !important; transform: none !important; }
+            .social-buttons { grid-template-columns: 1fr !important; }
+            .floating-card, .depth-layer { display: none !important; }
+            .hero-title, .hero-subtitle, .hero-badge { transform: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="layer-background">
+            <div class="depth-layer layer-1"></div>
+            <div class="depth-layer layer-2"></div>
+            <div class="depth-layer layer-3"></div>
+        </div>
+        
+        <div class="depth-cards">
+            <div class="floating-card card-1"></div>
+            <div class="floating-card card-2"></div>
+            <div class="floating-card card-3"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="layers" style="width: 1rem; height: 1rem;"></i>
+                Multi-Dimensional Tracking
+            </div>
+            
+            <h1 class="hero-title">
+                DRIVE FORWARD<br>
+                TRACK SMART
+            </h1>
+            
+            <p class="hero-subtitle">
+                Experience toll tracking with unprecedented depth and dimensional intelligence.
+            </p>
+            
+            <div class="login-card">
+                <h2 class="form-title">Depth Portal</h2>
+                <p class="form-subtitle">Enter the next dimension</p>
+                
+                <form>
+                    <div class="form-group">
+                        <input type="email" class="form-input" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-input" placeholder="Password" required>
+                    </div>
+                    
+                    <div class="form-options">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: rgba(255,255,255,0.7);">
+                            <input type="checkbox" style="accent-color: var(--sunglow);">
+                            Remember depth
+                        </label>
+                        <a href="#" style="color: var(--sunglow); text-decoration: none;">Forgot layers?</a>
+                    </div>
+                    
+                    <button type="submit" class="signin-btn">Enter Dimension</button>
+                </form>
+                
+                <div class="divider">
+                    <span>or traverse via</span>
+                </div>
+                
+                <div class="social-buttons">
+                    <button class="social-btn">
+                        <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                        Google
+                    </button>
+                    <button class="social-btn">
+                        <i data-lucide="square" style="width: 1rem; height: 1rem;"></i>
+                        Microsoft
+                    </button>
+                </div>
+                
+                <div class="signup-link">
+                    New to dimensions? <a href="#">Explore layers</a>
+                </div>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Dimensions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">$5M+</div>
+                    <div class="stat-label">Layered</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">25K+</div>
+                    <div class="stat-label">Depths</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+        
+        // Enhanced parallax with depth
+        document.addEventListener('mousemove', (e) => {
+            const mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            const mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+            
+            // Move layers based on depth
+            document.querySelectorAll('.depth-layer').forEach((layer, index) => {
+                const depth = (index + 1) * 0.1;
+                const x = mouseX * 20 * depth;
+                const y = mouseY * 20 * depth;
+                layer.style.transform = `translate(${x}px, ${y}px)`;
+            });
+            
+            // Move floating cards
+            document.querySelectorAll('.floating-card').forEach((card, index) => {
+                const depth = (index + 1) * 0.05;
+                const x = mouseX * 15 * depth;
+                const y = mouseY * 15 * depth;
+                const currentTransform = card.style.transform;
+                card.style.transform = currentTransform + ` translate(${x}px, ${y}px)`;
+            });
+        });
+    </script>
+</body>
+</html>

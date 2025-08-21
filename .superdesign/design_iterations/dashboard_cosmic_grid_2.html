@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Orbital Dynamics Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --space-cadet: #2D1B69;
+            --english-violet: #553C8B;
+            --sunglow: #FFC857;
+            --dark-cyan: #17A2B8;
+            --paynes-gray: #495057;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif !important;
+            background: radial-gradient(ellipse at center, var(--english-violet) 0%, var(--space-cadet) 70%) !important;
+            min-height: 100vh !important;
+            color: white !important;
+            overflow-x: hidden !important;
+            position: relative !important;
+        }
+
+        /* Orbital Mesh Background */
+        .orbital-background {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: -1 !important;
+            overflow: hidden !important;
+        }
+
+        .orbital-system {
+            position: absolute !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            border-radius: 50% !important;
+            animation: orbitalSpin 25s linear infinite !important;
+        }
+
+        .orbital-1 {
+            width: 300px !important;
+            height: 300px !important;
+            top: 10% !important;
+            left: 20% !important;
+        }
+
+        .orbital-2 {
+            width: 200px !important;
+            height: 200px !important;
+            top: 40% !important;
+            right: 15% !important;
+            animation-duration: 35s !important;
+            animation-direction: reverse !important;
+        }
+
+        .orbital-3 {
+            width: 150px !important;
+            height: 150px !important;
+            bottom: 25% !important;
+            left: 30% !important;
+            animation-duration: 40s !important;
+        }
+
+        .orbital-planet {
+            position: absolute !important;
+            width: 20px !important;
+            height: 20px !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+            border-radius: 50% !important;
+            top: -10px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            box-shadow: 0 0 20px rgba(255, 200, 87, 0.5) !important;
+            animation: planetPulse 3s ease-in-out infinite !important;
+        }
+
+        .orbital-planet.large {
+            width: 30px !important;
+            height: 30px !important;
+            top: -15px !important;
+        }
+
+        .orbital-planet.small {
+            width: 15px !important;
+            height: 15px !important;
+            top: -7.5px !important;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            max-width: 1400px !important;
+            margin: 0 auto !important;
+            padding: 2rem !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+
+        /* Header with Orbital Theme */
+        .dashboard-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 3rem !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 2px solid rgba(255, 200, 87, 0.4) !important;
+            border-radius: 25px !important;
+            padding: 1.5rem 2rem !important;
+            box-shadow: 
+                0 15px 35px rgba(255, 200, 87, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .dashboard-header::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 200, 87, 0.1) 50%, 
+                transparent 100%) !important;
+            animation: headerShimmer 4s ease-in-out infinite !important;
+        }
+
+        .dashboard-title {
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-size: 2.2rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f, var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            text-shadow: 0 0 30px rgba(255, 200, 87, 0.3) !important;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.2rem 2.5rem !important;
+            border-radius: 15px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.4s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .upload-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: rgba(255, 255, 255, 0.3) !important;
+            border-radius: 50% !important;
+            transition: all 0.6s ease !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+        .upload-btn:hover::before {
+            width: 300px !important;
+            height: 300px !important;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-3px) scale(1.05) !important;
+            box-shadow: 0 15px 30px rgba(255, 200, 87, 0.4) !important;
+        }
+
+        /* Orbital Stats Cards */
+        .stats-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+            gap: 2.5rem !important;
+            margin-bottom: 3rem !important;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.06) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 2px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 25px !important;
+            padding: 2.5rem !important;
+            transition: all 0.4s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .stat-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 5px !important;
+            background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan), var(--sunglow)) !important;
+            background-size: 200% 100% !important;
+            animation: gradientShift 3s ease-in-out infinite !important;
+        }
+
+        .stat-card::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 20px !important;
+            right: 20px !important;
+            width: 60px !important;
+            height: 60px !important;
+            border: 2px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 50% !important;
+            animation: orbitalSpin 8s linear infinite !important;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02) !important;
+            box-shadow: 
+                0 25px 50px rgba(255, 200, 87, 0.25),
+                0 0 50px rgba(255, 200, 87, 0.1) !important;
+            border-color: var(--sunglow) !important;
+        }
+
+        .stat-number {
+            font-size: 3.5rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 0.8rem !important;
+            animation: numberGlow 2s ease-in-out infinite alternate !important;
+        }
+
+        .stat-label {
+            font-size: 1.2rem !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            margin-bottom: 0.5rem !important;
+            font-weight: 500 !important;
+        }
+
+        .stat-value {
+            font-size: 1rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+
+        /* Performance Matrix with Orbital Elements */
+        .performance-matrix {
+            background: rgba(255, 255, 255, 0.06) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 2px solid rgba(255, 200, 87, 0.4) !important;
+            border-radius: 25px !important;
+            padding: 3rem !important;
+            margin-bottom: 3rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .performance-matrix::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -50% !important;
+            left: -50% !important;
+            width: 200% !important;
+            height: 200% !important;
+            background: conic-gradient(
+                transparent 0deg,
+                rgba(255, 200, 87, 0.1) 90deg,
+                transparent 180deg,
+                rgba(23, 162, 184, 0.1) 270deg,
+                transparent 360deg
+            ) !important;
+            animation: orbitalSpin 30s linear infinite !important;
+            z-index: -1 !important;
+        }
+
+        .matrix-title {
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-size: 1.8rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2.5rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            text-shadow: 0 0 20px rgba(255, 200, 87, 0.3) !important;
+        }
+
+        .matrix-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+            gap: 2.5rem !important;
+        }
+
+        .matrix-item {
+            text-align: center !important;
+            position: relative !important;
+        }
+
+        .matrix-value {
+            font-size: 3rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 1.5rem !important;
+            animation: valueOrbit 4s ease-in-out infinite !important;
+        }
+
+        .progress-bar {
+            width: 100% !important;
+            height: 12px !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 15px !important;
+            overflow: hidden !important;
+            margin-bottom: 1rem !important;
+            position: relative !important;
+        }
+
+        .progress-fill {
+            height: 100% !important;
+            background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan)) !important;
+            border-radius: 15px !important;
+            transition: width 2s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .progress-fill::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.4) 50%, 
+                transparent 100%) !important;
+            animation: progressShimmer 2s ease-in-out infinite !important;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex !important;
+            gap: 1.5rem !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: white !important;
+            border: 2px solid rgba(255, 200, 87, 0.4) !important;
+            padding: 1.2rem 2.5rem !important;
+            border-radius: 15px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.4s ease !important;
+            backdrop-filter: blur(15px) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .action-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: rgba(255, 200, 87, 0.2) !important;
+            border-radius: 50% !important;
+            transition: all 0.6s ease !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+        .action-btn:hover::before {
+            width: 300px !important;
+            height: 300px !important;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 200, 87, 0.15) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-3px) !important;
+            box-shadow: 0 10px 25px rgba(255, 200, 87, 0.3) !important;
+        }
+
+        /* Animations */
+        @keyframes orbitalSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes planetPulse {
+            0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 20px rgba(255, 200, 87, 0.5); }
+            50% { transform: translateX(-50%) scale(1.2); box-shadow: 0 0 30px rgba(255, 200, 87, 0.8); }
+        }
+
+        @keyframes headerShimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes numberGlow {
+            0% { text-shadow: 0 0 20px rgba(255, 200, 87, 0.3); }
+            100% { text-shadow: 0 0 30px rgba(255, 200, 87, 0.6); }
+        }
+
+        @keyframes valueOrbit {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes progressShimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-container { padding: 1rem !important; }
+            .dashboard-header { 
+                flex-direction: column !important; 
+                gap: 1rem !important; 
+                text-align: center !important; 
+            }
+            .stats-grid { grid-template-columns: 1fr !important; }
+            .matrix-grid { grid-template-columns: 1fr !important; }
+            .orbital-system { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="orbital-background">
+        <div class="orbital-system orbital-1">
+            <div class="orbital-planet large"></div>
+        </div>
+        <div class="orbital-system orbital-2">
+            <div class="orbital-planet"></div>
+        </div>
+        <div class="orbital-system orbital-3">
+            <div class="orbital-planet small"></div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1 class="dashboard-title">TURO TOLL TRACKER</h1>
+            <button class="upload-btn">
+                <i data-lucide="upload"></i>
+                Upload CSVs / Run Fetch
+            </button>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">69</div>
+                <div class="stat-label">TOTAL TOLLS</div>
+                <div class="stat-value">Active tolls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">50</div>
+                <div class="stat-label">PERSONAL DRIVING TOLLS</div>
+                <div class="stat-value">$1154.90</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">19</div>
+                <div class="stat-label">MATCHED TOLLS</div>
+                <div class="stat-value">$87.39</div>
+            </div>
+        </div>
+
+        <div class="performance-matrix">
+            <h2 class="matrix-title">
+                <i data-lucide="activity"></i>
+                PERFORMANCE MATRIX
+            </h2>
+            <div class="matrix-grid">
+                <div class="matrix-item">
+                    <div class="matrix-value">100%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <div>Matching Accuracy</div>
+                </div>
+                <div class="matrix-item">
+                    <div class="matrix-value">69</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 85%"></div>
+                    </div>
+                    <div>Total Tolls</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn">View Matched (19)</button>
+            <button class="action-btn">Personal Driving (50)</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

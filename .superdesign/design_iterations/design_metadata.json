@@ -1,0 +1,58 @@
+{
+  "project": "Turo Toll Tracker Login Page Iterations",
+  "description": "5 different login page design approaches for the Turo toll tracking application",
+  "iterations": [
+    {
+      "id": "iteration_1_minimalist",
+      "name": "Minimalist Card",
+      "description": "Clean, centered card design with gradient background and subtle shadows",
+      "features": ["Single floating card", "Gradient background", "Social login buttons", "Mobile responsive"],
+      "target_audience": "General users who prefer simple, clean interfaces",
+      "file": "iteration_1_minimalist.html"
+    },
+    {
+      "id": "iteration_2_split_screen",
+      "name": "Split Screen Visual",
+      "description": "Dramatic 60/40 split layout with visual panel and dark form section",
+      "features": ["60% visual panel", "Dark theme", "Statistics display", "Professional branding"],
+      "target_audience": "Power users and professional hosts",
+      "file": "iteration_2_split_screen.html"
+    },
+    {
+      "id": "iteration_3_dashboard_preview",
+      "name": "Dashboard Preview",
+      "description": "Glassmorphism design with blurred dashboard preview in background",
+      "features": ["Dashboard preview", "Glassmorphism effects", "Floating particles", "Preview badge"],
+      "target_audience": "Users who want to see what they're signing up for",
+      "file": "iteration_3_dashboard_preview.html"
+    },
+    {
+      "id": "iteration_4_full_hero",
+      "name": "Full-Screen Hero",
+      "description": "Immersive full-screen experience with animated backgrounds and parallax effects",
+      "features": ["Animated gradients", "Parallax interactions", "Bold typography", "Stats display"],
+      "target_audience": "Modern users who appreciate visual impact",
+      "file": "iteration_4_full_hero.html"
+    },
+    {
+      "id": "iteration_5_business_pro",
+      "name": "Business Professional",
+      "description": "Corporate layout with header navigation, features section, and testimonials",
+      "features": ["Corporate header", "Feature grid", "Testimonials", "Trust badges", "Enterprise SSO"],
+      "target_audience": "Business and enterprise customers",
+      "file": "iteration_5_business_pro.html"
+    }
+  ],
+  "common_features": [
+    "Email/password authentication",
+    "Social login (Google, Microsoft)",
+    "Remember me functionality",
+    "Forgot password link",
+    "Form validation",
+    "Loading states",
+    "Responsive design",
+    "Accessibility features"
+  ],
+  "created": "2025-08-20T15:03:00Z",
+  "version": "1.0"
+}

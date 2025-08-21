@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Crystal Matrix</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        /* Custom Color Variables */
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: 
+                radial-gradient(ellipse at top, var(--space-cadet) 0%, rgba(31, 32, 65, 0.9) 40%),
+                radial-gradient(ellipse at bottom, var(--english-violet) 0%, rgba(75, 63, 114, 0.8) 40%),
+                radial-gradient(ellipse at center, rgba(255, 200, 87, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, var(--paynes-gray) 0%, var(--space-cadet) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .crystal-field {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .crystal-layer {
+            position: absolute !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-image: 
+                linear-gradient(30deg, rgba(255, 200, 87, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(255, 200, 87, 0.05) 87.5%),
+                linear-gradient(150deg, rgba(17, 157, 164, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(17, 157, 164, 0.05) 87.5%),
+                linear-gradient(30deg, rgba(75, 63, 114, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(75, 63, 114, 0.05) 87.5%),
+                linear-gradient(150deg, rgba(25, 100, 126, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(25, 100, 126, 0.05) 87.5%) !important;
+            background-size: 100px 100px !important;
+            animation: crystalShift 40s linear infinite !important;
+        }
+        
+        .floating-elements {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
+        }
+        
+        .floating-shape {
+            position: absolute !important;
+            background: transparent !important;
+            animation-timing-function: ease-in-out !important;
+            animation-iteration-count: infinite !important;
+            animation-direction: alternate !important;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1)) !important;
+        }
+        
+        .shape-1 {
+            top: 10% !important;
+            left: 8% !important;
+            width: 120px !important;
+            height: 120px !important;
+            background: linear-gradient(45deg, 
+                rgba(255, 200, 87, 0.3) 0%, 
+                rgba(255, 200, 87, 0.1) 50%, 
+                transparent 100%) !important;
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%) !important;
+            animation: crystalFloat1 14s, crystalSpin 20s linear infinite !important;
+            box-shadow: 
+                inset 0 0 30px rgba(255, 200, 87, 0.2),
+                0 0 50px rgba(255, 200, 87, 0.1) !important;
+        }
+        
+        .shape-1::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 20% !important;
+            left: 20% !important;
+            width: 60% !important;
+            height: 60% !important;
+            background: radial-gradient(circle, rgba(255, 200, 87, 0.4) 0%, transparent 70%) !important;
+            border-radius: 50% !important;
+            animation: crystalCore 6s infinite !important;
+        }
+        
+        .shape-2 {
+            top: 18% !important;
+            right: 10% !important;
+            width: 90px !important;
+            height: 90px !important;
+            background: conic-gradient(from 0deg, 
+                rgba(17, 157, 164, 0.3) 0%, 
+                rgba(17, 157, 164, 0.1) 50%, 
+                transparent 100%) !important;
+            clip-path: polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%) !important;
+            animation: crystalFloat2 16s, crystalRotate 15s linear infinite !important;
+            box-shadow: 
+                inset 0 0 25px rgba(17, 157, 164, 0.2),
+                0 0 40px rgba(17, 157, 164, 0.15) !important;
+        }
+        
+        .shape-3 {
+            bottom: 12% !important;
+            left: 12% !important;
+            width: 60px !important;
+            height: 180px !important;
+            background: linear-gradient(90deg, 
+                rgba(75, 63, 114, 0.3) 0%, 
+                rgba(75, 63, 114, 0.1) 50%, 
+                transparent 100%) !important;
+            clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 90% 100%, 10% 100%, 0% 30%) !important;
+            animation: crystalFloat3 18s, crystalTilt 25s linear infinite !important;
+            box-shadow: 
+                inset 0 0 40px rgba(75, 63, 114, 0.2),
+                0 0 60px rgba(75, 63, 114, 0.1) !important;
+        }
+        
+        .shape-4 {
+            bottom: 20% !important;
+            right: 8% !important;
+            width: 140px !important;
+            height: 70px !important;
+            background: linear-gradient(135deg, 
+                rgba(25, 100, 126, 0.3) 0%, 
+                rgba(25, 100, 126, 0.1) 50%, 
+                transparent 100%) !important;
+            clip-path: polygon(10% 0%, 90% 0%, 100% 30%, 95% 70%, 80% 100%, 20% 100%, 5% 70%, 0% 30%) !important;
+            animation: crystalFloat4 12s, crystalStretch 8s infinite !important;
+            box-shadow: 
+                inset 0 0 20px rgba(25, 100, 126, 0.2),
+                0 0 35px rgba(25, 100, 126, 0.15) !important;
+        }
+        
+        .shape-5 {
+            top: 35% !important;
+            left: 3% !important;
+            width: 80px !important;
+            height: 80px !important;
+            background: radial-gradient(polygon, 
+                rgba(255, 200, 87, 0.4) 0%, 
+                rgba(255, 200, 87, 0.1) 60%, 
+                transparent 100%) !important;
+            clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%) !important;
+            animation: crystalFloat5 20s, crystalPulse 10s infinite !important;
+            box-shadow: 
+                inset 0 0 30px rgba(255, 200, 87, 0.3),
+                0 0 50px rgba(255, 200, 87, 0.2) !important;
+        }
+        
+        .shape-6 {
+            top: 45% !important;
+            right: 12% !important;
+            width: 100px !important;
+            height: 100px !important;
+            background: linear-gradient(60deg, 
+                rgba(17, 157, 164, 0.3) 0%, 
+                rgba(17, 157, 164, 0.1) 40%, 
+                rgba(75, 63, 114, 0.2) 70%, 
+                transparent 100%) !important;
+            clip-path: polygon(50% 0%, 85% 25%, 100% 60%, 85% 90%, 50% 100%, 15% 90%, 0% 60%, 15% 25%) !important;
+            animation: crystalFloat6 22s, crystalOrbit 18s linear infinite !important;
+            box-shadow: 
+                inset 0 0 35px rgba(17, 157, 164, 0.2),
+                0 0 55px rgba(17, 157, 164, 0.15) !important;
+        }
+        
+        .crystal-beams {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .beam {
+            position: absolute !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 200, 87, 0.4) 30%,
+                rgba(17, 157, 164, 0.4) 70%,
+                transparent 100%) !important;
+            height: 2px !important;
+            border-radius: 1px !important;
+            animation: beamFlow 12s ease-in-out infinite !important;
+        }
+        
+        .beam-1 { 
+            top: 25% !important; 
+            left: 10% !important; 
+            width: 80% !important; 
+            animation-delay: 0s !important;
+            transform: rotate(15deg) !important;
+        }
+        .beam-2 { 
+            top: 55% !important; 
+            left: 5% !important; 
+            width: 70% !important; 
+            animation-delay: 4s !important;
+            transform: rotate(-10deg) !important;
+        }
+        .beam-3 { 
+            top: 75% !important; 
+            left: 15% !important; 
+            width: 75% !important; 
+            animation-delay: 8s !important;
+            transform: rotate(5deg) !important;
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: linear-gradient(135deg, 
+                rgba(255, 200, 87, 0.2) 0%, 
+                rgba(17, 157, 164, 0.15) 100%) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 50px !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            color: var(--sunglow) !important;
+            animation: slideInDown 0.8s ease-out, crystalGlow 8s infinite !important;
+            box-shadow: 
+                0 8px 32px rgba(255, 200, 87, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.9) 0%, 
+                var(--sunglow) 20%, 
+                var(--dark-cyan) 40%, 
+                var(--english-violet) 60%, 
+                var(--paynes-gray) 80%, 
+                rgba(255, 255, 255, 0.9) 100%) !important;
+            background-size: 400% 400% !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: slideInUp 1s ease-out 0.2s both, crystalGradient 15s ease-in-out infinite !important;
+            text-shadow: 0 0 80px rgba(255, 200, 87, 0.3) !important;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1)) !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem) !important;
+            margin-bottom: 3rem !important;
+            opacity: 0.9 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: slideInUp 1s ease-out 0.4s both !important;
+            text-shadow: 0 0 30px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .login-card {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(75, 63, 114, 0.2) 30%, 
+                rgba(25, 100, 126, 0.15) 70%, 
+                rgba(31, 32, 65, 0.25) 100%) !important;
+            backdrop-filter: blur(40px) !important;
+            border: 2px solid transparent !important;
+            background-clip: padding-box !important;
+            border-radius: 32px !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            box-shadow: 
+                0 25px 50px rgba(31, 32, 65, 0.4),
+                0 0 100px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 0 30px rgba(255, 200, 87, 0.05) !important;
+            animation: floatingCard 1s ease-out 0.6s both, crystalCardFloat 12s ease-in-out infinite 2s !important;
+            position: relative !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            inset: -2px !important;
+            background: conic-gradient(from 0deg at 50% 50%, 
+                var(--sunglow) 0%, 
+                var(--dark-cyan) 20%, 
+                var(--english-violet) 40%, 
+                var(--paynes-gray) 60%, 
+                var(--sunglow) 80%, 
+                var(--dark-cyan) 100%) !important;
+            border-radius: inherit !important;
+            z-index: -1 !important;
+            opacity: 0.7 !important;
+            animation: crystalBorderSpin 20s linear infinite !important;
+        }
+        
+        .login-card::after {
+            content: '' !important;
+            position: absolute !important;
+            inset: 0 !important;
+            background: inherit !important;
+            border-radius: inherit !important;
+            z-index: -1 !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            text-shadow: 0 0 20px rgba(255, 200, 87, 0.5) !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            text-shadow: 0 0 15px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 16px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            transition: all 0.4s ease !important;
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 20px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 
+                0 0 30px rgba(255, 200, 87, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 0 20px rgba(255, 200, 87, 0.1) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: linear-gradient(135deg, 
+                var(--sunglow) 0%, 
+                #ffdc7f 30%, 
+                var(--dark-cyan) 70%, 
+                var(--sunglow) 100%) !important;
+            background-size: 300% 300% !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.5rem !important;
+            border-radius: 16px !important;
+            font-size: 1.125rem !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.4s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+            overflow: hidden !important;
+            animation: crystalButtonFlow 8s ease-in-out infinite !important;
+        }
+        
+        .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -50% !important;
+            left: -50% !important;
+            width: 200% !important;
+            height: 200% !important;
+            background: conic-gradient(from 0deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.4) 10%, 
+                transparent 20%) !important;
+            animation: crystalSweep 3s linear infinite !important;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 
+                0 20px 40px rgba(255, 200, 87, 0.4),
+                0 0 60px rgba(255, 200, 87, 0.2),
+                inset 0 0 20px rgba(255, 255, 255, 0.2) !important;
+            background-position: 100% 100% !important;
+        }
+        
+        .social-btn {
+            background: rgba(17, 157, 164, 0.2) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(17, 157, 164, 0.4) !important;
+            color: white !important;
+            padding: 1rem !important;
+            border-radius: 16px !important;
+            transition: all 0.4s ease !important;
+            margin: 0.5rem !important;
+            width: 45% !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .social-btn:hover {
+            background: rgba(17, 157, 164, 0.3) !important;
+            border-color: var(--dark-cyan) !important;
+            transform: translateY(-3px) !important;
+            box-shadow: 
+                0 12px 25px rgba(17, 157, 164, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .hero-stats {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 2rem !important;
+            margin-top: 3rem !important;
+            animation: slideInUp 1s ease-out 0.8s both !important;
+        }
+        
+        .stat-item {
+            text-align: center !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.25) !important;
+            border-radius: 20px !important;
+            padding: 1.5rem !important;
+            transition: all 0.4s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .stat-item::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -50% !important;
+            left: -50% !important;
+            width: 200% !important;
+            height: 200% !important;
+            background: conic-gradient(from 0deg, 
+                transparent 0%, 
+                rgba(255, 200, 87, 0.2) 10%, 
+                transparent 20%) !important;
+            animation: crystalStatSweep 10s linear infinite !important;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-8px) !important;
+            background: rgba(255, 200, 87, 0.15) !important;
+            box-shadow: 
+                0 20px 40px rgba(255, 200, 87, 0.2),
+                0 0 60px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem !important;
+            font-weight: 900 !important;
+            color: var(--sunglow) !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 0 0 20px rgba(255, 200, 87, 0.5) !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+        
+        /* Crystal Animations */
+        @keyframes crystalShift {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(100px, 100px) rotate(360deg); }
+        }
+        
+        @keyframes crystalFloat1 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            25% { transform: translate(-25px, -30px) rotate(5deg); }
+            50% { transform: translate(20px, -40px) rotate(-3deg); }
+            75% { transform: translate(-15px, -25px) rotate(8deg); }
+        }
+        
+        @keyframes crystalFloat2 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            50% { transform: translate(30px, -35px) rotate(-10deg); }
+        }
+        
+        @keyframes crystalFloat3 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(20px, -35px) rotate(5deg); }
+            66% { transform: translate(-15px, -45px) rotate(-8deg); }
+        }
+        
+        @keyframes crystalFloat4 {
+            0%, 100% { transform: translateX(0px) rotate(0deg); }
+            50% { transform: translateX(35px) rotate(3deg); }
+        }
+        
+        @keyframes crystalFloat5 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(-30px, -25px) rotate(12deg); }
+            66% { transform: translate(25px, -40px) rotate(-9deg); }
+        }
+        
+        @keyframes crystalFloat6 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            50% { transform: translate(-35px, 30px) rotate(-15deg); }
+        }
+        
+        @keyframes crystalSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes crystalRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+        
+        @keyframes crystalTilt {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes crystalOrbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+        
+        @keyframes crystalStretch {
+            0%, 100% { transform: scaleX(1); }
+            50% { transform: scaleX(1.15); }
+        }
+        
+        @keyframes crystalPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        
+        @keyframes crystalCore {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+        }
+        
+        @keyframes beamFlow {
+            0%, 100% { opacity: 0.2; transform: scaleX(1) scaleY(1); }
+            50% { opacity: 0.6; transform: scaleX(1.2) scaleY(2); }
+        }
+        
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes crystalGlow {
+            0%, 100% { 
+                box-shadow: 0 8px 32px rgba(255, 200, 87, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                border-color: rgba(255, 200, 87, 0.3);
+            }
+            50% { 
+                box-shadow: 0 12px 40px rgba(255, 200, 87, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 200, 87, 0.5);
+            }
+        }
+        
+        @keyframes crystalGradient {
+            0%, 100% { background-position: 0% 50%; }
+            25% { background-position: 100% 25%; }
+            50% { background-position: 100% 100%; }
+            75% { background-position: 0% 75%; }
+        }
+        
+        @keyframes floatingCard {
+            from { opacity: 0; transform: scale(0.9) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes crystalCardFloat {
+            0%, 100% { transform: translateY(0px) rotateX(0deg); }
+            50% { transform: translateY(-10px) rotateX(2deg); }
+        }
+        
+        @keyframes crystalBorderSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes crystalButtonFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes crystalSweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes crystalStatSweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .hero-stats { grid-template-columns: 1fr !important; }
+            .social-btn { width: 100% !important; margin: 0.25rem 0 !important; }
+            .floating-shape { transform: scale(0.7) !important; }
+            .crystal-layer { background-size: 60px 60px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="crystal-field">
+            <div class="crystal-layer"></div>
+        </div>
+        <div class="crystal-beams">
+            <div class="beam beam-1"></div>
+            <div class="beam beam-2"></div>
+            <div class="beam beam-3"></div>
+        </div>
+        <div class="floating-elements">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="floating-shape shape-4"></div>
+            <div class="floating-shape shape-5"></div>
+            <div class="floating-shape shape-6"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="gem" style="width: 1rem; height: 1rem;"></i>
+                Crystalline Precision
+            </div>
+            
+            <h1 class="hero-title">
+                FACETED<br>
+                BRILLIANCE
+            </h1>
+            
+            <p class="hero-subtitle">
+                Multi-dimensional toll tracking with crystalline clarity. Refract your data into pure insight.
+            </p>
+            
+            <div class="login-card">
+                <h2 class="form-title">Enter the Prism</h2>
+                <p class="form-subtitle">Unlock multifaceted analytics</p>
+                
+                <form>
+                    <input type="email" class="form-input" placeholder="Crystal ID" required>
+                    <input type="password" class="form-input" placeholder="Facet Key" required>
+                    
+                    <button type="submit" class="signin-btn">Crystallize Dashboard</button>
+                </form>
+                
+                <div style="text-align: center; margin: 1.5rem 0; color: rgba(255,255,255,0.7);">
+                    or refract via
+                </div>
+                
+                <div style="text-align: center;">
+                    <button class="social-btn">
+                        <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                        Google
+                    </button>
+                    <button class="social-btn">
+                        <i data-lucide="microsoft" style="width: 1rem; height: 1rem;"></i>
+                        Microsoft
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">∞°</div>
+                    <div class="stat-label">Refraction</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">1.5PT</div>
+                    <div class="stat-label">Clarity</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">999K+</div>
+                    <div class="stat-label">Facets</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

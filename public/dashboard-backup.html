@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="neo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Turo Toll Tracker</title>
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    
+    <!-- Neo Dark Theme -->
+    <link rel="stylesheet" href="/css/ui-theme.tokens.css">
+    <link rel="stylesheet" href="/css/ui-dashboard.css">
+    <link rel="stylesheet" href="/css/no-emoji.css">
+    
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Scripts -->
+    <script src="/js/ui-utils.js"></script>
+    <script src="/js/xss-utils.js"></script>
+    <script src="/js/accessibility.js"></script>
+    
+    <style>
+        /* Premium Dashboard Design System */
+        :root {
+            --header-height: 72px;
+            --sidebar-width: 280px;
+            --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --card-shadow-hover: 0 4px 6px rgba(0, 0, 0, 0.07), 0 10px 15px rgba(0, 0, 0, 0.1);
+            --gradient-border: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
+        }
+
+        /* Layout Foundation */
+        .dashboard-layout {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            display: grid;
+            grid-template-rows: var(--header-height) 1fr;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-areas: 
+                "sidebar header"
+                "sidebar main";
+        }
+
+        /* Header */
+        .dashboard-header {
+            grid-area: header;
+            background: var(--panel);
+            border-bottom: 1px solid var(--hairline);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: var(--z-sticky);
+        }
+
+        .dashboard-title {
+            font-family: var(--font-heading);
+            font-size: var(--text-2xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+        }
+
+        .dashboard-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+
+        .primary-cta {
+            background: linear-gradient(135deg, var(--accentA), var(--accentB));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-sm);
+            font-weight: var(--font-semibold);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--card-shadow);
+        }
+
+        .primary-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .user-menu {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .user-menu:hover {
+            background: var(--hover);
+        }
+
+        .user-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accentA), var(--accentB));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: var(--font-semibold);
+            font-size: var(--text-sm);
+        }
+        
+        /* User Dropdown Menu */
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            min-width: 200px;
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-0.5rem);
+            transition: all var(--transition-fast);
+            z-index: var(--z-dropdown);
+        }
+        
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .user-dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--hairline);
+        }
+        
+        .user-email {
+            font-size: var(--text-sm);
+            color: var(--muted);
+            margin: 0;
+        }
+        
+        .user-dropdown-content {
+            padding: 0.5rem 0;
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: var(--text-sm);
+            color: var(--ink);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .dropdown-item:hover {
+            background: var(--hover);
+        }
+        
+        .dropdown-item.danger {
+            color: #EF4444;
+        }
+        
+        .dropdown-item.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .dropdown-icon {
+            font-size: var(--text-base);
+        }
+
+        /* Sidebar */
+        .dashboard-sidebar {
+            grid-area: sidebar;
+            background: var(--panel);
+            border-right: 1px solid var(--hairline);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--hairline);
+            font-family: var(--font-heading);
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--hover);
+            color: var(--ink);
+        }
+
+        .nav-item.active {
+            background: var(--hover);
+            color: var(--accentB);
+            font-weight: var(--font-semibold);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--gradient-border);
+        }
+
+        .nav-icon {
+            font-size: var(--text-lg);
+        }
+
+
+        /* Main Content */
+        .dashboard-main {
+            grid-area: main;
+            padding: 2rem;
+            background: var(--bg);
+        }
+
+        .dashboard-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-fast);
+            box-shadow: var(--card-shadow);
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-border);
+        }
+
+        .kpi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .kpi-title {
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .kpi-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-lg);
+            color: white;
+        }
+
+        .kpi-icon.tolls { background: linear-gradient(135deg, #8B5CF6, #A855F7); }
+        .kpi-icon.driving { background: linear-gradient(135deg, #06B6D4, #0891B2); }
+        .kpi-icon.matched { background: linear-gradient(135deg, #10B981, #059669); }
+        .kpi-icon.revenue { background: linear-gradient(135deg, #F59E0B, #D97706); }
+
+        .kpi-value {
+            font-family: var(--font-heading);
+            font-size: var(--text-4xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .kpi-subtitle {
+            font-size: var(--text-sm);
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .kpi-change {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: var(--text-xs);
+            font-weight: var(--font-medium);
+        }
+
+        .kpi-change.positive {
+            color: #10B981;
+        }
+
+        .kpi-change.negative {
+            color: #EF4444;
+        }
+
+        .kpi-change.neutral {
+            color: var(--muted);
+        }
+
+        /* Performance Section */
+        .performance-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .performance-card {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .card-header {
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--hairline);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-family: var(--font-heading);
+            font-size: var(--text-lg);
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+        }
+
+        .card-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .segmented-control {
+            display: flex;
+            background: var(--hover);
+            border-radius: var(--radius-sm);
+            padding: 0.25rem;
+        }
+
+        .segment-option {
+            padding: 0.375rem 0.75rem;
+            font-size: var(--text-xs);
+            font-weight: var(--font-medium);
+            color: var(--muted);
+            background: none;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .segment-option.active {
+            background: var(--panel);
+            color: var(--ink);
+            box-shadow: var(--card-shadow);
+        }
+
+        .performance-metrics {
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .metric-group {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-family: var(--font-heading);
+            font-size: var(--text-3xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            font-size: var(--text-sm);
+            color: var(--muted);
+            font-weight: var(--font-medium);
+        }
+
+        .metric-progress {
+            margin-top: 1rem;
+            height: 0.5rem;
+            background: var(--hover);
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accentA), var(--accentB));
+            border-radius: 0.25rem;
+            transition: width var(--transition-base);
+        }
+
+        /* Status List */
+        .status-list {
+            padding: 1.5rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--hairline);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .status-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-sm);
+            font-weight: var(--font-semibold);
+        }
+
+        .status-icon.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .status-icon.processing {
+            background: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+        }
+
+        .status-details h4 {
+            font-size: var(--text-sm);
+            font-weight: var(--font-semibold);
+            color: var(--ink);
+            margin: 0 0 0.25rem 0;
+        }
+
+        .status-details p {
+            font-size: var(--text-xs);
+            color: var(--muted);
+            margin: 0;
+        }
+
+        .status-chip {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: var(--text-xs);
+            font-weight: var(--font-medium);
+            background: var(--hover);
+            color: var(--muted);
+        }
+
+        .status-chip.optimal {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .status-chip.just-now {
+            background: rgba(34, 211, 238, 0.1);
+            color: var(--accentB);
+        }
+
+        /* View Actions */
+        .view-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .view-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            color: var(--ink);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            transition: all var(--transition-fast);
+            box-shadow: var(--card-shadow);
+        }
+
+        .view-button:hover {
+            background: var(--hover);
+            border-color: var(--accentB);
+            transform: translateY(-1px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .view-button.primary {
+            background: var(--accentB);
+            color: white;
+            border-color: var(--accentB);
+        }
+
+        .view-button.primary:hover {
+            background: var(--accentA);
+            border-color: var(--accentA);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+
+            .dashboard-sidebar {
+                display: none;
+            }
+
+            .performance-section {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 0 1rem;
+            }
+
+            .dashboard-main {
+                padding: 1rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .dashboard-controls {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .primary-cta {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Focus States */
+        .primary-cta:focus,
+        .view-button:focus,
+        .nav-item:focus {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        /* Loading States */
+        .kpi-card.loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="dashboard-sidebar">
+            <div class="sidebar-brand">
+                <span class="nav-icon">🚗</span>
+                Turo Toll Tracker
+            </div>
+            
+            <div class="sidebar-nav">
+                <a href="/dashboard.html" class="nav-item active">
+                    <span class="nav-icon">📊</span>
+                    Overview
+                </a>
+                <a href="/trips.html" class="nav-item">
+                    <span class="nav-icon">🛣️</span>
+                    Trips
+                </a>
+                <a href="/upload.html" class="nav-item">
+                    <span class="nav-icon">📤</span>
+                    Upload CSV Files
+                </a>
+                <a href="/analytics.html" class="nav-item">
+                    <span class="nav-icon">📈</span>
+                    Analytics
+                </a>
+                <a href="/transponders.html" class="nav-item">
+                    <span class="nav-icon">📡</span>
+                    Transponders
+                </a>
+                <a href="/invoices.html" class="nav-item">
+                    <span class="nav-icon">🧾</span>
+                    Invoices
+                </a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1 class="dashboard-title">Dashboard Overview</h1>
+            
+            <div class="dashboard-controls">
+                <button class="primary-cta" id="uploadCTA">
+                    📤 Upload CSVs / Run Fetch
+                </button>
+                
+                <div class="user-menu" id="userMenu">
+                    <div class="user-avatar">E</div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="user-dropdown-header">
+                            <p class="user-email" id="userEmail">eliascolon23@gmail.com</p>
+                        </div>
+                        <div class="user-dropdown-content">
+                            <button class="dropdown-item danger" id="signOutBtn">
+                                <span class="dropdown-icon">🚪</span>
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-content">
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Total Tolls</div>
+                            <div class="kpi-icon tolls">📊</div>
+                        </div>
+                        <div class="kpi-value" id="total-tolls">-</div>
+                        <div class="kpi-subtitle" id="total-tolls-subtitle">Loading...</div>
+                        <div class="kpi-change neutral" id="total-tolls-change">
+                            ➡️ Loading...
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Personal Driving Tolls</div>
+                            <div class="kpi-icon driving">🚗</div>
+                        </div>
+                        <div class="kpi-value" id="personal-tolls">-</div>
+                        <div class="kpi-subtitle" id="personal-tolls-subtitle">Loading...</div>
+                        <div class="kpi-change neutral" id="personal-tolls-change">
+                            ➡️ Loading...
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Matched Tolls</div>
+                            <div class="kpi-icon matched">✅</div>
+                        </div>
+                        <div class="kpi-value" id="matched-tolls">-</div>
+                        <div class="kpi-subtitle" id="matched-tolls-subtitle">Loading...</div>
+                        <div class="kpi-change neutral" id="matched-tolls-change">
+                            ➡️ Loading...
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Performance & Status Section -->
+                <div class="performance-section">
+                    <!-- Toll Matching Performance -->
+                    <div class="performance-card">
+                        <div class="card-header">
+                            <h2 class="card-title" data-title="Toll Matching Performance">🎯 Toll Matching Performance</h2>
+                            <div class="card-controls">
+                                <div class="segmented-control">
+                                    <button class="segment-option active">Live Data</button>
+                                    <button class="segment-option">Historical</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="performance-metrics">
+                            <div class="metric-group">
+                                <div class="metric-value" id="matching-accuracy">-</div>
+                                <div class="metric-label">Matching Accuracy</div>
+                                <div class="metric-progress">
+                                    <div class="progress-fill" id="accuracy-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-group">
+                                <div class="metric-value" id="performance-total-tolls">-</div>
+                                <div class="metric-label">Total Tolls</div>
+                                <div class="metric-progress">
+                                    <div class="progress-fill" id="tolls-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Status -->
+                    <div class="performance-card">
+                        <div class="card-header">
+                            <h2 class="card-title" data-title="Processing Status">⚙️ Processing Status</h2>
+                        </div>
+                        
+                        <div class="status-list">
+                            <div class="status-item">
+                                <div class="status-info">
+                                    <div class="status-icon success">95%</div>
+                                    <div class="status-details">
+                                        <h4>Auto-Match Rate</h4>
+                                        <p>Toll matching performance</p>
+                                    </div>
+                                </div>
+                                <div class="status-chip optimal">Optimal</div>
+                            </div>
+                            
+                            <div class="status-item">
+                                <div class="status-info">
+                                    <div class="status-icon success">✓</div>
+                                    <div class="status-details">
+                                        <h4>System Health</h4>
+                                        <p>All systems operational</p>
+                                    </div>
+                                </div>
+                                <div class="status-chip optimal">Optimal</div>
+                            </div>
+                            
+                            <div class="status-item">
+                                <div class="status-info">
+                                    <div class="status-icon processing">⏰</div>
+                                    <div class="status-details">
+                                        <h4>Last Updated</h4>
+                                        <p>Data synchronized</p>
+                                    </div>
+                                </div>
+                                <div class="status-chip just-now">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View Actions -->
+                <div class="view-actions">
+                    <a href="/trips.html?filter=matched" class="view-button primary" id="view-matched-link">
+                        📋 View Matched (0)
+                    </a>
+                    <a href="/trips.html?filter=personal" class="view-button" id="view-personal-link">
+                        🚗 Personal Driving (0)
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Dashboard functionality
+        console.log('🚀 Dashboard script loading...');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ DOM Content Loaded - initializing dashboard...');
+            console.log('🔍 DEBUG: Page load info:', {
+                url: window.location.href,
+                pathname: window.location.pathname,
+                cookies: document.cookie,
+                timestamp: new Date().toISOString()
+            });
+            
+            initializeDashboard();
+            setupEventListeners();
+            loadDashboardData();
+        });
+
+        function initializeDashboard() {
+            // Add loading states to KPI cards briefly for visual feedback
+            const kpiCards = document.querySelectorAll('.kpi-card');
+            kpiCards.forEach(card => {
+                card.classList.add('loading');
+                setTimeout(() => card.classList.remove('loading'), 1000);
+            });
+        }
+
+        function setupEventListeners() {
+
+            // Upload CTA
+            const uploadCTA = document.getElementById('uploadCTA');
+            if (uploadCTA) {
+                uploadCTA.addEventListener('click', () => {
+                    window.location.href = '/upload.html';
+                });
+            }
+            
+            // User menu dropdown
+            const userMenu = document.getElementById('userMenu');
+            const userDropdown = document.getElementById('userDropdown');
+            const signOutBtn = document.getElementById('signOutBtn');
+            
+            if (userMenu && userDropdown) {
+                // Toggle dropdown on user menu click
+                userMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('show');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!userMenu.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                });
+                
+                // Handle sign out
+                if (signOutBtn) {
+                    signOutBtn.addEventListener('click', handleSignOut);
+                }
+            }
+
+            // Segmented control
+            const segmentOptions = document.querySelectorAll('.segment-option');
+            segmentOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    // Remove active class from siblings
+                    const siblings = e.target.parentNode.querySelectorAll('.segment-option');
+                    siblings.forEach(sibling => sibling.classList.remove('active'));
+                    
+                    // Add active class to clicked option
+                    e.target.classList.add('active');
+                    
+                    // Update performance data
+                    updatePerformanceData(e.target.textContent);
+                });
+            });
+
+            // KPI card hover effects
+            const kpiCards = document.querySelectorAll('.kpi-card');
+            kpiCards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-4px)';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(-2px)';
+                });
+            });
+        }
+
+
+        function updatePerformanceData(mode) {
+            const metrics = document.querySelectorAll('.metric-value');
+            const progressBars = document.querySelectorAll('.progress-fill');
+            
+            if (mode === 'Live Data') {
+                metrics[0].textContent = '100.0%';
+                metrics[1].textContent = '100';
+                progressBars[0].style.width = '100%';
+                progressBars[1].style.width = '83%';
+            } else {
+                metrics[0].textContent = '98.5%';
+                metrics[1].textContent = '847';
+                progressBars[0].style.width = '98.5%';
+                progressBars[1].style.width = '92%';
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                console.log('📡 Fetching real dashboard data from API...');
+                console.log('🔍 DEBUG: Request details:', {
+                    url: '/api/dashboard/summary',
+                    method: 'GET',
+                    credentials: 'include',
+                    cookies: document.cookie,
+                    timestamp: new Date().toISOString()
+                });
+                
+                const response = await fetch('/api/dashboard/summary', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                console.log('📋 DEBUG: Response details:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    headers: Object.fromEntries([...response.headers.entries()]),
+                    url: response.url
+                });
+                
+                if (!response.ok) {
+                    // Try to get error response body for debugging
+                    let errorBody;
+                    try {
+                        errorBody = await response.text();
+                        console.log('🔍 DEBUG: Error response body:', errorBody);
+                    } catch (e) {
+                        console.log('🔍 DEBUG: Could not read error response body:', e);
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} | Body: ${errorBody || 'No body'}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Dashboard data received:', data);
+                console.log('🔍 DEBUG: Response validation:', {
+                    hasData: !!data,
+                    isSuccess: data?.success,
+                    hasDataProperty: !!data?.data,
+                    dataKeys: data?.data ? Object.keys(data.data) : 'No data object'
+                });
+                
+                if (data.success) {
+                    updateDashboardWithRealData(data.data);
+                } else {
+                    throw new Error(data.error || 'Failed to load dashboard data');
+                }
+                
+                // Update timestamp
+                const timestampElements = document.querySelectorAll('.status-details p');
+                if (timestampElements.length > 0) {
+                    timestampElements[timestampElements.length - 1].textContent = 
+                        `Updated ${new Date().toLocaleTimeString()}`;
+                }
+                
+                console.log('✅ Dashboard data loaded successfully');
+            } catch (error) {
+                console.error('❌ Failed to load dashboard data:', error);
+                console.error('🔍 DEBUG: Full error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                    timestamp: new Date().toISOString()
+                });
+                updateDashboardWithErrorState();
+            }
+        }
+        
+        function updateDashboardWithRealData(data) {
+            console.log('🔄 Updating dashboard with real data:', data);
+            
+            // Helper function to safely update elements
+            function safeUpdate(elementId, textContent) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    // Strip emojis if Neo theme is active
+                    const isNeoTheme = document.documentElement.getAttribute('data-theme') === 'neo';
+                    if (isNeoTheme) {
+                        // Remove emoji characters from text
+                        const cleanText = String(textContent).replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+                        element.textContent = cleanText;
+                    } else {
+                        element.textContent = textContent;
+                    }
+                } else {
+                    console.error(`❌ Element with ID '${elementId}' not found`);
+                }
+            }
+            
+            // Update KPI cards with null checks
+            safeUpdate('total-tolls', data.totalTolls || 0);
+            safeUpdate('total-tolls-subtitle', data.totalTolls > 0 ? 'Active tolls' : 'No tolls');
+            safeUpdate('total-tolls-change', '📊 Real data');
+            
+            safeUpdate('personal-tolls', data.personalTolls || 0);
+            safeUpdate('personal-tolls-subtitle', data.personalAmount ? `$${data.personalAmount}` : '$0.00');
+            safeUpdate('personal-tolls-change', '🚗 Real data');
+            
+            safeUpdate('matched-tolls', data.matchedTolls || 0);
+            safeUpdate('matched-tolls-subtitle', data.matchedAmount ? `$${data.matchedAmount}` : '$0.00');
+            safeUpdate('matched-tolls-change', '✅ Real data');
+            
+            
+            // Update performance metrics with safe updates
+            const accuracy = data.matchingAccuracy || 0;
+            safeUpdate('matching-accuracy', `${accuracy}%`);
+            
+            const accuracyProgress = document.getElementById('accuracy-progress');
+            if (accuracyProgress) {
+                accuracyProgress.style.width = `${accuracy}%`;
+            }
+            
+            safeUpdate('performance-total-tolls', data.totalTolls || 0);
+            const tollsProgress = data.totalTolls > 0 ? Math.min((data.matchedTolls || 0) / data.totalTolls * 100, 100) : 0;
+            const tollsProgressElement = document.getElementById('tolls-progress');
+            if (tollsProgressElement) {
+                tollsProgressElement.style.width = `${tollsProgress}%`;
+            }
+            
+            // Update navigation badge (safely)
+            safeUpdate('trips-badge', data.totalTrips || 0);
+            
+            // Update view action links (safely)
+            safeUpdate('view-matched-link', `📋 View Matched (${data.matchedTolls || 0})`);
+            safeUpdate('view-personal-link', `🚗 Personal Driving (${data.personalTolls || 0})`);
+            
+            console.log('✅ Dashboard updated with real data');
+        }
+        
+        function updateDashboardWithErrorState() {
+            console.log('⚠️ Updating dashboard with error state');
+            
+            // Show error states
+            document.getElementById('total-tolls').textContent = 'Error';
+            document.getElementById('total-tolls-subtitle').textContent = 'Failed to load data';
+            document.getElementById('total-tolls-change').textContent = '❌ Error loading';
+            
+            document.getElementById('personal-tolls').textContent = 'Error';
+            document.getElementById('personal-tolls-subtitle').textContent = 'Failed to load data';
+            document.getElementById('personal-tolls-change').textContent = '❌ Error loading';
+            
+            document.getElementById('matched-tolls').textContent = 'Error';
+            document.getElementById('matched-tolls-subtitle').textContent = 'Failed to load data';
+            document.getElementById('matched-tolls-change').textContent = '❌ Error loading';
+            
+            
+            // Update performance metrics
+            document.getElementById('matching-accuracy').textContent = 'Error';
+            document.getElementById('performance-total-tolls').textContent = 'Error';
+        }
+
+        // Accessibility improvements
+        function setupAccessibility() {
+            // Add keyboard navigation for cards
+            const cards = document.querySelectorAll('.kpi-card, .view-button');
+            cards.forEach(card => {
+                card.setAttribute('tabindex', '0');
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        card.click();
+                    }
+                });
+            });
+
+            // Announce data changes to screen readers
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                        const target = mutation.target;
+                        if (target.classList?.contains('kpi-value') || target.classList?.contains('metric-value')) {
+                            // Announce value changes
+                            const announcement = `Value updated to ${target.textContent}`;
+                            announceToScreenReader(announcement);
+                        }
+                    }
+                });
+            });
+
+            // Observe KPI value changes
+            document.querySelectorAll('.kpi-value, .metric-value').forEach(element => {
+                observer.observe(element, { childList: true, characterData: true, subtree: true });
+            });
+        }
+
+        function announceToScreenReader(message) {
+            const announcer = document.createElement('div');
+            announcer.setAttribute('aria-live', 'polite');
+            announcer.setAttribute('aria-atomic', 'true');
+            announcer.className = 'sr-only';
+            announcer.textContent = message;
+            document.body.appendChild(announcer);
+            setTimeout(() => document.body.removeChild(announcer), 1000);
+        }
+
+        // Initialize accessibility features
+        setupAccessibility();
+
+        // Performance monitoring
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                list.getEntries().forEach((entry) => {
+                    if (entry.entryType === 'navigation') {
+                        console.log(`Dashboard loaded in ${entry.loadEventEnd - entry.loadEventStart}ms`);
+                    }
+                });
+            });
+            observer.observe({ entryTypes: ['navigation'] });
+        }
+        
+        // Sign out functionality
+        async function handleSignOut() {
+            const signOutBtn = document.getElementById('signOutBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            try {
+                // Show loading state
+                const originalText = signOutBtn.innerHTML;
+                signOutBtn.innerHTML = '<span class="dropdown-icon">⏳</span>Signing out...';
+                signOutBtn.disabled = true;
+                
+                // Get CSRF token
+                const csrfResponse = await fetch('/api/auth/csrf-token', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (!csrfResponse.ok) {
+                    throw new Error('Failed to get CSRF token');
+                }
+                
+                const csrfData = await csrfResponse.json();
+                
+                if (!csrfData.success) {
+                    throw new Error(csrfData.error || 'Failed to get CSRF token');
+                }
+                
+                // Send logout request
+                const logoutResponse = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfData.csrfToken
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        csrfToken: csrfData.csrfToken
+                    })
+                });
+                
+                const logoutData = await logoutResponse.json();
+                
+                if (logoutData.success) {
+                    // Successful logout - redirect to login page
+                    window.location.href = '/';
+                } else {
+                    throw new Error(logoutData.error || 'Sign out failed');
+                }
+                
+            } catch (error) {
+                console.error('Sign out error:', error);
+                
+                // Restore button state
+                signOutBtn.innerHTML = '<span class="dropdown-icon">🚪</span>Sign Out';
+                signOutBtn.disabled = false;
+                
+                // Show error message
+                alert('Failed to sign out: ' + error.message);
+                
+                // Close dropdown
+                userDropdown.classList.remove('show');
+            }
+        }
+    </script>
+</body>
+</html>

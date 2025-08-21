@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Neon Cyberpunk</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        /* Custom Color Variables */
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+            background: #000 !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255, 200, 87, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(17, 157, 164, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, var(--space-cadet) 0%, #000 50%, var(--english-violet) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .floating-elements {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 1 !important;
+        }
+        
+        .floating-shape {
+            position: absolute !important;
+            border: 2px solid !important;
+            background: transparent !important;
+            animation-timing-function: linear !important;
+            animation-iteration-count: infinite !important;
+        }
+        
+        .shape-1 {
+            top: 15% !important;
+            left: 10% !important;
+            width: 100px !important;
+            height: 100px !important;
+            border-color: var(--sunglow) !important;
+            border-radius: 0 !important;
+            box-shadow: 0 0 30px var(--sunglow), inset 0 0 20px rgba(255, 200, 87, 0.2) !important;
+            animation: neonFloat 8s, neonGlow 2s infinite, rotateSquare 12s linear infinite !important;
+        }
+        
+        .shape-2 {
+            top: 25% !important;
+            right: 15% !important;
+            width: 80px !important;
+            height: 80px !important;
+            border-color: var(--dark-cyan) !important;
+            border-radius: 50% !important;
+            box-shadow: 0 0 25px var(--dark-cyan), inset 0 0 15px rgba(17, 157, 164, 0.2) !important;
+            animation: neonFloat2 10s, neonGlow2 3s infinite !important;
+        }
+        
+        .shape-3 {
+            bottom: 20% !important;
+            left: 12% !important;
+            width: 60px !important;
+            height: 160px !important;
+            border-color: var(--english-violet) !important;
+            border-radius: 30px !important;
+            box-shadow: 0 0 35px var(--english-violet), inset 0 0 25px rgba(75, 63, 114, 0.2) !important;
+            animation: neonFloat3 12s, neonGlow3 4s infinite, rotateBar 15s linear infinite !important;
+        }
+        
+        .shape-4 {
+            bottom: 30% !important;
+            right: 8% !important;
+            width: 120px !important;
+            height: 50px !important;
+            border-color: var(--paynes-gray) !important;
+            border-radius: 25px !important;
+            box-shadow: 0 0 20px var(--paynes-gray), inset 0 0 10px rgba(25, 100, 126, 0.2) !important;
+            animation: neonFloat4 9s, neonGlow4 2.5s infinite !important;
+        }
+        
+        .shape-5 {
+            top: 45% !important;
+            left: 5% !important;
+            width: 70px !important;
+            height: 70px !important;
+            border-color: var(--sunglow) !important;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
+            box-shadow: 0 0 40px var(--sunglow) !important;
+            animation: neonFloat5 11s, neonGlow 3.5s infinite, rotateTriangle 8s linear infinite !important;
+        }
+        
+        .shape-6 {
+            top: 60% !important;
+            right: 20% !important;
+            width: 90px !important;
+            height: 90px !important;
+            border-color: var(--dark-cyan) !important;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%) !important;
+            box-shadow: 0 0 30px var(--dark-cyan) !important;
+            animation: neonFloat6 13s, neonGlow2 4.5s infinite !important;
+        }
+        
+        .cyber-grid {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-image: 
+                linear-gradient(rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 200, 87, 0.1) 1px, transparent 1px) !important;
+            background-size: 50px 50px !important;
+            opacity: 0.3 !important;
+            animation: gridMove 20s linear infinite !important;
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: transparent !important;
+            border: 2px solid var(--sunglow) !important;
+            box-shadow: 0 0 20px var(--sunglow), inset 0 0 10px rgba(255, 200, 87, 0.1) !important;
+            border-radius: 0 !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            color: var(--sunglow) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+            animation: slideInDown 0.8s ease-out, badgeGlow 3s infinite !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            color: white !important;
+            text-shadow: 
+                0 0 10px var(--sunglow),
+                0 0 20px var(--sunglow),
+                0 0 40px var(--sunglow) !important;
+            animation: slideInUp 1s ease-out 0.2s both, titleFlicker 4s infinite !important;
+            text-transform: uppercase !important;
+            letter-spacing: 3px !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.5rem) !important;
+            margin-bottom: 3rem !important;
+            color: rgba(17, 157, 164, 0.9) !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: slideInUp 1s ease-out 0.4s both !important;
+            text-shadow: 0 0 10px var(--dark-cyan) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .login-card {
+            background: linear-gradient(135deg, rgba(31, 32, 65, 0.8), rgba(0, 0, 0, 0.9)) !important;
+            border: 2px solid var(--sunglow) !important;
+            box-shadow: 
+                0 0 50px var(--sunglow),
+                inset 0 0 30px rgba(255, 200, 87, 0.1) !important;
+            border-radius: 0 !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            animation: floatingCard 1s ease-out 0.6s both, cardPulse 6s ease-in-out infinite 2s !important;
+            position: relative !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -2px !important;
+            left: -2px !important;
+            right: -2px !important;
+            bottom: -2px !important;
+            background: linear-gradient(45deg, var(--sunglow), var(--dark-cyan), var(--english-violet), var(--paynes-gray)) !important;
+            z-index: -1 !important;
+            animation: borderScan 2s linear infinite !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.5rem !important;
+            color: var(--sunglow) !important;
+            text-shadow: 0 0 15px var(--sunglow) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+        }
+        
+        .form-subtitle {
+            color: var(--dark-cyan) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            text-shadow: 0 0 10px var(--dark-cyan) !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: transparent !important;
+            border: 2px solid var(--dark-cyan) !important;
+            border-radius: 0 !important;
+            color: white !important;
+            font-size: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            transition: all 0.3s ease !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            box-shadow: 0 0 15px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(17, 157, 164, 0.6) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            box-shadow: 0 0 25px var(--sunglow) !important;
+            text-shadow: 0 0 5px white !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: transparent !important;
+            color: var(--sunglow) !important;
+            border: 2px solid var(--sunglow) !important;
+            padding: 1.5rem !important;
+            border-radius: 0 !important;
+            font-size: 1.125rem !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            box-shadow: 0 0 20px rgba(255, 200, 87, 0.3) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: var(--sunglow) !important;
+            transition: left 0.3s ease !important;
+            z-index: -1 !important;
+        }
+        
+        .signin-btn:hover::before {
+            left: 0 !important;
+        }
+        
+        .signin-btn:hover {
+            color: var(--space-cadet) !important;
+            box-shadow: 0 0 40px var(--sunglow) !important;
+            text-shadow: none !important;
+        }
+        
+        .social-btn {
+            background: transparent !important;
+            border: 2px solid var(--dark-cyan) !important;
+            color: var(--dark-cyan) !important;
+            padding: 1rem !important;
+            border-radius: 0 !important;
+            transition: all 0.3s ease !important;
+            margin: 0.5rem !important;
+            width: 45% !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            box-shadow: 0 0 15px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .social-btn:hover {
+            background: var(--dark-cyan) !important;
+            color: black !important;
+            box-shadow: 0 0 25px var(--dark-cyan) !important;
+        }
+        
+        .hero-stats {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 2rem !important;
+            margin-top: 3rem !important;
+            animation: slideInUp 1s ease-out 0.8s both !important;
+        }
+        
+        .stat-item {
+            text-align: center !important;
+            background: transparent !important;
+            border: 2px solid var(--english-violet) !important;
+            border-radius: 0 !important;
+            padding: 1.5rem !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 0 20px rgba(75, 63, 114, 0.3) !important;
+        }
+        
+        .stat-item:hover {
+            box-shadow: 0 0 40px var(--english-violet) !important;
+            border-color: var(--sunglow) !important;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem !important;
+            font-weight: 900 !important;
+            color: var(--sunglow) !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 0 0 15px var(--sunglow) !important;
+        }
+        
+        .stat-label {
+            color: var(--dark-cyan) !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+            text-shadow: 0 0 10px var(--dark-cyan) !important;
+        }
+        
+        /* Neon Animations */
+        @keyframes neonFloat {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            25% { transform: translateY(-20px) translateX(10px); }
+            50% { transform: translateY(-10px) translateX(-15px); }
+            75% { transform: translateY(-25px) translateX(5px); }
+        }
+        
+        @keyframes neonFloat2 {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-30px) translateX(20px); }
+        }
+        
+        @keyframes neonFloat3 {
+            0%, 100% { transform: translate(0px, 0px); }
+            33% { transform: translate(15px, -25px); }
+            66% { transform: translate(-10px, -35px); }
+        }
+        
+        @keyframes neonFloat4 {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(25px); }
+        }
+        
+        @keyframes neonFloat5 {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            33% { transform: translateY(-30px) translateX(15px); }
+            66% { transform: translateY(-15px) translateX(-20px); }
+        }
+        
+        @keyframes neonFloat6 {
+            0%, 100% { transform: translate(0px, 0px); }
+            50% { transform: translate(-25px, 30px); }
+        }
+        
+        @keyframes neonGlow {
+            0%, 100% { opacity: 0.6; box-shadow: 0 0 30px var(--sunglow), inset 0 0 20px rgba(255, 200, 87, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 50px var(--sunglow), inset 0 0 30px rgba(255, 200, 87, 0.4); }
+        }
+        
+        @keyframes neonGlow2 {
+            0%, 100% { opacity: 0.6; box-shadow: 0 0 25px var(--dark-cyan), inset 0 0 15px rgba(17, 157, 164, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 45px var(--dark-cyan), inset 0 0 25px rgba(17, 157, 164, 0.4); }
+        }
+        
+        @keyframes neonGlow3 {
+            0%, 100% { opacity: 0.6; box-shadow: 0 0 35px var(--english-violet), inset 0 0 25px rgba(75, 63, 114, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 55px var(--english-violet), inset 0 0 35px rgba(75, 63, 114, 0.4); }
+        }
+        
+        @keyframes neonGlow4 {
+            0%, 100% { opacity: 0.6; box-shadow: 0 0 20px var(--paynes-gray), inset 0 0 10px rgba(25, 100, 126, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 40px var(--paynes-gray), inset 0 0 20px rgba(25, 100, 126, 0.4); }
+        }
+        
+        @keyframes rotateSquare {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes rotateBar {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+        
+        @keyframes rotateTriangle {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes badgeGlow {
+            0%, 100% { box-shadow: 0 0 20px var(--sunglow), inset 0 0 10px rgba(255, 200, 87, 0.1); }
+            50% { box-shadow: 0 0 40px var(--sunglow), inset 0 0 20px rgba(255, 200, 87, 0.2); }
+        }
+        
+        @keyframes titleFlicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes floatingCard {
+            from { opacity: 0; transform: scale(0.9) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes cardPulse {
+            0%, 100% { box-shadow: 0 0 50px var(--sunglow), inset 0 0 30px rgba(255, 200, 87, 0.1); }
+            50% { box-shadow: 0 0 80px var(--sunglow), inset 0 0 50px rgba(255, 200, 87, 0.2); }
+        }
+        
+        @keyframes borderScan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .hero-stats { grid-template-columns: 1fr !important; }
+            .social-btn { width: 100% !important; margin: 0.25rem 0 !important; }
+            .floating-shape { transform: scale(0.6) !important; }
+            .cyber-grid { background-size: 30px 30px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="cyber-grid"></div>
+        <div class="floating-elements">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="floating-shape shape-4"></div>
+            <div class="floating-shape shape-5"></div>
+            <div class="floating-shape shape-6"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="cpu" style="width: 1rem; height: 1rem;"></i>
+                SYSTEM ONLINE
+            </div>
+            
+            <h1 class="hero-title">
+                NEURAL<br>
+                NETWORK
+            </h1>
+            
+            <p class="hero-subtitle">
+                Advanced cybernetic toll tracking protocol. Enter the digital frontier.
+            </p>
+            
+            <div class="login-card">
+                <h2 class="form-title">ACCESS TERMINAL</h2>
+                <p class="form-subtitle">Initialize connection</p>
+                
+                <form>
+                    <input type="email" class="form-input" placeholder="USER ID" required>
+                    <input type="password" class="form-input" placeholder="AUTH CODE" required>
+                    
+                    <button type="submit" class="signin-btn">EXECUTE LOGIN</button>
+                </form>
+                
+                <div style="text-align: center; margin: 1.5rem 0; color: rgba(17, 157, 164, 0.7); text-transform: uppercase; letter-spacing: 1px;">
+                    or sync with
+                </div>
+                
+                <div style="text-align: center;">
+                    <button class="social-btn">
+                        <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                        GOOG
+                    </button>
+                    <button class="social-btn">
+                        <i data-lucide="microsoft" style="width: 1rem; height: 1rem;"></i>
+                        MSFT
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">UPTIME</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">15TB</div>
+                    <div class="stat-label">PROCESSED</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">80K+</div>
+                    <div class="stat-label">NODES</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

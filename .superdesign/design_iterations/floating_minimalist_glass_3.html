@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Minimalist Glass</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        /* Custom Color Variables */
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: linear-gradient(180deg, 
+                var(--space-cadet) 0%, 
+                rgba(31, 32, 65, 0.95) 30%, 
+                rgba(75, 63, 114, 0.8) 60%, 
+                var(--paynes-gray) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .floating-elements {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 1 !important;
+        }
+        
+        .floating-shape {
+            position: absolute !important;
+            backdrop-filter: blur(40px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            animation-timing-function: ease-in-out !important;
+            animation-iteration-count: infinite !important;
+            animation-direction: alternate !important;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .shape-1 {
+            top: 15% !important;
+            left: 10% !important;
+            width: 80px !important;
+            height: 80px !important;
+            border-radius: 20px !important;
+            background: linear-gradient(135deg, 
+                rgba(255, 200, 87, 0.15) 0%, 
+                rgba(255, 200, 87, 0.05) 100%) !important;
+            border-color: rgba(255, 200, 87, 0.3) !important;
+            animation: glassFloat1 10s, glassRotate 15s linear infinite !important;
+        }
+        
+        .shape-2 {
+            top: 25% !important;
+            right: 15% !important;
+            width: 60px !important;
+            height: 60px !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, 
+                rgba(17, 157, 164, 0.15) 0%, 
+                rgba(17, 157, 164, 0.05) 100%) !important;
+            border-color: rgba(17, 157, 164, 0.3) !important;
+            animation: glassFloat2 12s, glassPulse 8s infinite !important;
+        }
+        
+        .shape-3 {
+            bottom: 20% !important;
+            left: 12% !important;
+            width: 40px !important;
+            height: 120px !important;
+            border-radius: 20px !important;
+            background: linear-gradient(135deg, 
+                rgba(75, 63, 114, 0.15) 0%, 
+                rgba(75, 63, 114, 0.05) 100%) !important;
+            border-color: rgba(75, 63, 114, 0.3) !important;
+            animation: glassFloat3 14s, glassRotate 20s linear infinite reverse !important;
+        }
+        
+        .shape-4 {
+            bottom: 30% !important;
+            right: 10% !important;
+            width: 100px !important;
+            height: 40px !important;
+            border-radius: 20px !important;
+            background: linear-gradient(135deg, 
+                rgba(25, 100, 126, 0.15) 0%, 
+                rgba(25, 100, 126, 0.05) 100%) !important;
+            border-color: rgba(25, 100, 126, 0.3) !important;
+            animation: glassFloat4 11s !important;
+        }
+        
+        .shape-5 {
+            top: 45% !important;
+            left: 5% !important;
+            width: 50px !important;
+            height: 50px !important;
+            background: linear-gradient(135deg, 
+                rgba(255, 200, 87, 0.15) 0%, 
+                rgba(255, 200, 87, 0.05) 100%) !important;
+            border-color: rgba(255, 200, 87, 0.3) !important;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
+            animation: glassFloat5 13s, glassPulse 6s infinite !important;
+        }
+        
+        .shape-6 {
+            top: 35% !important;
+            right: 8% !important;
+            width: 70px !important;
+            height: 70px !important;
+            background: linear-gradient(135deg, 
+                rgba(17, 157, 164, 0.15) 0%, 
+                rgba(17, 157, 164, 0.05) 100%) !important;
+            border-color: rgba(17, 157, 164, 0.3) !important;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%) !important;
+            animation: glassFloat6 16s, glassRotate 12s linear infinite !important;
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            border-radius: 50px !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            margin-bottom: 2rem !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            animation: slideInDown 0.8s ease-out !important;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 300 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            color: white !important;
+            animation: slideInUp 1s ease-out 0.2s both !important;
+            letter-spacing: -0.02em !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem) !important;
+            margin-bottom: 3rem !important;
+            opacity: 0.8 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: slideInUp 1s ease-out 0.4s both !important;
+            font-weight: 300 !important;
+        }
+        
+        .login-card {
+            background: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(40px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 24px !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+            animation: floatingCard 1s ease-out 0.6s both, subtleFloat 10s ease-in-out infinite 2s !important;
+            position: relative !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 400 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            letter-spacing: -0.01em !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            font-weight: 300 !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            transition: all 0.3s ease !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: rgba(255, 200, 87, 0.3) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 
+                0 0 20px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: rgba(255, 200, 87, 0.15) !important;
+            backdrop-filter: blur(20px) !important;
+            color: var(--sunglow) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            font-size: 1.125rem !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            margin-bottom: 2rem !important;
+            letter-spacing: 0.5px !important;
+            box-shadow: 
+                0 8px 32px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-2px) !important;
+            background: rgba(255, 200, 87, 0.2) !important;
+            box-shadow: 
+                0 12px 40px rgba(255, 200, 87, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+        }
+        
+        .social-btn {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            padding: 1rem !important;
+            border-radius: 12px !important;
+            transition: all 0.3s ease !important;
+            margin: 0.5rem !important;
+            width: 45% !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .social-btn:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        .hero-stats {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 2rem !important;
+            margin-top: 3rem !important;
+            animation: slideInUp 1s ease-out 0.8s both !important;
+        }
+        
+        .stat-item {
+            text-align: center !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 1.5rem !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-5px) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem !important;
+            font-weight: 300 !important;
+            color: white !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 0.875rem !important;
+            font-weight: 400 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        /* Glass Animations */
+        @keyframes glassFloat1 {
+            0%, 100% { transform: translate(0px, 0px); }
+            25% { transform: translate(-15px, -20px); }
+            50% { transform: translate(10px, -30px); }
+            75% { transform: translate(-5px, -15px); }
+        }
+        
+        @keyframes glassFloat2 {
+            0%, 100% { transform: translate(0px, 0px); }
+            50% { transform: translate(20px, -25px); }
+        }
+        
+        @keyframes glassFloat3 {
+            0%, 100% { transform: translate(0px, 0px); }
+            33% { transform: translate(12px, -25px); }
+            66% { transform: translate(-8px, -35px); }
+        }
+        
+        @keyframes glassFloat4 {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(25px); }
+        }
+        
+        @keyframes glassFloat5 {
+            0%, 100% { transform: translate(0px, 0px); }
+            33% { transform: translate(-20px, -15px); }
+            66% { transform: translate(15px, -25px); }
+        }
+        
+        @keyframes glassFloat6 {
+            0%, 100% { transform: translate(0px, 0px); }
+            50% { transform: translate(-25px, 20px); }
+        }
+        
+        @keyframes glassRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes glassPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes floatingCard {
+            from { opacity: 0; transform: scale(0.9) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes subtleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .hero-stats { grid-template-columns: 1fr !important; }
+            .social-btn { width: 100% !important; margin: 0.25rem 0 !important; }
+            .floating-shape { transform: scale(0.8) !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="floating-elements">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="floating-shape shape-4"></div>
+            <div class="floating-shape shape-5"></div>
+            <div class="floating-shape shape-6"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="eye" style="width: 1rem; height: 1rem;"></i>
+                Crystal Clear Vision
+            </div>
+            
+            <h1 class="hero-title">
+                PURE<br>
+                CLARITY
+            </h1>
+            
+            <p class="hero-subtitle">
+                Transparent toll management with pristine simplicity. See through complexity.
+            </p>
+            
+            <div class="login-card">
+                <h2 class="form-title">Enter Clarity</h2>
+                <p class="form-subtitle">Access your transparent workspace</p>
+                
+                <form>
+                    <input type="email" class="form-input" placeholder="Email Address" required>
+                    <input type="password" class="form-input" placeholder="Password" required>
+                    
+                    <button type="submit" class="signin-btn">Access Dashboard</button>
+                </form>
+                
+                <div style="text-align: center; margin: 1.5rem 0; color: rgba(255,255,255,0.6); font-weight: 300;">
+                    or connect via
+                </div>
+                
+                <div style="text-align: center;">
+                    <button class="social-btn">
+                        <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                        Google
+                    </button>
+                    <button class="social-btn">
+                        <i data-lucide="microsoft" style="width: 1rem; height: 1rem;"></i>
+                        Microsoft
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Transparent</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">∞GB</div>
+                    <div class="stat-label">Clear Data</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">95K+</div>
+                    <div class="stat-label">Pure Views</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

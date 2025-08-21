@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Sign In</title>
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .hero-container {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Animated Background */
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            z-index: 1;
+        }
+        
+        .hero-background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'%3E%3Cdefs%3E%3CradialGradient id='hero-pattern' cx='50%25' cy='50%25' r='50%25'%3E%3Cstop offset='0%25' style='stop-color:rgba(255,255,255,0.1)'/%3E%3Cstop offset='100%25' style='stop-color:rgba(255,255,255,0)'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1000' height='1000' fill='url(%23hero-pattern)'/%3E%3C/svg%3E");
+            background-size: 300px 300px;
+            animation: float 20s ease-in-out infinite;
+            opacity: 0.3;
+        }
+        
+        .hero-background::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        
+        /* Floating Elements */
+        .floating-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .floating-element {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .floating-element:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 10%;
+            left: 10%;
+            animation: floatElement 8s ease-in-out infinite;
+        }
+        
+        .floating-element:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            top: 70%;
+            right: 15%;
+            animation: floatElement 12s ease-in-out infinite reverse;
+        }
+        
+        .floating-element:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            bottom: 20%;
+            left: 20%;
+            animation: floatElement 10s ease-in-out infinite;
+        }
+        
+        .floating-element:nth-child(4) {
+            width: 40px;
+            height: 40px;
+            top: 30%;
+            right: 30%;
+            animation: floatElement 6s ease-in-out infinite reverse;
+        }
+        
+        @keyframes floatElement {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+            50% { transform: translateY(-30px) rotate(180deg); opacity: 0.9; }
+        }
+        
+        /* Main Content */
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            color: white;
+            max-width: 1200px;
+            padding: 2rem;
+        }
+        
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+        
+        .hero-badge::before {
+            content: '✨';
+            font-size: 1rem;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff, #e0e7ff, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            margin-bottom: 3rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+            animation: fadeInUp 1s ease-out 0.6s both;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Login Form */
+        .login-form-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 450px;
+            margin: 0 auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: fadeInUp 1s ease-out 0.8s both;
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .form-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1.25rem 1.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .form-input:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.18);
+        }
+        
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .checkbox-container input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #fbbf24;
+        }
+        
+        .forgot-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .forgot-link:hover {
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .signin-btn {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+            backdrop-filter: blur(20px);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            padding: 1.5rem;
+            border-radius: 16px;
+            font-size: 1.125rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .signin-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
+        }
+        
+        .signin-btn:hover::before {
+            left: 100%;
+        }
+        
+        .signin-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 2rem 0;
+            position: relative;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        }
+        
+        .divider span {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 0 1.5rem;
+            border-radius: 20px;
+        }
+        
+        .social-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+        
+        .social-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .social-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        .signup-link {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.875rem;
+        }
+        
+        .signup-link a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .signup-link a:hover {
+            border-bottom-color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Stats Section */
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: fadeInUp 1s ease-out 1.2s both;
+        }
+        
+        .stat-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #fbbf24;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Loading state */
+        .btn-loading {
+            position: relative;
+            color: transparent;
+        }
+        
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-content {
+                padding: 1rem;
+            }
+            
+            .login-form-container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+            
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                margin-top: 2rem;
+            }
+            
+            .social-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .floating-elements {
+                display: none;
+            }
+        }
+        
+        /* Scroll indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            animation: bounce 2s infinite;
+            z-index: 10;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <!-- Animated Background -->
+        <div class="hero-background"></div>
+        
+        <!-- Floating Elements -->
+        <div class="floating-elements">
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="hero-content">
+            <div class="hero-badge">
+                Premium Toll Management Platform
+            </div>
+            
+            <h1 class="hero-title">
+                Drive Forward<br>
+                Track Smart
+            </h1>
+            
+            <p class="hero-subtitle">
+                The ultimate toll tracking solution for Turo hosts. Automate everything from detection to billing with AI-powered precision.
+            </p>
+            
+            <!-- Login Form -->
+            <div class="login-form-container">
+                <div class="form-header">
+                    <h2 class="form-title">Welcome Back</h2>
+                    <p class="form-subtitle">Access your command center</p>
+                </div>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            class="form-input" 
+                            placeholder="your@email.com"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input" 
+                            placeholder="••••••••"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-options">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">Remember me</label>
+                        </div>
+                        <a href="#" class="forgot-link">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="signin-btn" id="signin-btn">
+                        Launch Dashboard
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>or continue with</span>
+                </div>
+                
+                <div class="social-buttons">
+                    <button type="button" class="social-btn" onclick="handleSSO('google')">
+                        <svg class="social-icon" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        Google
+                    </button>
+                    
+                    <button type="button" class="social-btn" onclick="handleSSO('microsoft')">
+                        <svg class="social-icon" viewBox="0 0 24 24">
+                            <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z" fill="#00BCF2"/>
+                        </svg>
+                        Microsoft
+                    </button>
+                </div>
+                
+                <div class="signup-link">
+                    First time here? <a href="#" onclick="showSignup()">Create your account</a>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">$5M+</div>
+                    <div class="stat-label">Processed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">25K+</div>
+                    <div class="stat-label">Users</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 13l3 3 7-7"/>
+            </svg>
+        </div>
+    </div>
+    
+    <script>
+        // Form handling
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const button = document.getElementById('signin-btn');
+            button.classList.add('btn-loading');
+            button.disabled = true;
+            
+            // Simulate API call
+            setTimeout(() => {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+            }, 2500);
+        });
+        
+        // SSO handlers
+        function handleSSO(provider) {
+            alert(`${provider} SSO will be implemented`);
+        }
+        
+        function showSignup() {
+            alert('Signup form will be implemented');
+        }
+        
+        // Parallax effect on mouse move
+        document.addEventListener('mousemove', (e) => {
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            
+            const xPercent = (clientX / innerWidth - 0.5) * 2;
+            const yPercent = (clientY / innerHeight - 0.5) * 2;
+            
+            // Move floating elements
+            const elements = document.querySelectorAll('.floating-element');
+            elements.forEach((element, index) => {
+                const speed = (index + 1) * 0.5;
+                const x = xPercent * speed;
+                const y = yPercent * speed;
+                element.style.transform = `translate(${x}px, ${y}px)`;
+            });
+            
+            // Move background
+            const background = document.querySelector('.hero-background::before');
+            if (background) {
+                const bgX = xPercent * 10;
+                const bgY = yPercent * 10;
+                document.querySelector('.hero-background').style.transform = `translate(${bgX}px, ${bgY}px)`;
+            }
+        });
+        
+        // Add entrance animations
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '1';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+:root {
+  /* Custom Color Palette */
+  --space-cadet: #1f2041;
+  --english-violet: #4b3f72;
+  --sunglow: #ffc857;
+  --dark-cyan: #119da4;
+  --paynes-gray: #19647e;
+  
+  /* Theme Variables */
+  --background: var(--space-cadet);
+  --foreground: #ffffff;
+  --card: rgba(75, 63, 114, 0.2);
+  --card-foreground: #ffffff;
+  --popover: rgba(31, 32, 65, 0.95);
+  --popover-foreground: #ffffff;
+  --primary: var(--sunglow);
+  --primary-foreground: var(--space-cadet);
+  --secondary: var(--dark-cyan);
+  --secondary-foreground: #ffffff;
+  --muted: var(--paynes-gray);
+  --muted-foreground: rgba(255, 255, 255, 0.7);
+  --accent: var(--english-violet);
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(75, 63, 114, 0.3);
+  --input: rgba(25, 100, 126, 0.2);
+  --ring: var(--sunglow);
+  
+  /* Typography */
+  --font-sans: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Playfair Display', ui-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  
+  /* Spacing & Layout */
+  --radius: 0.75rem;
+  --spacing: 0.25rem;
+  --tracking-normal: -0.01em;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--space-cadet), var(--english-violet));
+  --gradient-accent: linear-gradient(135deg, var(--sunglow), var(--dark-cyan));
+  --gradient-hero: linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, var(--paynes-gray) 100%);
+  --gradient-card: linear-gradient(135deg, rgba(75, 63, 114, 0.15), rgba(25, 100, 126, 0.1));
+  --gradient-button: linear-gradient(135deg, var(--sunglow), #ffdc7f);
+  
+  /* Shadows */
+  --shadow-color: rgba(31, 32, 65, 0.5);
+  --shadow-xs: 0 1px 2px 0 var(--shadow-color);
+  --shadow-sm: 0 1px 3px 0 var(--shadow-color), 0 1px 2px -1px var(--shadow-color);
+  --shadow: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
+  --shadow-md: 0 10px 15px -3px var(--shadow-color), 0 4px 6px -4px var(--shadow-color);
+  --shadow-lg: 0 20px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
+  --shadow-xl: 0 25px 50px -12px var(--shadow-color);
+  --shadow-2xl: 0 25px 50px -12px rgba(31, 32, 65, 0.7);
+}

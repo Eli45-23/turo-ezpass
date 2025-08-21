@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Quantum Matrix Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --space-cadet: #2D1B69;
+            --english-violet: #553C8B;
+            --sunglow: #FFC857;
+            --dark-cyan: #17A2B8;
+            --paynes-gray: #495057;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif !important;
+            background: 
+                linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
+            min-height: 100vh !important;
+            color: white !important;
+            overflow-x: hidden !important;
+            position: relative !important;
+        }
+
+        /* Quantum Matrix Background */
+        .quantum-background {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: -1 !important;
+            overflow: hidden !important;
+        }
+
+        .hexagon-grid {
+            position: absolute !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-image: 
+                repeating-linear-gradient(
+                    30deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(255, 200, 87, 0.05) 52px,
+                    rgba(255, 200, 87, 0.05) 54px
+                ),
+                repeating-linear-gradient(
+                    150deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(23, 162, 184, 0.05) 52px,
+                    rgba(23, 162, 184, 0.05) 54px
+                ),
+                repeating-linear-gradient(
+                    270deg,
+                    transparent,
+                    transparent 50px,
+                    rgba(255, 200, 87, 0.05) 52px,
+                    rgba(255, 200, 87, 0.05) 54px
+                ) !important;
+            animation: quantumGrid 20s linear infinite !important;
+        }
+
+        .data-node {
+            position: absolute !important;
+            width: 8px !important;
+            height: 8px !important;
+            background: var(--sunglow) !important;
+            border-radius: 50% !important;
+            box-shadow: 0 0 20px rgba(255, 200, 87, 0.6) !important;
+            animation: dataFlow 4s ease-in-out infinite !important;
+        }
+
+        .node-1 {
+            top: 20% !important;
+            left: 15% !important;
+            animation-delay: 0s !important;
+        }
+
+        .node-2 {
+            top: 30% !important;
+            right: 25% !important;
+            animation-delay: 1s !important;
+        }
+
+        .node-3 {
+            bottom: 40% !important;
+            left: 35% !important;
+            animation-delay: 2s !important;
+        }
+
+        .node-4 {
+            bottom: 25% !important;
+            right: 20% !important;
+            animation-delay: 3s !important;
+        }
+
+        .node-5 {
+            top: 60% !important;
+            left: 60% !important;
+            animation-delay: 1.5s !important;
+        }
+
+        .quantum-line {
+            position: absolute !important;
+            height: 1px !important;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 200, 87, 0.3), 
+                rgba(23, 162, 184, 0.3), 
+                transparent) !important;
+            animation: quantumPulse 3s ease-in-out infinite !important;
+        }
+
+        .line-1 {
+            width: 200px !important;
+            top: 25% !important;
+            left: 20% !important;
+            transform: rotate(25deg) !important;
+        }
+
+        .line-2 {
+            width: 150px !important;
+            top: 65% !important;
+            right: 30% !important;
+            transform: rotate(-45deg) !important;
+            animation-delay: 1s !important;
+        }
+
+        .line-3 {
+            width: 180px !important;
+            bottom: 30% !important;
+            left: 40% !important;
+            transform: rotate(60deg) !important;
+            animation-delay: 2s !important;
+        }
+
+        /* Layout Structure */
+        .app-layout {
+            display: flex !important;
+            min-height: 100vh !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+
+        /* Quantum Sidebar Navigation */
+        .sidebar {
+            width: 280px !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border-right: 1px solid rgba(255, 200, 87, 0.3) !important;
+            padding: 2rem 0 !important;
+            position: fixed !important;
+            height: 100vh !important;
+            left: 0 !important;
+            top: 0 !important;
+            overflow-y: auto !important;
+        }
+
+        .sidebar::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 20px,
+                    rgba(255, 200, 87, 0.02) 22px,
+                    rgba(255, 200, 87, 0.02) 24px
+                ) !important;
+            z-index: -1 !important;
+        }
+
+        .sidebar-title {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            color: var(--sunglow) !important;
+            padding: 0 2rem !important;
+            margin-bottom: 3rem !important;
+            letter-spacing: 2px !important;
+            text-transform: uppercase !important;
+        }
+
+        .nav-menu {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem !important;
+        }
+
+        .nav-link {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            padding: 1rem 2rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            text-decoration: none !important;
+            transition: all 0.3s ease !important;
+            border-left: 2px solid transparent !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+        }
+
+        .nav-link::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 0 !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+            transition: width 0.3s ease !important;
+        }
+
+        .nav-link:hover::before {
+            width: 100% !important;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            border-left-color: var(--sunglow) !important;
+        }
+
+        .nav-link.active {
+            color: var(--sunglow) !important;
+            border-left-color: var(--sunglow) !important;
+        }
+
+        .nav-link.active::before {
+            width: 100% !important;
+            background: rgba(255, 200, 87, 0.15) !important;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1 !important;
+            margin-left: 280px !important;
+            position: relative !important;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            max-width: 1400px !important;
+            margin: 0 auto !important;
+            padding: 2rem !important;
+            position: relative !important;
+        }
+
+        /* Quantum Header */
+        .dashboard-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 3rem !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 15px !important;
+            padding: 1.5rem 2rem !important;
+            box-shadow: 
+                0 0 50px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .dashboard-header::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -50% !important;
+            left: -50% !important;
+            width: 200% !important;
+            height: 200% !important;
+            background: 
+                repeating-conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    rgba(255, 200, 87, 0.03) 30deg,
+                    transparent 60deg
+                ) !important;
+            animation: quantumSpin 15s linear infinite !important;
+            z-index: -1 !important;
+        }
+
+        .dashboard-title {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f, var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            text-shadow: 0 0 30px rgba(255, 200, 87, 0.4) !important;
+            letter-spacing: 2px !important;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            border: 1px solid rgba(255, 200, 87, 0.5) !important;
+            padding: 1rem 2rem !important;
+            border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+
+        .upload-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent) !important;
+            transition: left 0.5s ease !important;
+        }
+
+        .upload-btn:hover::before {
+            left: 100% !important;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 25px rgba(255, 200, 87, 0.4) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
+        }
+
+        /* Quantum User Profile Avatar */
+        .user-profile {
+            position: relative !important;
+        }
+
+        .user-avatar {
+            width: 45px !important;
+            height: 45px !important;
+            border-radius: 8px !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 700 !important;
+            font-size: 1.2rem !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            border: 1px solid rgba(255, 200, 87, 0.5) !important;
+            box-shadow: 0 5px 15px rgba(255, 200, 87, 0.2) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .user-avatar::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent) !important;
+            transition: left 0.5s ease !important;
+        }
+
+        .user-avatar:hover::before {
+            left: 100% !important;
+        }
+
+        .user-avatar:hover {
+            transform: translateY(-2px) scale(1.05) !important;
+            box-shadow: 0 8px 25px rgba(255, 200, 87, 0.4) !important;
+            border-color: var(--sunglow) !important;
+        }
+
+        .dropdown-menu {
+            position: absolute !important;
+            top: 55px !important;
+            right: 0 !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 0 !important;
+            min-width: 160px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: translateY(-10px) !important;
+            transition: all 0.3s ease !important;
+            z-index: 1000 !important;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) !important;
+        }
+
+        .dropdown-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.8rem !important;
+            padding: 0.75rem 1.5rem !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            text-decoration: none !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.9rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+        }
+
+        .dropdown-item::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 0 !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+            transition: width 0.3s ease !important;
+        }
+
+        .dropdown-item:hover::before {
+            width: 100% !important;
+        }
+
+        .dropdown-item:hover {
+            color: white !important;
+        }
+
+        .header-actions {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+        }
+
+        /* Quantum Stats Cards */
+        .stats-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+            gap: 2rem !important;
+            margin-bottom: 3rem !important;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            border-radius: 15px !important;
+            padding: 2rem !important;
+            transition: all 0.4s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .stat-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 2px !important;
+            background: linear-gradient(90deg,
+                transparent,
+                var(--sunglow),
+                var(--dark-cyan),
+                transparent) !important;
+            animation: quantumScanner 3s ease-in-out infinite !important;
+        }
+
+        .stat-card::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 10px !important;
+            right: 10px !important;
+            width: 6px !important;
+            height: 6px !important;
+            background: var(--sunglow) !important;
+            border-radius: 50% !important;
+            box-shadow: 0 0 10px rgba(255, 200, 87, 0.8) !important;
+            animation: dataFlow 2s ease-in-out infinite !important;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02) !important;
+            box-shadow: 
+                0 20px 40px rgba(255, 200, 87, 0.15),
+                0 0 50px rgba(255, 200, 87, 0.1) !important;
+            border-color: rgba(255, 200, 87, 0.5) !important;
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 3rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 0 0 20px rgba(255, 200, 87, 0.3) !important;
+            letter-spacing: 2px !important;
+        }
+
+        .stat-label {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.9rem !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            margin-bottom: 0.5rem !important;
+            font-weight: 500 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.8rem !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            text-transform: uppercase !important;
+        }
+
+        /* Quantum Performance Matrix */
+        .performance-matrix {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 15px !important;
+            padding: 2.5rem !important;
+            margin-bottom: 3rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .performance-matrix::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(255, 200, 87, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(23, 162, 184, 0.05) 0%, transparent 50%) !important;
+            z-index: -1 !important;
+        }
+
+        .matrix-title {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 2px !important;
+            color: var(--sunglow) !important;
+        }
+
+        .matrix-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+            gap: 2rem !important;
+        }
+
+        .matrix-item {
+            text-align: center !important;
+            position: relative !important;
+            padding: 1.5rem !important;
+            border: 1px solid rgba(255, 200, 87, 0.1) !important;
+            border-radius: 10px !important;
+            background: rgba(255, 255, 255, 0.01) !important;
+        }
+
+        .matrix-value {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 2.5rem !important;
+            font-weight: 700 !important;
+            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            margin-bottom: 1rem !important;
+            letter-spacing: 2px !important;
+        }
+
+        .progress-bar {
+            width: 100% !important;
+            height: 8px !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+            margin-bottom: 0.5rem !important;
+            position: relative !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+        }
+
+        .progress-fill {
+            height: 100% !important;
+            background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan)) !important;
+            border-radius: 10px !important;
+            transition: width 2s ease !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        .progress-fill::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.5),
+                transparent) !important;
+            animation: quantumFlow 2s ease-in-out infinite !important;
+        }
+
+        .matrix-label {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.8rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+
+        /* Quantum Action Buttons */
+        .action-buttons {
+            display: flex !important;
+            gap: 1.5rem !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            padding: 1rem 2rem !important;
+            border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            backdrop-filter: blur(20px) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+
+        .action-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 200, 87, 0.2),
+                transparent) !important;
+            transition: left 0.5s ease !important;
+        }
+
+        .action-btn:hover::before {
+            left: 100% !important;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 200, 87, 0.1) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 20px rgba(255, 200, 87, 0.2) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
+        }
+
+        /* Quantum Animations */
+        @keyframes quantumGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        @keyframes dataFlow {
+            0%, 100% { 
+                transform: scale(1); 
+                opacity: 0.6; 
+                box-shadow: 0 0 20px rgba(255, 200, 87, 0.6); 
+            }
+            50% { 
+                transform: scale(1.5); 
+                opacity: 1; 
+                box-shadow: 0 0 30px rgba(255, 200, 87, 1); 
+            }
+        }
+
+        @keyframes quantumPulse {
+            0%, 100% { opacity: 0.3; transform: scaleX(1); }
+            50% { opacity: 0.8; transform: scaleX(1.2); }
+        }
+
+        @keyframes quantumSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes quantumScanner {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400px); }
+        }
+
+        @keyframes quantumFlow {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%) !important;
+                transition: transform 0.3s ease !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container { padding: 1rem !important; }
+            .dashboard-header { 
+                flex-direction: column !important; 
+                gap: 1rem !important; 
+                text-align: center !important; 
+            }
+            .header-actions {
+                flex-direction: column !important;
+                gap: 1rem !important;
+            }
+            .stats-grid { grid-template-columns: 1fr !important; }
+            .matrix-grid { grid-template-columns: 1fr !important; }
+            .quantum-line, .data-node { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="quantum-background">
+        <div class="hexagon-grid"></div>
+        <div class="data-node node-1"></div>
+        <div class="data-node node-2"></div>
+        <div class="data-node node-3"></div>
+        <div class="data-node node-4"></div>
+        <div class="data-node node-5"></div>
+        <div class="quantum-line line-1"></div>
+        <div class="quantum-line line-2"></div>
+        <div class="quantum-line line-3"></div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Quantum Sidebar Navigation -->
+        <aside class="sidebar">
+            <h1 class="sidebar-title">TURO_TOLL_TRACKER</h1>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active">
+                            <i data-lucide="bar-chart-3"></i>
+                            OVERVIEW
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i data-lucide="route"></i>
+                            TRIPS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i data-lucide="upload"></i>
+                            UPLOAD_CSV
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i data-lucide="activity"></i>
+                            ANALYTICS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i data-lucide="radio"></i>
+                            TRANSPONDERS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i data-lucide="file-text"></i>
+                            INVOICES
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="dashboard-container">
+                <header class="dashboard-header">
+                    <h1 class="dashboard-title">DASHBOARD_OVERVIEW</h1>
+                    <div class="header-actions">
+                        <button class="upload-btn">
+                            <i data-lucide="database"></i>
+                            UPLOAD_CSV / RUN_FETCH
+                        </button>
+                        <div class="user-profile">
+                            <div class="user-avatar" onclick="toggleDropdown()">E</div>
+                            <div class="dropdown-menu" id="userDropdown">
+                                <a href="#" class="dropdown-item" onclick="signOut()">
+                                    <i data-lucide="log-out"></i>
+                                    SIGN_OUT
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">69</div>
+                <div class="stat-label">TOTAL_TOLLS</div>
+                <div class="stat-value">ACTIVE_STATUS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">50</div>
+                <div class="stat-label">PERSONAL_TOLLS</div>
+                <div class="stat-value">$1154.90_USD</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">19</div>
+                <div class="stat-label">MATCHED_TOLLS</div>
+                <div class="stat-value">$87.39_USD</div>
+            </div>
+        </div>
+
+        <div class="performance-matrix">
+            <h2 class="matrix-title">
+                <i data-lucide="cpu"></i>
+                PERFORMANCE_MATRIX
+            </h2>
+            <div class="matrix-grid">
+                <div class="matrix-item">
+                    <div class="matrix-value">100%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <div class="matrix-label">MATCH_ACCURACY</div>
+                </div>
+                <div class="matrix-item">
+                    <div class="matrix-value">69</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 85%"></div>
+                    </div>
+                    <div class="matrix-label">TOTAL_COUNT</div>
+                </div>
+            </div>
+        </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn">VIEW_MATCHED(19)</button>
+                    <button class="action-btn">PERSONAL_DRIVING(50)</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Quantum user dropdown functionality
+        function toggleDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const userProfile = document.querySelector('.user-profile');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (!userProfile.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Quantum sign out functionality
+        function signOut() {
+            if (confirm('CONFIRM: TERMINATE_SESSION?')) {
+                // Quantum logout sequence
+                window.location.href = '/api/auth/logout';
+            }
+        }
+    </script>
+</body>
+</html>

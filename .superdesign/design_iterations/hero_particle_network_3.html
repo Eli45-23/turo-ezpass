@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Network Hero</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: radial-gradient(circle at center, var(--english-violet) 0%, var(--space-cadet) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .network-background {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .network-node {
+            position: absolute !important;
+            border-radius: 50% !important;
+            opacity: 0.6 !important;
+            animation: pulse 4s ease-in-out infinite !important;
+        }
+        
+        .node-1 {
+            width: 8px !important;
+            height: 8px !important;
+            background: var(--sunglow) !important;
+            top: 20% !important;
+            left: 15% !important;
+            animation-delay: 0s !important;
+        }
+        
+        .node-2 {
+            width: 12px !important;
+            height: 12px !important;
+            background: var(--dark-cyan) !important;
+            top: 30% !important;
+            right: 20% !important;
+            animation-delay: 1s !important;
+        }
+        
+        .node-3 {
+            width: 6px !important;
+            height: 6px !important;
+            background: var(--paynes-gray) !important;
+            bottom: 25% !important;
+            left: 25% !important;
+            animation-delay: 2s !important;
+        }
+        
+        .node-4 {
+            width: 10px !important;
+            height: 10px !important;
+            background: var(--sunglow) !important;
+            top: 60% !important;
+            right: 30% !important;
+            animation-delay: 0.5s !important;
+        }
+        
+        .node-5 {
+            width: 14px !important;
+            height: 14px !important;
+            background: var(--dark-cyan) !important;
+            bottom: 40% !important;
+            right: 15% !important;
+            animation-delay: 1.5s !important;
+        }
+        
+        .connection-line {
+            position: absolute !important;
+            background: linear-gradient(45deg, var(--sunglow), var(--dark-cyan)) !important;
+            opacity: 0.3 !important;
+            animation: connectionPulse 6s ease-in-out infinite !important;
+        }
+        
+        .line-1 {
+            width: 2px !important;
+            height: 200px !important;
+            top: 20% !important;
+            left: 20% !important;
+            transform: rotate(45deg) !important;
+            animation-delay: 0s !important;
+        }
+        
+        .line-2 {
+            width: 2px !important;
+            height: 150px !important;
+            top: 40% !important;
+            right: 25% !important;
+            transform: rotate(-30deg) !important;
+            animation-delay: 2s !important;
+        }
+        
+        .line-3 {
+            width: 2px !important;
+            height: 180px !important;
+            bottom: 30% !important;
+            left: 30% !important;
+            transform: rotate(120deg) !important;
+            animation-delay: 4s !important;
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: rgba(17, 157, 164, 0.2) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid var(--dark-cyan) !important;
+            border-radius: 25px !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            color: var(--dark-cyan) !important;
+            animation: fadeInScale 0.8s ease-out !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            background: linear-gradient(135deg, white 0%, var(--sunglow) 30%, var(--dark-cyan) 70%, white 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: titleGlow 1s ease-out 0.2s both !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem) !important;
+            margin-bottom: 3rem !important;
+            opacity: 0.9 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: fadeInUp 1s ease-out 0.4s both !important;
+        }
+        
+        .login-card {
+            background: rgba(31, 32, 65, 0.7) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 20px !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            box-shadow: 0 25px 50px rgba(31, 32, 65, 0.6), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            animation: cardSlideIn 0.8s ease-out 0.6s both !important;
+            position: relative !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -1px !important;
+            left: -1px !important;
+            right: -1px !important;
+            bottom: -1px !important;
+            background: linear-gradient(45deg, var(--sunglow), var(--dark-cyan), var(--sunglow)) !important;
+            border-radius: 20px !important;
+            z-index: -1 !important;
+            opacity: 0.5 !important;
+            animation: borderGlow 3s ease-in-out infinite !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            text-align: center !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            text-align: center !important;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem !important;
+            position: relative !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(17, 157, 164, 0.3) !important;
+            border-radius: 12px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            transition: all 0.3s ease !important;
+            font-weight: 500 !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 0 25px rgba(255, 200, 87, 0.3), 
+                        0 0 50px rgba(17, 157, 164, 0.2) !important;
+        }
+        
+        .form-options {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 2rem !important;
+            font-size: 0.875rem !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: linear-gradient(135deg, var(--sunglow) 0%, #ffdc7f 50%, var(--dark-cyan) 100%) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            font-size: 1.125rem !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.4s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) !important;
+            transition: left 0.7s ease !important;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 20px 40px rgba(255, 200, 87, 0.4), 
+                        0 0 60px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .signin-btn:hover::before {
+            left: 100% !important;
+        }
+        
+        .divider {
+            text-align: center !important;
+            margin: 2rem 0 !important;
+            position: relative !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.875rem !important;
+        }
+        
+        .divider::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 1px !important;
+            background: linear-gradient(90deg, transparent, var(--dark-cyan), transparent) !important;
+        }
+        
+        .divider span {
+            background: rgba(31, 32, 65, 0.7) !important;
+            padding: 0 1.5rem !important;
+        }
+        
+        .social-buttons {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .social-btn {
+            background: rgba(17, 157, 164, 0.2) !important;
+            border: 1px solid var(--dark-cyan) !important;
+            color: white !important;
+            padding: 1rem !important;
+            border-radius: 12px !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            font-weight: 600 !important;
+        }
+        
+        .social-btn:hover {
+            background: rgba(17, 157, 164, 0.3) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 25px rgba(17, 157, 164, 0.3) !important;
+        }
+        
+        .signup-link {
+            text-align: center !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 0.875rem !important;
+        }
+        
+        .signup-link a {
+            color: var(--sunglow) !important;
+            text-decoration: none !important;
+            font-weight: 600 !important;
+        }
+        
+        .hero-stats {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 2rem !important;
+            margin-top: 3rem !important;
+            animation: fadeInUp 1s ease-out 0.8s both !important;
+        }
+        
+        .stat-item {
+            text-align: center !important;
+            background: rgba(17, 157, 164, 0.1) !important;
+            border: 1px solid rgba(17, 157, 164, 0.3) !important;
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            backdrop-filter: blur(10px) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stat-item:hover {
+            background: rgba(17, 157, 164, 0.2) !important;
+            border-color: var(--sunglow) !important;
+            transform: translateY(-5px) !important;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem !important;
+            font-weight: 900 !important;
+            color: var(--sunglow) !important;
+            margin-bottom: 0.5rem !important;
+            text-shadow: 0 0 20px rgba(255, 200, 87, 0.5) !important;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        @keyframes connectionPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes titleGlow {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes cardSlideIn {
+            from { opacity: 0; transform: translateX(-50px) rotateY(-15deg); }
+            to { opacity: 1; transform: translateX(0) rotateY(0deg); }
+        }
+        
+        @keyframes borderGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .hero-stats { grid-template-columns: 1fr !important; }
+            .social-buttons { grid-template-columns: 1fr !important; }
+            .network-node, .connection-line { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="network-background">
+            <!-- Network Nodes -->
+            <div class="network-node node-1"></div>
+            <div class="network-node node-2"></div>
+            <div class="network-node node-3"></div>
+            <div class="network-node node-4"></div>
+            <div class="network-node node-5"></div>
+            
+            <!-- Connection Lines -->
+            <div class="connection-line line-1"></div>
+            <div class="connection-line line-2"></div>
+            <div class="connection-line line-3"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="network" style="width: 1rem; height: 1rem;"></i>
+                Connected Intelligence
+            </div>
+            
+            <h1 class="hero-title">
+                DRIVE FORWARD<br>
+                TRACK SMART
+            </h1>
+            
+            <p class="hero-subtitle">
+                AI-powered toll tracking that connects every mile to maximum profitability.
+            </p>
+            
+            <div class="login-card">
+                <h2 class="form-title">Network Access</h2>
+                <p class="form-subtitle">Connect to your dashboard</p>
+                
+                <form>
+                    <div class="form-group">
+                        <input type="email" class="form-input" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-input" placeholder="Password" required>
+                    </div>
+                    
+                    <div class="form-options">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: rgba(255,255,255,0.7);">
+                            <input type="checkbox" style="accent-color: var(--sunglow);">
+                            Stay connected
+                        </label>
+                        <a href="#" style="color: var(--sunglow); text-decoration: none;">Reset access</a>
+                    </div>
+                    
+                    <button type="submit" class="signin-btn">Connect Now</button>
+                </form>
+                
+                <div class="divider">
+                    <span>or connect via</span>
+                </div>
+                
+                <div class="social-buttons">
+                    <button class="social-btn">
+                        <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                        Google
+                    </button>
+                    <button class="social-btn">
+                        <i data-lucide="square" style="width: 1rem; height: 1rem;"></i>
+                        Microsoft
+                    </button>
+                </div>
+                
+                <div class="signup-link">
+                    New to the network? <a href="#">Join now</a>
+                </div>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">$5M+</div>
+                    <div class="stat-label">Connected</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">25K+</div>
+                    <div class="stat-label">Nodes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+        
+        // Add mouse interaction for network effect
+        document.addEventListener('mousemove', (e) => {
+            const nodes = document.querySelectorAll('.network-node');
+            const mouseX = e.clientX / window.innerWidth;
+            const mouseY = e.clientY / window.innerHeight;
+            
+            nodes.forEach((node, index) => {
+                const speed = (index + 1) * 0.02;
+                const x = mouseX * 50 * speed;
+                const y = mouseY * 50 * speed;
+                node.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        });
+    </script>
+</body>
+</html>

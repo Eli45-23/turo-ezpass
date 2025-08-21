@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Enterprise Login</title>
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+        
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav-link {
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            color: #3b82f6;
+            background: #f1f5f9;
+        }
+        
+        .nav-cta {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .nav-cta:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        /* Main Layout */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 4rem;
+            align-items: start;
+        }
+        
+        /* Content Section */
+        .content-section {
+            padding-top: 2rem;
+        }
+        
+        .content-header {
+            margin-bottom: 3rem;
+        }
+        
+        .content-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        
+        .content-badge::before {
+            content: '🏢';
+            font-size: 1rem;
+        }
+        
+        .content-title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+        
+        .content-subtitle {
+            font-size: 1.25rem;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .feature-icon {
+            width: 3rem;
+            height: 3rem;
+            background: #dbeafe;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        
+        .feature-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-desc {
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        /* Testimonials */
+        .testimonials {
+            margin-bottom: 3rem;
+        }
+        
+        .testimonial {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .testimonial-content {
+            font-style: italic;
+            color: #374151;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .author-avatar {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .author-info {
+            flex: 1;
+        }
+        
+        .author-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .author-title {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        /* Trust Indicators */
+        .trust-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+        
+        .trust-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .trust-badges {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .trust-badge {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .trust-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .trust-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        /* Login Form */
+        .login-section {
+            position: sticky;
+            top: 120px;
+        }
+        
+        .login-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .form-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-subtitle {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            color: #374151;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s;
+            background: #f8fafc;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-input:hover {
+            border-color: #cbd5e1;
+            background: white;
+        }
+        
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .checkbox-container input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            accent-color: #3b82f6;
+        }
+        
+        .checkbox-container label {
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .forgot-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .forgot-link:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        
+        .signin-btn {
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 1.25rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1.5rem;
+        }
+        
+        .signin-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        .signin-btn:active {
+            transform: translateY(0);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            position: relative;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 1rem;
+        }
+        
+        .social-buttons {
+            display: grid;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            color: #374151;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .social-btn:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+            transform: translateY(-1px);
+        }
+        
+        .social-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        .signup-link {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.875rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+        }
+        
+        .signup-link a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .signup-link a:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        
+        .security-notice {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #0369a1;
+        }
+        
+        .security-notice strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        
+        /* Loading state */
+        .btn-loading {
+            position: relative;
+            color: transparent;
+        }
+        
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        /* Stats Section */
+        .stats-section {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #3b82f6;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 2rem;
+            }
+            
+            .login-section {
+                position: static;
+                order: -1;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 0 1rem;
+            }
+            
+            .nav {
+                display: none;
+            }
+            
+            .content-title {
+                font-size: 2rem;
+            }
+            
+            .login-card {
+                padding: 1.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .trust-badges {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">Turo Toll Tracker</div>
+            </div>
+            <nav class="nav">
+                <a href="#" class="nav-link">Features</a>
+                <a href="#" class="nav-link">Pricing</a>
+                <a href="#" class="nav-link">Support</a>
+                <a href="#" class="nav-link">About</a>
+                <a href="#" class="nav-cta">Get Started</a>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Content Section -->
+        <div class="content-section">
+            <div class="content-header">
+                <div class="content-badge">Enterprise Solution</div>
+                <h1 class="content-title">Professional Toll Management for Turo Hosts</h1>
+                <p class="content-subtitle">
+                    Streamline your business operations with our enterprise-grade toll tracking platform. 
+                    Trusted by thousands of hosts worldwide.
+                </p>
+            </div>
+            
+            <!-- Features -->
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-title">AI-Powered Matching</div>
+                    <div class="feature-desc">Advanced algorithms ensure 99.9% accuracy in toll-to-trip matching</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">Advanced Analytics</div>
+                    <div class="feature-desc">Comprehensive reporting and insights to optimize your revenue</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-title">Enterprise Security</div>
+                    <div class="feature-desc">Bank-level encryption and compliance with industry standards</div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🤝</div>
+                    <div class="feature-title">24/7 Support</div>
+                    <div class="feature-desc">Dedicated account management and round-the-clock assistance</div>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats-section">
+                <div class="stats-title">Trusted by Industry Leaders</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">50K+</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">$12M+</div>
+                        <div class="stat-label">Processed</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Testimonial -->
+            <div class="testimonials">
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "Turo Toll Tracker has revolutionized our fleet management. The accuracy and efficiency 
+                        gains have directly improved our bottom line by 35%."
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">MJ</div>
+                        <div class="author-info">
+                            <div class="author-name">Marcus Johnson</div>
+                            <div class="author-title">Fleet Operations Manager, DriveShare Pro</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trust Indicators -->
+            <div class="trust-section">
+                <div class="trust-title">Security & Compliance</div>
+                <div class="trust-badges">
+                    <div class="trust-badge">
+                        <div class="trust-icon">🛡️</div>
+                        <div class="trust-text">SOC 2 Certified</div>
+                    </div>
+                    <div class="trust-badge">
+                        <div class="trust-icon">🔐</div>
+                        <div class="trust-text">GDPR Compliant</div>
+                    </div>
+                    <div class="trust-badge">
+                        <div class="trust-icon">🏦</div>
+                        <div class="trust-text">Bank-Level Security</div>
+                    </div>
+                    <div class="trust-badge">
+                        <div class="trust-icon">✅</div>
+                        <div class="trust-text">99.9% Uptime</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Login Section -->
+        <div class="login-section">
+            <div class="login-card">
+                <div class="form-header">
+                    <h2 class="form-title">Sign In</h2>
+                    <p class="form-subtitle">Access your business dashboard</p>
+                </div>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email" class="form-label">Business Email</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            class="form-input" 
+                            placeholder="your@company.com"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input" 
+                            placeholder="Enter your password"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-options">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">Keep me signed in</label>
+                        </div>
+                        <a href="#" class="forgot-link">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="signin-btn" id="signin-btn">
+                        Access Dashboard
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>or sign in with</span>
+                </div>
+                
+                <div class="social-buttons">
+                    <button type="button" class="social-btn" onclick="handleSSO('microsoft')">
+                        <svg class="social-icon" viewBox="0 0 24 24">
+                            <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z" fill="#00BCF2"/>
+                        </svg>
+                        Microsoft 365
+                    </button>
+                    
+                    <button type="button" class="social-btn" onclick="handleSSO('google')">
+                        <svg class="social-icon" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        Google Workspace
+                    </button>
+                </div>
+                
+                <div class="signup-link">
+                    Need an enterprise account? <a href="#" onclick="showSignup()">Contact Sales</a>
+                </div>
+                
+                <div class="security-notice">
+                    <strong>🔒 Your data is secure</strong>
+                    All connections use 256-bit SSL encryption and are monitored 24/7 for security threats.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Form handling
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const button = document.getElementById('signin-btn');
+            button.classList.add('btn-loading');
+            button.disabled = true;
+            
+            // Simulate API call
+            setTimeout(() => {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+            }, 2000);
+        });
+        
+        // SSO handlers
+        function handleSSO(provider) {
+            alert(`${provider} enterprise SSO will be implemented`);
+        }
+        
+        function showSignup() {
+            alert('Enterprise sales contact form will be implemented');
+        }
+        
+        // Input enhancements
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentNode.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', () => {
+                input.parentNode.classList.remove('focused');
+            });
+        });
+    </script>
+</body>
+</html>

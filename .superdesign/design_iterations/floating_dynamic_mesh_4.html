@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Dynamic Mesh</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        /* Custom Color Variables */
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, var(--paynes-gray) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .mesh-background {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-image: 
+                linear-gradient(rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+                linear-gradient(rgba(17, 157, 164, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(17, 157, 164, 0.08) 1px, transparent 1px) !important;
+            background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+            animation: meshMove 30s linear infinite !important;
+            z-index: 1 !important;
+        }
+        
+        .floating-elements {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
+        }
+        
+        .floating-shape {
+            position: absolute !important;
+            background: transparent !important;
+            border: 2px solid !important;
+            animation-timing-function: ease-in-out !important;
+            animation-iteration-count: infinite !important;
+            animation-direction: alternate !important;
+        }
+        
+        .shape-1 {
+            top: 12% !important;
+            left: 8% !important;
+            width: 100px !important;
+            height: 100px !important;
+            border-color: var(--sunglow) !important;
+            border-radius: 10px !important;
+            background: linear-gradient(45deg, 
+                rgba(255, 200, 87, 0.1) 0%, 
+                transparent 50%, 
+                rgba(255, 200, 87, 0.1) 100%) !important;
+            animation: meshFloat1 12s, meshRotate 20s linear infinite !important;
+            box-shadow: 
+                0 0 30px rgba(255, 200, 87, 0.3),
+                inset 0 0 20px rgba(255, 200, 87, 0.1) !important;
+        }
+        
+        .shape-1::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 60% !important;
+            height: 60% !important;
+            background: linear-gradient(45deg, var(--sunglow), transparent) !important;
+            transform: translate(-50%, -50%) !important;
+            border-radius: inherit !important;
+            animation: innerPulse 4s infinite !important;
+        }
+        
+        .shape-2 {
+            top: 20% !important;
+            right: 12% !important;
+            width: 80px !important;
+            height: 80px !important;
+            border-color: var(--dark-cyan) !important;
+            border-radius: 50% !important;
+            background: radial-gradient(circle, 
+                rgba(17, 157, 164, 0.15) 0%, 
+                transparent 70%) !important;
+            animation: meshFloat2 15s, meshSpin 12s linear infinite !important;
+            box-shadow: 
+                0 0 25px rgba(17, 157, 164, 0.4),
+                inset 0 0 15px rgba(17, 157, 164, 0.2) !important;
+        }
+        
+        .shape-3 {
+            bottom: 15% !important;
+            left: 10% !important;
+            width: 50px !important;
+            height: 150px !important;
+            border-color: var(--english-violet) !important;
+            border-radius: 25px !important;
+            background: linear-gradient(90deg, 
+                rgba(75, 63, 114, 0.2) 0%, 
+                transparent 50%, 
+                rgba(75, 63, 114, 0.2) 100%) !important;
+            animation: meshFloat3 18s, meshRotate 25s linear infinite reverse !important;
+            box-shadow: 
+                0 0 35px rgba(75, 63, 114, 0.3),
+                inset 0 0 25px rgba(75, 63, 114, 0.15) !important;
+        }
+        
+        .shape-4 {
+            bottom: 25% !important;
+            right: 8% !important;
+            width: 120px !important;
+            height: 50px !important;
+            border-color: var(--paynes-gray) !important;
+            border-radius: 25px !important;
+            background: linear-gradient(135deg, 
+                rgba(25, 100, 126, 0.15) 0%, 
+                transparent 50%, 
+                rgba(25, 100, 126, 0.15) 100%) !important;
+            animation: meshFloat4 14s, meshStretch 8s infinite !important;
+            box-shadow: 
+                0 0 20px rgba(25, 100, 126, 0.4),
+                inset 0 0 10px rgba(25, 100, 126, 0.2) !important;
+        }
+        
+        .shape-5 {
+            top: 40% !important;
+            left: 4% !important;
+            width: 70px !important;
+            height: 70px !important;
+            border-color: var(--sunglow) !important;
+            background: conic-gradient(from 45deg, 
+                rgba(255, 200, 87, 0.2) 0%, 
+                transparent 50%, 
+                rgba(255, 200, 87, 0.2) 100%) !important;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
+            animation: meshFloat5 16s, meshSpin 10s linear infinite !important;
+            filter: drop-shadow(0 0 20px rgba(255, 200, 87, 0.4)) !important;
+        }
+        
+        .shape-6 {
+            top: 50% !important;
+            right: 15% !important;
+            width: 90px !important;
+            height: 90px !important;
+            border-color: var(--dark-cyan) !important;
+            background: linear-gradient(60deg, 
+                rgba(17, 157, 164, 0.15) 0%, 
+                transparent 40%, 
+                rgba(17, 157, 164, 0.15) 80%) !important;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%) !important;
+            animation: meshFloat6 20s, meshRotate 15s linear infinite !important;
+            filter: drop-shadow(0 0 25px rgba(17, 157, 164, 0.4)) !important;
+        }
+        
+        .connection-lines {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .line {
+            position: absolute !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 200, 87, 0.3) 50%, 
+                transparent 100%) !important;
+            height: 1px !important;
+            animation: lineFlow 8s ease-in-out infinite !important;
+        }
+        
+        .line-1 { 
+            top: 20% !important; 
+            left: 15% !important; 
+            width: 70% !important; 
+            animation-delay: 0s !important; 
+        }
+        .line-2 { 
+            top: 45% !important; 
+            left: 10% !important; 
+            width: 60% !important; 
+            animation-delay: 2s !important; 
+        }
+        .line-3 { 
+            top: 70% !important; 
+            left: 20% !important; 
+            width: 65% !important; 
+            animation-delay: 4s !important; 
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+        }
+        
+        .hero-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            background: rgba(255, 200, 87, 0.15) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 50px !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 2rem !important;
+            color: var(--sunglow) !important;
+            animation: slideInDown 0.8s ease-out, meshPulse 6s infinite !important;
+            box-shadow: 
+                0 8px 32px rgba(255, 200, 87, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 1.5rem !important;
+            background: linear-gradient(135deg, 
+                white 0%, 
+                var(--sunglow) 25%, 
+                var(--dark-cyan) 50%, 
+                var(--english-violet) 75%, 
+                white 100%) !important;
+            background-size: 300% 300% !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: slideInUp 1s ease-out 0.2s both, meshGradient 10s ease-in-out infinite !important;
+            text-shadow: 0 0 50px rgba(255, 200, 87, 0.3) !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem) !important;
+            margin-bottom: 3rem !important;
+            opacity: 0.9 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: slideInUp 1s ease-out 0.4s both !important;
+        }
+        
+        .login-card {
+            background: linear-gradient(135deg, 
+                rgba(75, 63, 114, 0.25) 0%, 
+                rgba(25, 100, 126, 0.2) 50%, 
+                rgba(31, 32, 65, 0.3) 100%) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 2px solid !important;
+            border-image: linear-gradient(45deg, 
+                var(--sunglow) 0%, 
+                var(--dark-cyan) 25%, 
+                var(--english-violet) 50%, 
+                var(--paynes-gray) 75%, 
+                var(--sunglow) 100%) 1 !important;
+            border-radius: 24px !important;
+            padding: 3rem !important;
+            max-width: 450px !important;
+            margin: 0 auto 3rem !important;
+            box-shadow: 
+                0 25px 50px rgba(31, 32, 65, 0.4),
+                0 0 100px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            animation: floatingCard 1s ease-out 0.6s both, meshCardFloat 8s ease-in-out infinite 2s !important;
+            position: relative !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            inset: -2px !important;
+            background: linear-gradient(45deg, 
+                var(--sunglow) 0%, 
+                var(--dark-cyan) 25%, 
+                var(--english-violet) 50%, 
+                var(--paynes-gray) 75%, 
+                var(--sunglow) 100%) !important;
+            background-size: 400% 400% !important;
+            border-radius: inherit !important;
+            z-index: -1 !important;
+            opacity: 0.8 !important;
+            animation: meshBorderFlow 12s linear infinite !important;
+        }
+        
+        .tab-container {
+            display: flex !important;
+            margin-bottom: 2rem !important;
+            border-radius: 12px !important;
+            background: rgba(25, 100, 126, 0.2) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            padding: 0.25rem !important;
+        }
+        
+        .tab-btn {
+            flex: 1 !important;
+            padding: 0.75rem 1rem !important;
+            background: transparent !important;
+            border: none !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            border-radius: 8px !important;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            box-shadow: 0 4px 15px rgba(255, 200, 87, 0.3) !important;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            color: white !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+        }
+        
+        .form-content {
+            display: none !important;
+        }
+        
+        .form-content.active {
+            display: block !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            text-align: center !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            text-align: center !important;
+        }
+        
+        .form-input {
+            width: 100% !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(25, 100, 126, 0.3) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 12px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            transition: all 0.3s ease !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            background: rgba(25, 100, 126, 0.4) !important;
+            box-shadow: 
+                0 0 20px rgba(255, 200, 87, 0.3),
+                inset 0 0 10px rgba(255, 200, 87, 0.1) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        .signin-btn {
+            width: 100% !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            font-size: 1.125rem !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.3) 50%, 
+                transparent 100%) !important;
+            transition: left 0.6s ease !important;
+        }
+        
+        .signin-btn:hover::before {
+            left: 100% !important;
+        }
+        
+        .signin-btn:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 
+                0 15px 35px rgba(255, 200, 87, 0.4),
+                0 0 50px rgba(255, 200, 87, 0.2) !important;
+        }
+        
+        .social-btn {
+            background: rgba(17, 157, 164, 0.2) !important;
+            border: 1px solid rgba(17, 157, 164, 0.4) !important;
+            color: white !important;
+            padding: 1rem !important;
+            border-radius: 12px !important;
+            transition: all 0.3s ease !important;
+            margin: 0.5rem !important;
+            width: 45% !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .social-btn:hover {
+            background: rgba(17, 157, 164, 0.3) !important;
+            border-color: var(--dark-cyan) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 25px rgba(17, 157, 164, 0.2) !important;
+        }
+        
+        
+        /* Mesh Animations */
+        @keyframes meshMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(100px, 100px); }
+        }
+        
+        @keyframes meshFloat1 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            25% { transform: translate(-20px, -25px) rotate(5deg); }
+            50% { transform: translate(15px, -35px) rotate(-3deg); }
+            75% { transform: translate(-10px, -20px) rotate(7deg); }
+        }
+        
+        @keyframes meshFloat2 {
+            0%, 100% { transform: translate(0px, 0px); }
+            50% { transform: translate(25px, -30px); }
+        }
+        
+        @keyframes meshFloat3 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(18px, -30px) rotate(-8deg); }
+            66% { transform: translate(-12px, -40px) rotate(5deg); }
+        }
+        
+        @keyframes meshFloat4 {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(30px); }
+        }
+        
+        @keyframes meshFloat5 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(-25px, -20px) rotate(10deg); }
+            66% { transform: translate(20px, -35px) rotate(-7deg); }
+        }
+        
+        @keyframes meshFloat6 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            50% { transform: translate(-30px, 25px) rotate(-12deg); }
+        }
+        
+        @keyframes meshRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes meshSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+        
+        @keyframes meshStretch {
+            0%, 100% { transform: scaleX(1); }
+            50% { transform: scaleX(1.2); }
+        }
+        
+        @keyframes innerPulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        @keyframes lineFlow {
+            0%, 100% { opacity: 0.3; transform: scaleX(1); }
+            50% { opacity: 0.8; transform: scaleX(1.1); }
+        }
+        
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes meshPulse {
+            0%, 100% { box-shadow: 0 8px 32px rgba(255, 200, 87, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+            50% { box-shadow: 0 12px 40px rgba(255, 200, 87, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        }
+        
+        @keyframes meshGradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes floatingCard {
+            from { opacity: 0; transform: scale(0.9) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes meshCardFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @keyframes meshBorderFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .social-btn { width: 100% !important; margin: 0.25rem 0 !important; }
+            .floating-shape { transform: scale(0.7) !important; }
+            .mesh-background { background-size: 50px 50px, 50px 50px, 15px 15px, 15px 15px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="mesh-background"></div>
+        <div class="connection-lines">
+            <div class="line line-1"></div>
+            <div class="line line-2"></div>
+            <div class="line line-3"></div>
+        </div>
+        <div class="floating-elements">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="floating-shape shape-4"></div>
+            <div class="floating-shape shape-5"></div>
+            <div class="floating-shape shape-6"></div>
+        </div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="network" style="width: 1rem; height: 1rem;"></i>
+                Connected Intelligence
+            </div>
+            
+            <h1 class="hero-title">
+                ELEVATE YOUR<br>
+                TOLL GAME
+            </h1>
+            
+            <p class="hero-subtitle">
+                Your personal toll assistant
+            </p>
+            
+            <div class="login-card">
+                <div class="tab-container">
+                    <button class="tab-btn active" onclick="switchTab('login', this)">Login</button>
+                    <button class="tab-btn" onclick="switchTab('signup', this)">Sign Up</button>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-form" class="form-content active">
+                    <h2 class="form-title">Welcome Back</h2>
+                    <p class="form-subtitle">Access your dashboard</p>
+                    
+                    <form>
+                        <input type="email" class="form-input" placeholder="Email" required>
+                        <input type="password" class="form-input" placeholder="Password" required>
+                        
+                        <button type="submit" class="signin-btn">Login</button>
+                    </form>
+                </div>
+                
+                <!-- Sign Up Form -->
+                <div id="signup-form" class="form-content">
+                    <h2 class="form-title">Create Account</h2>
+                    <p class="form-subtitle">Join the toll revolution</p>
+                    
+                    <form>
+                        <input type="text" class="form-input" placeholder="Full Name" required>
+                        <input type="email" class="form-input" placeholder="Email" required>
+                        <input type="password" class="form-input" placeholder="Password" required>
+                        <input type="password" class="form-input" placeholder="Confirm Password" required>
+                        
+                        <button type="submit" class="signin-btn">Create Account</button>
+                    </form>
+                    
+                    <div style="text-align: center; margin: 1.5rem 0; color: rgba(255,255,255,0.7);">
+                        or sign up with
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button class="social-btn" style="width: 80% !important;">
+                            <i data-lucide="chrome" style="width: 1rem; height: 1rem;"></i>
+                            Sign up with Google
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+        
+        function switchTab(tabName, clickedButton) {
+            console.log('Switching to tab:', tabName); // Debug log
+            
+            // Remove active class from all tabs and forms
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const formContents = document.querySelectorAll('.form-content');
+            
+            console.log('Found tabs:', tabBtns.length); // Debug log
+            console.log('Found forms:', formContents.length); // Debug log
+            
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+            formContents.forEach(form => form.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding form
+            const targetForm = document.getElementById(`${tabName}-form`);
+            console.log('Target form:', targetForm); // Debug log
+            
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+                console.log('Button activated:', clickedButton); // Debug log
+            }
+            
+            if (targetForm) {
+                targetForm.classList.add('active');
+                console.log('Form activated successfully'); // Debug log
+            } else {
+                console.error('Target form not found:', `${tabName}-form`);
+            }
+        }
+    </script>
+</body>
+</html>

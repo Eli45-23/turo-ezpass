@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="neo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Sign In</title>
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    
+    <!-- Neo Dark Theme -->
+    <link rel="stylesheet" href="/css/ui-theme.tokens.css">
+    <link rel="stylesheet" href="/css/ui-auth.css">
+    <link rel="stylesheet" href="/css/no-emoji.css">
+    
+    <!-- Scripts -->
+    <script src="/js/ui-utils.js"></script>
+    <script src="/js/xss-utils.js"></script>
+    <script src="/js/accessibility.js"></script>
+    
+    <style>
+        /* Page-specific styles */
+        .auth-page {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: var(--bg);
+        }
+        
+        .auth-hero {
+            background: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+            opacity: 0.5;
+        }
+        
+        .auth-hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 400px;
+        }
+        
+        .auth-logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+        
+        .auth-hero h1 {
+            color: white;
+            font-size: var(--text-4xl);
+            font-weight: var(--font-bold);
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .auth-hero p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: var(--text-lg);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        
+        .auth-features {
+            display: grid;
+            gap: 1rem;
+            text-align: left;
+        }
+        
+        .auth-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: var(--text-sm);
+        }
+        
+        .auth-feature-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+        
+        .auth-form-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem;
+            background: var(--panel);
+            border-left: 1px solid var(--hairline);
+        }
+        
+        .auth-form-container {
+            max-width: 400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .auth-title {
+            font-size: var(--text-3xl);
+            font-weight: var(--font-bold);
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+        
+        .auth-subtitle {
+            color: var(--muted);
+            font-size: var(--text-base);
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            background: var(--hover);
+            border-radius: var(--radius);
+            padding: 0.25rem;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            color: var(--tab-inactive);
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .auth-tab.active {
+            background: var(--panel);
+            color: var(--label-text);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .auth-tab:hover:not(.active) {
+            color: var(--helper-text);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .auth-form {
+            margin-bottom: 1.5rem;
+        }
+        
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: var(--divider-text);
+            font-size: var(--text-sm);
+        }
+        
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--field-border);
+        }
+        
+        .auth-divider span {
+            margin: 0 1rem;
+        }
+        
+        .sso-buttons {
+            display: grid;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .sso-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: var(--hover);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            color: var(--ink);
+            text-decoration: none;
+            font-weight: var(--font-medium);
+            transition: all var(--transition-fast);
+        }
+        
+        .sso-button:hover {
+            background: var(--panel);
+            border-color: var(--accentB);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-base);
+        }
+        
+        .sso-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        .auth-footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--hairline);
+        }
+        
+        .auth-footer-text {
+            color: var(--divider-text);
+            font-size: var(--text-sm);
+            margin-bottom: 1rem;
+        }
+        
+        .auth-footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        
+        .auth-footer-link {
+            color: var(--link-primary);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            margin: -0.25rem -0.5rem;
+        }
+        
+        .auth-footer-link:hover {
+            color: var(--link-hover);
+            background: rgba(6, 214, 160, 0.1);
+        }
+        
+        .auth-footer-link:focus {
+            outline: 2px solid var(--link-primary);
+            outline-offset: 2px;
+            text-decoration: underline;
+        }
+        
+        /* Force dark theme colors with high specificity - Override any conflicting CSS */
+        .auth-form-panel .form-label,
+        .auth-form-panel label,
+        .auth-form-panel .form-group label {
+            color: var(--label-text) !important;
+        }
+        
+        .auth-form-panel .form-help {
+            color: var(--helper-text) !important;
+        }
+        
+        .auth-form-panel .form-input,
+        .auth-form-panel input {
+            color: var(--body-text) !important;
+            background: var(--field-bg) !important;
+        }
+        
+        .auth-form-panel body,
+        .auth-form-panel {
+            color: var(--body-text) !important;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .auth-page {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .auth-hero {
+                padding: 2rem 1rem;
+                min-height: 40vh;
+            }
+            
+            .auth-hero h1 {
+                font-size: var(--text-3xl);
+            }
+            
+            .auth-features {
+                display: none;
+            }
+            
+            .auth-form-panel {
+                padding: 2rem 1rem;
+            }
+        }
+        
+        /* Loading states */
+        .btn-loading {
+            position: relative;
+            color: transparent;
+        }
+        
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        /* Focus improvements */
+        .auth-tab:focus-visible {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+        
+        /* Error states */
+        .form-group.error .form-input {
+            border-color: var(--error-border);
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+        }
+        
+        .form-group.error .form-label {
+            color: var(--error-text);
+        }
+        
+        /* Success states */
+        .form-group.success .form-input {
+            border-color: var(--success-border);
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+        
+        .form-group.success .form-label {
+            color: var(--success-text);
+        }
+    </style>
+</head>
+<body>
+    <!-- Skip to main content -->
+    <a href="#main-content" class="skip-link sr-only">Skip to main content</a>
+    
+    <div class="auth-page">
+        <!-- Hero Panel -->
+        <div class="auth-hero">
+            <div class="auth-hero-content">
+                <div class="auth-logo" aria-hidden="true">🚗</div>
+                <h1>Turo Toll Tracker</h1>
+                <p>Automate your toll tracking and billing for seamless Turo hosting</p>
+                
+                <div class="auth-features">
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon">⚡</div>
+                        <span>Automatic toll matching</span>
+                    </div>
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon">📊</div>
+                        <span>Real-time analytics</span>
+                    </div>
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon">💰</div>
+                        <span>Instant invoice generation</span>
+                    </div>
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon">🔒</div>
+                        <span>Secure & compliant</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Form Panel -->
+        <div class="auth-form-panel">
+            <div class="auth-form-container">
+                <div class="auth-header">
+                    <h2 class="auth-title" id="main-content">Welcome back</h2>
+                    <p class="auth-subtitle">Sign in to your account to continue</p>
+                </div>
+                
+                <!-- Tab Navigation -->
+                <div class="auth-tabs" role="tablist" aria-label="Authentication options">
+                    <button class="auth-tab active" 
+                            onclick="showTab('login')" 
+                            role="tab" 
+                            aria-selected="true" 
+                            aria-controls="login-panel" 
+                            id="login-tab">
+                        Sign In
+                    </button>
+                    <button class="auth-tab" 
+                            onclick="showTab('signup')" 
+                            role="tab" 
+                            aria-selected="false" 
+                            aria-controls="signup-panel" 
+                            id="signup-tab">
+                        Create Account
+                    </button>
+                </div>
+                
+                <!-- SSO Buttons -->
+                <div class="sso-buttons">
+                    <button class="sso-button" onclick="handleSSO('google')" type="button">
+                        <svg class="sso-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    
+                    <button class="sso-button" onclick="handleSSO('microsoft')" type="button">
+                        <svg class="sso-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z" fill="#00BCF2"/>
+                        </svg>
+                        Continue with Microsoft
+                    </button>
+                </div>
+                
+                <div class="auth-divider">
+                    <span>or continue with email</span>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-panel" class="tab-content active" role="tabpanel" aria-labelledby="login-tab">
+                    <form id="login-form" class="auth-form" aria-label="Sign in form">
+                        <div class="form-group">
+                            <label for="login-email" class="form-label">Email address</label>
+                            <input type="email" 
+                                   id="login-email" 
+                                   name="email" 
+                                   class="form-input" 
+                                   required 
+                                   placeholder="Enter your email"
+                                   aria-describedby="login-email-help"
+                                   autocomplete="email">
+                            <div id="login-email-help" class="form-help">We'll never share your email</div>
+                            <div class="form-error" id="login-email-error"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="login-password" class="form-label">Password</label>
+                            <input type="password" 
+                                   id="login-password" 
+                                   name="password" 
+                                   class="form-input" 
+                                   required 
+                                   placeholder="Enter your password"
+                                   autocomplete="current-password">
+                            <div class="form-error" id="login-password-error"></div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between mb-4">
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" class="form-checkbox" id="remember-me">
+                                <span class="text-sm" style="color: var(--divider-text);">Remember me</span>
+                            </label>
+                            <a href="#" class="auth-footer-link text-sm">Forgot password?</a>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-full" id="login-btn">
+                            Sign In
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Signup Form -->
+                <div id="signup-panel" class="tab-content" role="tabpanel" aria-labelledby="signup-tab">
+                    <form id="signup-form" class="auth-form" aria-label="Create account form">
+                        <div class="form-group">
+                            <label for="signup-name" class="form-label">Full name</label>
+                            <input type="text" 
+                                   id="signup-name" 
+                                   name="fullName" 
+                                   class="form-input" 
+                                   required 
+                                   placeholder="Enter your full name"
+                                   autocomplete="name">
+                            <div class="form-error" id="signup-name-error"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="signup-email" class="form-label">Email address</label>
+                            <input type="email" 
+                                   id="signup-email" 
+                                   name="email" 
+                                   class="form-input" 
+                                   required 
+                                   placeholder="Enter your email"
+                                   autocomplete="email">
+                            <div class="form-error" id="signup-email-error"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="signup-password" class="form-label">Password</label>
+                            <input type="password" 
+                                   id="signup-password" 
+                                   name="password" 
+                                   class="form-input" 
+                                   required 
+                                   placeholder="Create a strong password"
+                                   autocomplete="new-password" 
+                                   minlength="8">
+                            <div class="form-help">Must be at least 8 characters with uppercase, lowercase, number, and symbol</div>
+                            <div class="form-error" id="signup-password-error"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="signup-turo-id" class="form-label">Turo Host ID <span style="color: var(--divider-text); font-weight: normal;">(Optional)</span></label>
+                            <input type="text" 
+                                   id="signup-turo-id" 
+                                   name="turoHostId"
+                                   class="form-input" 
+                                   placeholder="e.g., TH123456">
+                            <div class="form-help">You can add this later in your profile settings</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="flex items-start gap-3">
+                                <input type="checkbox" class="form-checkbox mt-1" required>
+                                <span class="text-sm" style="color: var(--divider-text);">
+                                    I agree to the <a href="#" class="auth-footer-link">Terms of Service</a> 
+                                    and <a href="#" class="auth-footer-link">Privacy Policy</a>
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-full" id="signup-btn">
+                            Create Account
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Footer -->
+                <div class="auth-footer">
+                    <p class="auth-footer-text">Need help getting started?</p>
+                    <div class="auth-footer-links">
+                        <a href="#" class="auth-footer-link">Contact Support</a>
+                        <a href="#" class="auth-footer-link">Documentation</a>
+                        <a href="#" class="auth-footer-link">Status</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+    
+    <script>
+        let csrfToken = null;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchCSRFToken();
+            setupFormValidation();
+            setupAccessibility();
+        });
+        
+        // Fetch CSRF token
+        async function fetchCSRFToken() {
+            try {
+                const response = await fetch('/api/auth/csrf-token');
+                const data = await response.json();
+                if (data.success) {
+                    csrfToken = data.csrfToken;
+                }
+            } catch (error) {
+                console.warn('Could not fetch CSRF token:', error);
+            }
+        }
+        
+        // Tab switching
+        function showTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.auth-tab').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Activate selected tab
+            if (tab === 'login') {
+                document.getElementById('login-tab').classList.add('active');
+                document.getElementById('login-tab').setAttribute('aria-selected', 'true');
+                document.getElementById('login-panel').classList.add('active');
+                document.querySelector('.auth-title').textContent = 'Welcome back';
+                document.querySelector('.auth-subtitle').textContent = 'Sign in to your account to continue';
+            } else {
+                document.getElementById('signup-tab').classList.add('active');
+                document.getElementById('signup-tab').setAttribute('aria-selected', 'true');
+                document.getElementById('signup-panel').classList.add('active');
+                document.querySelector('.auth-title').textContent = 'Create your account';
+                document.querySelector('.auth-subtitle').textContent = 'Start automating your toll tracking today';
+            }
+            
+            // Clear any existing errors
+            clearFormErrors();
+        }
+        
+        // Form validation setup
+        function setupFormValidation() {
+            const loginForm = getEl('login-form');
+            const signupForm = getEl('signup-form');
+            
+            if (loginForm) {
+                loginForm.addEventListener('submit', handleLogin);
+                
+                // Real-time validation
+                addListener('login-email', 'blur', () => validateEmail('login-email'));
+                addListener('login-password', 'blur', () => validateRequired('login-password'));
+            }
+            
+            if (signupForm) {
+                signupForm.addEventListener('submit', handleSignup);
+                
+                // Real-time validation
+                addListener('signup-name', 'blur', () => validateRequired('signup-name'));
+                addListener('signup-email', 'blur', () => validateEmail('signup-email'));
+                addListener('signup-password', 'blur', () => validatePassword('signup-password'));
+            }
+        }
+        
+        // Login handler
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            if (!validateLoginForm()) return;
+            
+            const loginBtn = getEl('login-btn');
+            setLoadingState(loginBtn, true);
+            
+            try {
+                if (!csrfToken) await fetchCSRFToken();
+                
+                const formData = getFormData('login-form');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification({
+                        type: 'success',
+                        title: 'Success!',
+                        message: 'Redirecting to dashboard...'
+                    });
+                    setTimeout(() => window.location.href = '/dashboard.html', 1000);
+                } else {
+                    handleAuthError(data.error);
+                    if (data.error?.includes('CSRF')) await fetchCSRFToken();
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Network Error',
+                    message: 'Please check your connection and try again.'
+                });
+            } finally {
+                setLoadingState(loginBtn, false);
+            }
+        }
+        
+        // Signup handler
+        async function handleSignup(e) {
+            e.preventDefault();
+            
+            if (!validateSignupForm()) return;
+            
+            const signupBtn = getEl('signup-btn');
+            setLoadingState(signupBtn, true);
+            
+            try {
+                if (!csrfToken) await fetchCSRFToken();
+                
+                const formData = getFormData('signup-form');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+                
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification({
+                        type: 'success',
+                        title: 'Account Created!',
+                        message: 'Welcome to Turo Toll Tracker. Redirecting...'
+                    });
+                    setTimeout(() => window.location.href = '/dashboard.html', 1500);
+                } else {
+                    handleAuthError(data.error);
+                    if (data.error?.includes('CSRF')) await fetchCSRFToken();
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Network Error',
+                    message: 'Please check your connection and try again.'
+                });
+            } finally {
+                setLoadingState(signupBtn, false);
+            }
+        }
+        
+        // SSO handlers (placeholder for future implementation)
+        function handleSSO(provider) {
+            showNotification({
+                type: 'info',
+                title: 'Coming Soon',
+                message: `${provider} authentication will be available soon!`
+            });
+        }
+        
+        // Form validation functions
+        function validateLoginForm() {
+            const emailValid = validateEmail('login-email');
+            const passwordValid = validateRequired('login-password');
+            return emailValid && passwordValid;
+        }
+        
+        function validateSignupForm() {
+            const nameValid = validateRequired('signup-name');
+            const emailValid = validateEmail('signup-email');
+            const passwordValid = validatePassword('signup-password');
+            return nameValid && emailValid && passwordValid;
+        }
+        
+        function validateEmail(fieldId) {
+            const field = getEl(fieldId);
+            if (!field) return false;
+            
+            const email = field.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!email) {
+                showFieldError(fieldId, 'Email is required');
+                return false;
+            }
+            
+            if (!emailRegex.test(email)) {
+                showFieldError(fieldId, 'Please enter a valid email address');
+                return false;
+            }
+            
+            clearFieldError(fieldId);
+            return true;
+        }
+        
+        function validatePassword(fieldId) {
+            const field = getEl(fieldId);
+            if (!field) return false;
+            
+            const password = field.value;
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+            
+            if (!password) {
+                showFieldError(fieldId, 'Password is required');
+                return false;
+            }
+            
+            const failedRequirements = Object.entries(requirements)
+                .filter(([, passed]) => !passed)
+                .map(([req]) => req);
+            
+            if (failedRequirements.length > 0) {
+                const messages = {
+                    length: 'at least 8 characters',
+                    uppercase: 'uppercase letter',
+                    lowercase: 'lowercase letter',
+                    number: 'number',
+                    special: 'special character'
+                };
+                
+                const missing = failedRequirements.map(req => messages[req]).join(', ');
+                showFieldError(fieldId, `Password must include: ${missing}`);
+                return false;
+            }
+            
+            clearFieldError(fieldId);
+            return true;
+        }
+        
+        function validateRequired(fieldId) {
+            const field = getEl(fieldId);
+            if (!field) return false;
+            
+            const value = field.value.trim();
+            
+            if (!value) {
+                const label = field.parentNode.querySelector('label')?.textContent || 'This field';
+                showFieldError(fieldId, `${label} is required`);
+                return false;
+            }
+            
+            clearFieldError(fieldId);
+            return true;
+        }
+        
+        // Error handling
+        function showFieldError(fieldId, message) {
+            const field = getEl(fieldId);
+            const group = field?.closest('.form-group');
+            const errorEl = group?.querySelector('.form-error');
+            
+            if (group && errorEl) {
+                group.classList.add('error');
+                errorEl.textContent = message;
+            }
+        }
+        
+        function clearFieldError(fieldId) {
+            const field = getEl(fieldId);
+            const group = field?.closest('.form-group');
+            const errorEl = group?.querySelector('.form-error');
+            
+            if (group && errorEl) {
+                group.classList.remove('error');
+                errorEl.textContent = '';
+            }
+        }
+        
+        function clearFormErrors() {
+            document.querySelectorAll('.form-group.error').forEach(group => {
+                group.classList.remove('error');
+                const errorEl = group.querySelector('.form-error');
+                if (errorEl) errorEl.textContent = '';
+            });
+        }
+        
+        function handleAuthError(error) {
+            const errorMap = {
+                'Invalid credentials': 'Email or password is incorrect',
+                'User not found': 'No account found with this email',
+                'Email already exists': 'An account with this email already exists',
+                'Invalid email': 'Please enter a valid email address',
+                'Password too weak': 'Password does not meet security requirements'
+            };
+            
+            const message = errorMap[error] || error || 'Authentication failed';
+            showNotification({
+                type: 'error',
+                title: 'Authentication Error',
+                message
+            });
+        }
+        
+        // UI helpers
+        function setLoadingState(button, loading) {
+            if (!button) return;
+            
+            if (loading) {
+                button.classList.add('btn-loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+            }
+        }
+        
+        // Accessibility setup
+        function setupAccessibility() {
+            // Keyboard navigation for tabs
+            document.addEventListener('keydown', (e) => {
+                if (e.target.classList.contains('auth-tab')) {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        const tabs = Array.from(document.querySelectorAll('.auth-tab'));
+                        const currentIndex = tabs.indexOf(e.target);
+                        const nextIndex = e.key === 'ArrowLeft' 
+                            ? (currentIndex - 1 + tabs.length) % tabs.length 
+                            : (currentIndex + 1) % tabs.length;
+                        
+                        tabs[nextIndex].click();
+                        tabs[nextIndex].focus();
+                    }
+                }
+            });
+            
+            // Announce tab changes to screen readers
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'aria-selected') {
+                        const tab = mutation.target;
+                        if (tab.getAttribute('aria-selected') === 'true') {
+                            // Announce the active tab
+                            const announcement = `${tab.textContent} tab selected`;
+                            const announcer = document.createElement('div');
+                            announcer.setAttribute('aria-live', 'polite');
+                            announcer.setAttribute('aria-atomic', 'true');
+                            announcer.className = 'sr-only';
+                            announcer.textContent = announcement;
+                            document.body.appendChild(announcer);
+                            setTimeout(() => document.body.removeChild(announcer), 1000);
+                        }
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                observer.observe(tab, { attributes: true });
+            });
+        }
+    </script>
+</body>
+</html>

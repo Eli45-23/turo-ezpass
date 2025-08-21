@@ -529,6 +529,19 @@ const initialize = () => {
             )
         `);
 
+        // Add missing transponder_id column (critical for CSV processing)
+        console.log('🔧 Adding missing transponder_id column...');
+        db.run(`
+            ALTER TABLE toll_charges 
+            ADD COLUMN transponder_id TEXT
+        `, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.warn('⚠️ Could not add transponder_id column:', err.message);
+            } else if (!err) {
+                console.log('✅ Added transponder_id column to toll_charges table');
+            }
+        });
+        
         // Add new columns for toll memory tracking system
         console.log('🧠 Adding toll memory tracking columns...');
         

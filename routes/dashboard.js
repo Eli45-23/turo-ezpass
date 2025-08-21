@@ -1694,27 +1694,58 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                         return;
                                     }
                                     
-                                    // Proceed with insert - use INSERT instead of INSERT OR REPLACE to catch FK violations
-                                    db.run(`INSERT INTO toll_charges 
-                                        (toll_account_id, toll_date, toll_location, toll_amount, plate_number, transponder_id, transaction_id, is_matched)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                                        [csvTollAccount.id, toll.transactionDate, toll.location, toll.amount, toll.plateNumber, toll.transponderId, toll.laneId, false],
-                                        function(err) {
-                                            if (err) {
-                                                if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                                    reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
-                                                } else if (err.message.includes('UNIQUE constraint failed')) {
-                                                    reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
+                                    // Try INSERT with transponder_id first, fallback if column doesn't exist
+                                    const tryInsertWithTransponderId = () => {
+                                        db.run(`INSERT INTO toll_charges 
+                                            (toll_account_id, toll_date, toll_location, toll_amount, plate_number, transponder_id, transaction_id, is_matched)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                                            [csvTollAccount.id, toll.transactionDate, toll.location, toll.amount, toll.plateNumber, toll.transponderId, toll.laneId, false],
+                                            function(err) {
+                                                if (err) {
+                                                    if (err.message.includes('no column named transponder_id')) {
+                                                        console.log('⚠️ transponder_id column missing, using fallback INSERT');
+                                                        tryInsertWithoutTransponderId();
+                                                    } else if (err.message.includes('FOREIGN KEY constraint failed')) {
+                                                        reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
+                                                    } else if (err.message.includes('UNIQUE constraint failed')) {
+                                                        reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
+                                                    } else {
+                                                        reject(new Error(`Failed to insert toll charge: ${err.message}`));
+                                                    }
                                                 } else {
-                                                    reject(new Error(`Failed to insert toll charge: ${err.message}`));
+                                                    console.log(`✅ Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId}`);
+                                                    dbUpdates.tolls_inserted++;
+                                                    resolve();
                                                 }
-                                            } else {
-                                                console.log(`✅ Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId}`);
-                                                dbUpdates.tolls_inserted++;
-                                                resolve();
                                             }
-                                        }
-                                    );
+                                        );
+                                    };
+                                    
+                                    const tryInsertWithoutTransponderId = () => {
+                                        db.run(`INSERT INTO toll_charges 
+                                            (toll_account_id, toll_date, toll_location, toll_amount, plate_number, transaction_id, is_matched)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                                            [csvTollAccount.id, toll.transactionDate, toll.location, toll.amount, toll.plateNumber, toll.laneId, false],
+                                            function(err) {
+                                                if (err) {
+                                                    if (err.message.includes('FOREIGN KEY constraint failed')) {
+                                                        reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
+                                                    } else if (err.message.includes('UNIQUE constraint failed')) {
+                                                        reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
+                                                    } else {
+                                                        reject(new Error(`Failed to insert toll charge: ${err.message}`));
+                                                    }
+                                                } else {
+                                                    console.log(`✅ Inserted toll (fallback): ${toll.laneId} for ${toll.plateNumber || toll.transponderId}`);
+                                                    dbUpdates.tolls_inserted++;
+                                                    resolve();
+                                                }
+                                            }
+                                        );
+                                    };
+                                    
+                                    // Start with the full INSERT attempt
+                                    tryInsertWithTransponderId();
                                 }
                             );
                         }
