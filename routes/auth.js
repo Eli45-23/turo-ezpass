@@ -57,50 +57,42 @@ router.post('/signup',
                     req.session.email = email;
                     req.session.fullName = fullName;
                     
-                    // Regenerate session ID for security
-                    req.session.regenerate((err) => {
-                        if (err) {
-                            console.error('❌ Session regeneration failed:', err);
-                            // Continue anyway - session already has data
+                    // Force session save to ensure persistence (no regeneration to avoid losing session)
+                    req.session.save((saveErr) => {
+                        if (saveErr) {
+                            console.error('❌ Session save failed after signup:', saveErr);
+                            return res.status(500).json({
+                                success: false,
+                                error: 'Session creation failed'
+                            });
                         }
                         
-                        // Reset session data after regeneration
-                        req.session.hostId = this.lastID;
-                        req.session.email = email;
-                        req.session.fullName = fullName;
+                        logSecurityEvent('ACCOUNT_CREATED', {
+                            ip: req.ip,
+                            userAgent: req.get('User-Agent'),
+                            email: email,
+                            hostId: this.lastID
+                        });
                         
-                        // Force session save to ensure persistence
-                        req.session.save((saveErr) => {
-                            if (saveErr) {
-                                console.error('❌ Session save failed:', saveErr);
-                                return res.status(500).json({
-                                    success: false,
-                                    error: 'Session creation failed'
-                                });
+                        console.log('✅ User logged in automatically after signup:', {
+                            hostId: this.lastID,
+                            email: email,
+                            sessionId: req.sessionID,
+                            sessionData: {
+                                hostId: req.session.hostId,
+                                email: req.session.email,
+                                fullName: req.session.fullName
                             }
-                            
-                            logSecurityEvent('ACCOUNT_CREATED', {
-                                ip: req.ip,
-                                userAgent: req.get('User-Agent'),
+                        });
+                        
+                        res.json({ 
+                            success: true, 
+                            message: 'Registration successful - you are now logged in',
+                            host: {
+                                id: this.lastID,
                                 email: email,
-                                hostId: this.lastID
-                            });
-                            
-                            console.log('✅ User logged in automatically after signup:', {
-                                hostId: this.lastID,
-                                email: email,
-                                sessionId: req.sessionID
-                            });
-                            
-                            res.json({ 
-                                success: true, 
-                                message: 'Registration successful - you are now logged in',
-                                host: {
-                                    id: this.lastID,
-                                    email: email,
-                                    fullName: fullName
-                                }
-                            });
+                                fullName: fullName
+                            }
                         });
                     });
                 }
@@ -180,50 +172,47 @@ router.post('/login',
                     });
                 }
 
-                // Regenerate session ID for security
-                req.session.regenerate((err) => {
-                    if (err) {
-                        console.error('❌ Session regeneration failed on login:', err);
-                        // Continue anyway - set session data directly
+                // Set session data directly (no regeneration to preserve session)
+                req.session.hostId = host.id;
+                req.session.email = host.email;
+                req.session.fullName = host.full_name;
+                
+                // Force session save to ensure persistence
+                req.session.save((saveErr) => {
+                    if (saveErr) {
+                        console.error('❌ Session save failed on login:', saveErr);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Login session creation failed'
+                        });
                     }
                     
-                    // Set session data
-                    req.session.hostId = host.id;
-                    req.session.email = host.email;
-                    req.session.fullName = host.full_name;
+                    logSecurityEvent('LOGIN_SUCCESS', {
+                        ip: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        email: email,
+                        hostId: host.id
+                    });
                     
-                    // Force session save to ensure persistence
-                    req.session.save((saveErr) => {
-                        if (saveErr) {
-                            console.error('❌ Session save failed on login:', saveErr);
-                            return res.status(500).json({
-                                success: false,
-                                error: 'Login session creation failed'
-                            });
+                    console.log('✅ User logged in successfully:', {
+                        hostId: host.id,
+                        email: host.email,
+                        sessionId: req.sessionID,
+                        sessionData: {
+                            hostId: req.session.hostId,
+                            email: req.session.email,
+                            fullName: req.session.fullName
                         }
-                        
-                        logSecurityEvent('LOGIN_SUCCESS', {
-                            ip: req.ip,
-                            userAgent: req.get('User-Agent'),
-                            email: email,
-                            hostId: host.id
-                        });
-                        
-                        console.log('✅ User logged in successfully:', {
-                            hostId: host.id,
-                            email: host.email,
-                            sessionId: req.sessionID
-                        });
+                    });
 
-                        res.json({ 
-                            success: true, 
-                            message: 'Login successful',
-                            host: {
-                                id: host.id,
-                                email: host.email,
-                                fullName: host.full_name
-                            }
-                        });
+                    res.json({ 
+                        success: true, 
+                        message: 'Login successful',
+                        host: {
+                            id: host.id,
+                            email: host.email,
+                            fullName: host.full_name
+                        }
                     });
                 });
             }

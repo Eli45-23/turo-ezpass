@@ -972,14 +972,24 @@
         
         // Dashboard functionality
         console.log('🚀 Dashboard script loading...');
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('✅ DOM Content Loaded - initializing dashboard...');
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('✅ DOM Content Loaded - checking authentication first...');
             console.log('🔍 DEBUG: Page load info:', {
                 url: window.location.href,
                 pathname: window.location.pathname,
                 cookies: document.cookie,
                 timestamp: new Date().toISOString()
             });
+            
+            // Check authentication before initializing dashboard
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) {
+                console.log('⚠️ User not authenticated, redirecting to login...');
+                window.location.href = '/';
+                return;
+            }
+            
+            console.log('✅ User authenticated, initializing dashboard...');
             
             // Initialize Lucide icons again after DOM is loaded
             lucide.createIcons();
@@ -998,6 +1008,47 @@
             });
         }
 
+        // Check if user is authenticated
+        async function checkAuthentication() {
+            try {
+                console.log('🔐 Checking authentication status...');
+                const response = await fetch('/api/auth/status', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('🔍 Auth check response:', {
+                    status: response.status,
+                    ok: response.ok,
+                    statusText: response.statusText
+                });
+                
+                if (!response.ok) {
+                    console.log('⚠️ Auth check failed with status:', response.status);
+                    return false;
+                }
+                
+                const data = await response.json();
+                console.log('🔍 Auth status data:', data);
+                
+                if (data.success && data.authenticated) {
+                    console.log('✅ User is authenticated:', data.host);
+                    // Store user info for use throughout the app
+                    window.currentUser = data.host;
+                    return true;
+                } else {
+                    console.log('⚠️ User is not authenticated');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Auth check error:', error);
+                return false;
+            }
+        }
+        
         function setupEventListeners() {
 
             // Upload CTA
