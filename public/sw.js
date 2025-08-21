@@ -84,15 +84,30 @@ self.addEventListener('activate', event => {
                     })
                 );
             }),
-            // Force all clients to refresh
+            // Force all clients to refresh - Safari specific handling
             self.clients.matchAll().then(clients => {
                 console.log('🔄 Force refreshing all clients');
                 clients.forEach(client => {
                     client.postMessage({
                         type: 'CACHE_CLEARED',
-                        message: 'Service worker cleared all caches'
+                        message: 'Service worker cleared all caches',
+                        safari: true,
+                        timestamp: Date.now()
                     });
                 });
+                
+                // For Safari: Force immediate claim and reload
+                setTimeout(() => {
+                    clients.forEach(client => {
+                        if (client.url.includes('dashboard')) {
+                            client.postMessage({
+                                type: 'FORCE_RELOAD',
+                                reason: 'Safari cache clearing'
+                            });
+                        }
+                    });
+                }, 100);
+                
                 return Promise.resolve();
             })
         ]).then(() => {

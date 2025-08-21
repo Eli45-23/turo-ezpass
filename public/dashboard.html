@@ -21,6 +21,9 @@
     <script src="/js/xss-utils.js?v=20250821"></script>
     <script src="/js/accessibility.js?v=20250821"></script>
     
+    <!-- Safari-specific cache busting (load first) -->
+    <script src="/js/safari-fix.js?v=20250821"></script>
+    
     <style>
         :root {
             --space-cadet: #2D1B69;
@@ -39,11 +42,15 @@
         body {
             font-family: 'Inter', sans-serif !important;
             background: 
+                -webkit-linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
+            background: 
                 linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
             min-height: 100vh !important;
             color: white !important;
             overflow-x: hidden !important;
             position: relative !important;
+            -webkit-transform: translateZ(0) !important;
+            transform: translateZ(0) !important;
         }
 
         /* Quantum Matrix Background */
@@ -83,6 +90,7 @@
                     rgba(255, 200, 87, 0.05) 52px,
                     rgba(255, 200, 87, 0.05) 54px
                 ) !important;
+            -webkit-animation: quantumGrid 20s linear infinite !important;
             animation: quantumGrid 20s linear infinite !important;
         }
 
@@ -93,6 +101,7 @@
             background: var(--sunglow) !important;
             border-radius: 50% !important;
             box-shadow: 0 0 20px rgba(255, 200, 87, 0.6) !important;
+            -webkit-animation: dataFlow 4s ease-in-out infinite !important;
             animation: dataFlow 4s ease-in-out infinite !important;
         }
 
@@ -732,40 +741,72 @@
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
         }
 
-        /* Quantum Animations */
+        /* Quantum Animations - Safari Webkit Support */
+        @-webkit-keyframes quantumGrid {
+            0% { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
+            100% { -webkit-transform: translate(50px, 50px); transform: translate(50px, 50px); }
+        }
         @keyframes quantumGrid {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
+            0% { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
+            100% { -webkit-transform: translate(50px, 50px); transform: translate(50px, 50px); }
         }
 
-        @keyframes dataFlow {
+        @-webkit-keyframes dataFlow {
             0%, 100% { 
-                transform: scale(1); 
+                -webkit-transform: scale(1); transform: scale(1); 
                 opacity: 0.6; 
                 box-shadow: 0 0 20px rgba(255, 200, 87, 0.6); 
             }
             50% { 
-                transform: scale(1.5); 
+                -webkit-transform: scale(1.5); transform: scale(1.5); 
+                opacity: 1; 
+                box-shadow: 0 0 30px rgba(255, 200, 87, 1); 
+            }
+        }
+        @keyframes dataFlow {
+            0%, 100% { 
+                -webkit-transform: scale(1); transform: scale(1); 
+                opacity: 0.6; 
+                box-shadow: 0 0 20px rgba(255, 200, 87, 0.6); 
+            }
+            50% { 
+                -webkit-transform: scale(1.5); transform: scale(1.5); 
                 opacity: 1; 
                 box-shadow: 0 0 30px rgba(255, 200, 87, 1); 
             }
         }
 
+        @-webkit-keyframes quantumPulse {
+            0%, 100% { opacity: 0.3; -webkit-transform: scaleX(1); transform: scaleX(1); }
+            50% { opacity: 0.8; -webkit-transform: scaleX(1.2); transform: scaleX(1.2); }
+        }
         @keyframes quantumPulse {
-            0%, 100% { opacity: 0.3; transform: scaleX(1); }
-            50% { opacity: 0.8; transform: scaleX(1.2); }
+            0%, 100% { opacity: 0.3; -webkit-transform: scaleX(1); transform: scaleX(1); }
+            50% { opacity: 0.8; -webkit-transform: scaleX(1.2); transform: scaleX(1.2); }
         }
 
+        @-webkit-keyframes quantumSpin {
+            from { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+            to { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+        }
         @keyframes quantumSpin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+            to { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
         }
 
+        @-webkit-keyframes quantumScanner {
+            0% { -webkit-transform: translateX(-100%); transform: translateX(-100%); }
+            100% { -webkit-transform: translateX(400px); transform: translateX(400px); }
+        }
         @keyframes quantumScanner {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(400px); }
+            0% { -webkit-transform: translateX(-100%); transform: translateX(-100%); }
+            100% { -webkit-transform: translateX(400px); transform: translateX(400px); }
         }
 
+        @-webkit-keyframes quantumFlow {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
         @keyframes quantumFlow {
             0% { left: -100%; }
             100% { left: 100%; }
@@ -934,6 +975,35 @@
         // Initialize Lucide icons
         lucide.createIcons();
         
+        // Service Worker Message Handler for Safari
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('📨 Service Worker message:', event.data);
+                
+                if (event.data.type === 'FORCE_RELOAD') {
+                    console.log('🔄 Service worker requesting reload for Safari');
+                    setTimeout(() => {
+                        window.location.reload(true);
+                    }, 500);
+                }
+                
+                if (event.data.type === 'CACHE_CLEARED' && event.data.safari) {
+                    console.log('✅ Safari caches cleared by service worker');
+                    // Optional: Show user notification
+                    const notification = document.createElement('div');
+                    notification.innerHTML = '✅ Cache cleared for Safari';
+                    notification.style.cssText = `
+                        position: fixed; top: 50px; right: 10px; z-index: 10001;
+                        background: #34C759; color: white; padding: 8px 12px;
+                        border-radius: 6px; font-size: 12px;
+                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                    `;
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 3000);
+                }
+            });
+        }
+
         // Dashboard functionality
         console.log('🚀 Dashboard script loading...');
         document.addEventListener('DOMContentLoaded', async () => {
