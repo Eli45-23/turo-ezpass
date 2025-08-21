@@ -24,6 +24,9 @@
     <!-- Safari-specific cache busting (load first) -->
     <script src="/js/safari-fix.js?v=20250821"></script>
     
+    <!-- Theme enforcement (load early) -->
+    <script src="/js/theme-enforcer.js?v=20250821"></script>
+    
     <style>
         :root {
             --space-cadet: #2D1B69;
@@ -39,12 +42,20 @@
             box-sizing: border-box;
         }
 
+        /* Force purple theme on html root */
+        html {
+            background: #2D1B69 !important;
+            min-height: 100vh !important;
+        }
+
         body {
             font-family: 'Inter', sans-serif !important;
+            background: #2D1B69 !important; /* Fallback solid color */
             background: 
                 -webkit-linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
             background: 
                 linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
+            background-attachment: fixed !important;
             min-height: 100vh !important;
             color: white !important;
             overflow-x: hidden !important;
@@ -175,6 +186,7 @@
             min-height: 100vh !important;
             position: relative !important;
             z-index: 10 !important;
+            background: transparent !important; /* Ensure layout doesn't block body background */
         }
 
         /* Quantum Sidebar Navigation */
@@ -282,6 +294,7 @@
             flex: 1 !important;
             margin-left: 280px !important;
             position: relative !important;
+            background: transparent !important; /* Ensure content area doesn't block body background */
         }
 
         /* Dashboard Container */
@@ -841,7 +854,7 @@
         }
     </style>
 </head>
-<body>
+<body style="background: #2D1B69 !important; background: linear-gradient(135deg, #2D1B69 0%, #553C8B 50%, #1a0e3d 100%) !important; min-height: 100vh !important; color: white !important;">
     <div class="quantum-background">
         <div class="hexagon-grid"></div>
         <div class="data-node node-1"></div>
@@ -1003,6 +1016,21 @@
                 }
             });
         }
+
+        // Theme Debug Information
+        console.log('🎨 THEME DEBUG: Dashboard loading with purple theme enforcement');
+        console.log('🎨 THEME DEBUG: Expected colors - Primary: #2D1B69, Secondary: #553C8B');
+        
+        // Verify theme on load
+        window.addEventListener('load', () => {
+            const bodyStyles = window.getComputedStyle(document.body);
+            console.log('🎨 THEME DEBUG: Final body styles:', {
+                backgroundColor: bodyStyles.backgroundColor,
+                backgroundImage: bodyStyles.backgroundImage,
+                color: bodyStyles.color,
+                fontFamily: bodyStyles.fontFamily
+            });
+        });
 
         // Dashboard functionality
         console.log('🚀 Dashboard script loading...');
