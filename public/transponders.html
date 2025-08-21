@@ -731,7 +731,7 @@
                         transponderNumber: mapping.transponder_number,
                         vehiclePlate: mapping.vehicle_plate,
                         vehicleDescription: mapping.vehicle_description || '',
-                        isActive: mapping.is_active === 1,
+                        isActive: mapping.is_active === true || mapping.is_active === 1,
                         createdAt: mapping.created_at,
                         updatedAt: mapping.updated_at
                     }));
