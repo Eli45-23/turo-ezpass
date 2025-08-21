@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { supabaseAdmin } = require('../config/supabase');
+const { db } = require('../config/database-supabase');
 const { CacheManager, CacheKeys } = require('../services/cache-manager');
 const { createPerformanceMiddleware } = require('../services/performance-monitor');
 const EnhancedTollMatcher = require('../services/enhanced-toll-matcher');
@@ -1426,42 +1427,33 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
     try {
         console.log('💾 Starting actual database storage...');
         
-        // Begin transaction for better data consistency
-        await new Promise((resolve, reject) => {
-            db.run('BEGIN TRANSACTION', (err) => {
-                if (err) {
-                    reject(new Error(`Failed to begin transaction: ${err.message}`));
-                } else {
-                    console.log('🔄 Transaction started');
-                    resolve();
-                }
-            });
-        });
+        // Supabase handles transactions automatically - no explicit BEGIN needed
+        console.log('🔄 Starting database operations with Supabase');
         
         // Get list of known vehicles (plates and transponders) ONLY from user-provided mappings
-        const knownVehicles = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT DISTINCT vehicle_plate FROM transponder_mappings WHERE host_id = ? AND is_active = 1
-            `, [hostId], (err, rows) => {
-                if (err) reject(err);
-                else {
-                    const plates = rows.map(row => normalizeVehiclePlate(row.vehicle_plate));
-                    resolve(new Set(plates));
-                }
-            });
-        });
+        const { data: vehicleRows, error: vehicleError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('vehicle_plate')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
         
-        const knownTransponders = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT DISTINCT transponder_number FROM transponder_mappings WHERE host_id = ? AND is_active = 1
-            `, [hostId], (err, rows) => {
-                if (err) reject(err);
-                else {
-                    const transponders = rows.map(row => row.transponder_number);
-                    resolve(new Set(transponders));
-                }
-            });
-        });
+        if (vehicleError) {
+            throw new Error(`Error fetching vehicle mappings: ${vehicleError.message}`);
+        }
+        
+        const knownVehicles = new Set((vehicleRows || []).map(row => normalizeVehiclePlate(row.vehicle_plate)));
+        
+        const { data: transponderRows, error: transponderError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('transponder_number')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
+        
+        if (transponderError) {
+            throw new Error(`Error fetching transponder mappings: ${transponderError.message}`);
+        }
+        
+        const knownTransponders = new Set((transponderRows || []).map(row => row.transponder_number));
         
         console.log('🚗 Known vehicles:', Array.from(knownVehicles));
         console.log('🏷️ Known transponders:', Array.from(knownTransponders));
@@ -1556,21 +1548,22 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             }
             
             // Check if trip already exists and has invoices (preserve for toll memory system)
-            const existingTripWithInvoice = await new Promise((resolve, reject) => {
-                db.get(`
-                    SELECT t.id, COUNT(i.id) as invoice_count 
-                    FROM trips t 
-                    LEFT JOIN invoices i ON i.trip_id = t.id 
-                    WHERE t.turo_trip_id = ? 
-                    GROUP BY t.id
-                `, [trip.turoTripId], (err, row) => {
-                    if (err) reject(err);
-                    else {
-                        console.log(`🔍 DEBUG: Query result for trip ${trip.turoTripId}:`, row);
-                        resolve(row);
-                    }
-                });
-            });
+            const { data: existingTrips, error: tripCheckError } = await supabaseAdmin
+                .from('trips')
+                .select(`
+                    id,
+                    invoices!inner(id)
+                `)
+                .eq('turo_trip_id', trip.turoTripId);
+            
+            if (tripCheckError && tripCheckError.code !== 'PGRST116') {
+                throw new Error(`Error checking existing trip: ${tripCheckError.message}`);
+            }
+            
+            const existingTripWithInvoice = existingTrips && existingTrips.length > 0 ? {
+                id: existingTrips[0].id,
+                invoice_count: existingTrips[0].invoices.length
+            } : null;
             
             console.log(`🔍 DEBUG: Checking trip ${trip.turoTripId} for existing invoices:`, existingTripWithInvoice);
             
@@ -1683,116 +1676,75 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             }
             
             if (shouldInsert) {
-                await new Promise((resolve, reject) => {
+                // Validate toll amount (must be > 0 and <= 200 per database constraint)
+                if (!toll.amount || toll.amount <= 0 || toll.amount > 200) {
+                    console.log(`⚠️ Skipping invalid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
+                    console.log('🔍 Toll details:', {
+                        amount: toll.amount,
+                        type: typeof toll.amount,
+                        location: toll.location,
+                        date: toll.transactionDate,
+                        plate: toll.plateNumber
+                    });
+                    dbUpdates.tolls_skipped = (dbUpdates.tolls_skipped || 0) + 1;
+                    continue;
+                }
+
+                console.log(`✅ Valid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
+
+                try {
                     // Check if transaction_id already exists to avoid UNIQUE constraint violations
-                    db.get(
-                        'SELECT id FROM toll_charges WHERE transaction_id = ?',
-                        [toll.laneId],
-                        (err, existingToll) => {
-                            if (err) {
-                                reject(new Error(`Database error checking duplicate transaction_id: ${err.message}`));
-                                return;
-                            }
-                            
-                            if (existingToll) {
-                                console.log(`⚠️ Skipping duplicate transaction_id: ${toll.laneId}`);
-                                resolve(); // Skip this toll
-                                return;
-                            }
-                            
-                            // Validate toll account exists before insert
-                            db.get(
-                                'SELECT id FROM toll_accounts WHERE id = ?',
-                                [csvTollAccount.id],
-                                (err, account) => {
-                                    if (err) {
-                                        reject(new Error(`Database error validating toll account: ${err.message}`));
-                                        return;
-                                    }
-                                    
-                                    if (!account) {
-                                        reject(new Error(`Toll account ID ${csvTollAccount.id} does not exist`));
-                                        return;
-                                    }
-                                    
-                                    // Validate toll amount (must be > 0 and <= 200 per database constraint)
-                                    if (!toll.amount || toll.amount <= 0 || toll.amount > 200) {
-                                        console.log(`⚠️ Skipping invalid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
-                                        console.log('🔍 Toll details:', {
-                                            amount: toll.amount,
-                                            type: typeof toll.amount,
-                                            location: toll.location,
-                                            date: toll.transactionDate,
-                                            plate: toll.plateNumber
-                                        });
-                                        dbUpdates.tolls_skipped = (dbUpdates.tolls_skipped || 0) + 1;
-                                        resolve();
-                                        return;
-                                    } else {
-                                        console.log(`✅ Valid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
-                                    }
-                                    
-                                    // Try INSERT with transponder_id first, fallback if column doesn't exist
-                                    const tryInsertWithTransponderId = () => {
-                                        db.run(`INSERT INTO toll_charges 
-                                            (toll_account_id, toll_date, toll_location, toll_amount, plate_number, transponder_id, transaction_id, is_matched)
-                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                                            [csvTollAccount.id, toll.transactionDate, toll.location, toll.amount, toll.plateNumber, toll.transponderId, toll.laneId, false],
-                                            function(err) {
-                                                if (err) {
-                                                    if (err.message.includes('no column named transponder_id')) {
-                                                        console.log('⚠️ transponder_id column missing, using fallback INSERT');
-                                                        tryInsertWithoutTransponderId();
-                                                    } else if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                                        reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
-                                                    } else if (err.message.includes('UNIQUE constraint failed')) {
-                                                        reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
-                                                    } else if (err.message.includes('CHECK constraint failed')) {
-                                                        reject(new Error(`Invalid toll amount: $${toll.amount} must be between $0.01 and $200.00`));
-                                                    } else {
-                                                        reject(new Error(`Failed to insert toll charge: ${err.message}`));
-                                                    }
-                                                } else {
-                                                    console.log(`✅ Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId}`);
-                                                    dbUpdates.tolls_inserted++;
-                                                    resolve();
-                                                }
-                                            }
-                                        );
-                                    };
-                                    
-                                    const tryInsertWithoutTransponderId = () => {
-                                        db.run(`INSERT INTO toll_charges 
-                                            (toll_account_id, toll_date, toll_location, toll_amount, plate_number, transaction_id, is_matched)
-                                            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                                            [csvTollAccount.id, toll.transactionDate, toll.location, toll.amount, toll.plateNumber, toll.laneId, false],
-                                            function(err) {
-                                                if (err) {
-                                                    if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                                        reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
-                                                    } else if (err.message.includes('UNIQUE constraint failed')) {
-                                                        reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
-                                                    } else if (err.message.includes('CHECK constraint failed')) {
-                                                        reject(new Error(`Invalid toll amount: $${toll.amount} must be between $0.01 and $200.00`));
-                                                    } else {
-                                                        reject(new Error(`Failed to insert toll charge: ${err.message}`));
-                                                    }
-                                                } else {
-                                                    console.log(`✅ Inserted toll (fallback): ${toll.laneId} for ${toll.plateNumber || toll.transponderId}`);
-                                                    dbUpdates.tolls_inserted++;
-                                                    resolve();
-                                                }
-                                            }
-                                        );
-                                    };
-                                    
-                                    // Start with the full INSERT attempt
-                                    tryInsertWithTransponderId();
-                                }
-                            );
+                    const { data: existingToll, error: checkError } = await supabaseAdmin
+                        .from('toll_charges')
+                        .select('id')
+                        .eq('transaction_id', toll.laneId)
+                        .single();
+                    
+                    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+                        throw new Error(`Database error checking duplicate transaction_id: ${checkError.message}`);
+                    }
+                    
+                    if (existingToll) {
+                        console.log(`⚠️ Skipping duplicate transaction_id: ${toll.laneId}`);
+                        continue;
+                    }
+
+                    // Insert toll charge with Supabase
+                    const { data: newTollCharge, error: insertError } = await supabaseAdmin
+                        .from('toll_charges')
+                        .insert({
+                            toll_account_id: csvTollAccount.id,
+                            toll_date: toll.transactionDate,
+                            toll_location: toll.location,
+                            toll_amount: toll.amount,
+                            plate_number: toll.plateNumber,
+                            transponder_id: toll.transponderId,
+                            transaction_id: toll.laneId,
+                            is_matched: false
+                        })
+                        .select()
+                        .single();
+
+                    if (insertError) {
+                        if (insertError.code === '23503') { // Foreign key constraint
+                            throw new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`);
+                        } else if (insertError.code === '23505') { // Unique constraint
+                            console.log(`⚠️ Skipping duplicate transaction_id: ${toll.laneId}`);
+                            continue;
+                        } else if (insertError.code === '23514') { // Check constraint
+                            throw new Error(`Invalid toll amount: $${toll.amount} must be between $0.01 and $200.00`);
+                        } else {
+                            throw new Error(`Failed to insert toll charge: ${insertError.message}`);
                         }
-                    );
-                });
+                    }
+
+                    console.log(`✅ Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId || 'unknown'}`);
+                    dbUpdates.tolls_inserted++;
+
+                } catch (error) {
+                    console.error(`❌ Error inserting toll ${toll.laneId}:`, error.message);
+                    throw error;
+                }
             } else {
                 dbUpdates.tolls_filtered++;
                 console.log(`🚫 Filtered out toll for unknown vehicle: ${toll.plateNumber || toll.transponderId} at ${toll.location}`);
@@ -1801,90 +1753,66 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         
         // 3. Create match relationships for matched tolls
         for (const match of matchingResults.matches) {
-            await new Promise((resolve, reject) => {
-                // First get the actual trip.id from turo_trip_id
-                db.get(
-                    'SELECT id FROM trips WHERE turo_trip_id = ? AND host_id = ?',
-                    [match.trip.reservationId, hostId],
-                    (err, trip) => {
-                        if (err) {
-                            reject(new Error(`Database error finding trip: ${err.message}`));
-                            return;
-                        }
-                        
-                        if (!trip) {
-                            reject(new Error(`Trip not found for turo_trip_id: ${match.trip.reservationId}`));
-                            return;
-                        }
-                        
-                        // Validate trip.id exists in trips table
-                        db.get(
-                            'SELECT id FROM trips WHERE id = ?',
-                            [trip.id],
-                            (err, validTrip) => {
-                                if (err) {
-                                    reject(new Error(`Database error validating trip: ${err.message}`));
-                                    return;
-                                }
-                                
-                                if (!validTrip) {
-                                    reject(new Error(`Trip ID ${trip.id} does not exist in trips table`));
-                                    return;
-                                }
-                                
-                                // Validate toll charge exists before updating
-                                db.get(
-                                    'SELECT id FROM toll_charges WHERE transaction_id = ?',
-                                    [match.toll.laneId],
-                                    (err, tollCharge) => {
-                                        if (err) {
-                                            reject(new Error(`Database error finding toll charge: ${err.message}`));
-                                            return;
-                                        }
-                                        
-                                        if (!tollCharge) {
-                                            reject(new Error(`Toll charge with transaction_id ${match.toll.laneId} not found`));
-                                            return;
-                                        }
-                                        
-                                        // Update toll as matched with correct trip.id
-                                        db.run(`UPDATE toll_charges SET is_matched = 1, trip_id = ? 
-                                            WHERE transaction_id = ?`,
-                                            [trip.id, match.toll.laneId],
-                                            function(err) {
-                                                if (err) {
-                                                    if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                                        reject(new Error(`Foreign key constraint violation: trip_id ${trip.id} does not exist in trips table`));
-                                                    } else {
-                                                        reject(new Error(`Failed to update toll charge: ${err.message}`));
-                                                    }
-                                                } else {
-                                                    console.log(`✅ Matched toll ${match.toll.laneId} to trip ${trip.id}`);
-                                                    dbUpdates.matches_created++;
-                                                    resolve();
-                                                }
-                                            }
-                                        );
-                                    }
-                                );
-                            }
-                        );
+            try {
+                // Get the actual trip.id from turo_trip_id
+                const { data: trip, error: tripError } = await supabaseAdmin
+                    .from('trips')
+                    .select('id')
+                    .eq('turo_trip_id', match.trip.reservationId)
+                    .eq('host_id', hostId)
+                    .single();
+                
+                if (tripError) {
+                    if (tripError.code === 'PGRST116') {
+                        throw new Error(`Trip not found for turo_trip_id: ${match.trip.reservationId}`);
+                    } else {
+                        throw new Error(`Database error finding trip: ${tripError.message}`);
                     }
-                );
-            });
+                }
+                
+                // Check if toll charge exists before updating
+                const { data: tollCharge, error: tollError } = await supabaseAdmin
+                    .from('toll_charges')
+                    .select('id')
+                    .eq('transaction_id', match.toll.laneId)
+                    .single();
+                
+                if (tollError) {
+                    if (tollError.code === 'PGRST116') {
+                        throw new Error(`Toll charge with transaction_id ${match.toll.laneId} not found`);
+                    } else {
+                        throw new Error(`Database error finding toll charge: ${tollError.message}`);
+                    }
+                }
+                
+                // Update toll as matched with correct trip.id
+                const { error: updateError } = await supabaseAdmin
+                    .from('toll_charges')
+                    .update({ 
+                        is_matched: true, 
+                        trip_id: trip.id 
+                    })
+                    .eq('transaction_id', match.toll.laneId);
+                
+                if (updateError) {
+                    if (updateError.code === '23503') {
+                        throw new Error(`Foreign key constraint violation: trip_id ${trip.id} does not exist in trips table`);
+                    } else {
+                        throw new Error(`Failed to update toll charge: ${updateError.message}`);
+                    }
+                }
+                
+                console.log(`✅ Matched toll ${match.toll.laneId} to trip ${trip.id}`);
+                dbUpdates.matches_created++;
+                
+            } catch (error) {
+                console.error(`❌ Error matching toll ${match.toll.laneId}:`, error.message);
+                throw error;
+            }
         }
         
-        // Commit transaction on success
-        await new Promise((resolve, reject) => {
-            db.run('COMMIT', (err) => {
-                if (err) {
-                    reject(new Error(`Failed to commit transaction: ${err.message}`));
-                } else {
-                    console.log('✅ Transaction committed successfully');
-                    resolve();
-                }
-            });
-        });
+        // Supabase operations are automatically committed
+        console.log('✅ Database operations completed successfully');
         
         console.log('✅ Database storage complete:', dbUpdates);
         console.log(`✅ Filtered out ${dbUpdates.tolls_filtered} tolls from unknown vehicles`);

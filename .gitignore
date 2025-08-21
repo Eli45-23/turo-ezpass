@@ -5,6 +5,9 @@ node_modules/
 .env
 .env.production
 
+# MCP configuration (contains sensitive tokens)
+.mcp.json
+
 # Database files
 *.db
 *.db-shm
