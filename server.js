@@ -36,6 +36,9 @@ function validateEnvironment() {
     if (missing.length > 0) {
         console.error('❌ Missing required environment variables:', missing.join(', '));
         console.error('🔧 Please copy .env.example to .env and configure the required variables');
+        if (process.env.NODE_ENV === 'production') {
+            console.error('🚫 Production deployment cannot continue without proper configuration');
+        }
         process.exit(1);
     }
     
@@ -49,12 +52,23 @@ function validateEnvironment() {
         console.error('❌ ENCRYPTION_MASTER_KEY must be at least 32 characters long');
         process.exit(1);
     }
+    
+    // Additional production-specific validations
+    if (process.env.NODE_ENV === 'production') {
+        console.log('✅ Environment validation passed for production');
+        
+        // Warn about missing optional but recommended variables
+        const recommended = ['BASE_URL', 'EMAIL_HOST', 'EMAIL_USER'];
+        const missingRecommended = recommended.filter(key => !process.env[key]);
+        if (missingRecommended.length > 0) {
+            console.warn('⚠️ Recommended environment variables not set:', missingRecommended.join(', '));
+            console.warn('💡 Some features may not work optimally without these variables');
+        }
+    }
 }
 
-// Validate environment in production
-if (process.env.NODE_ENV === 'production') {
-    validateEnvironment();
-}
+// Validate environment (always run, but different behavior per environment)
+validateEnvironment();
 
 // WebSocket server for real-time communication
 const wss = new WebSocket.Server({ server });
@@ -281,8 +295,8 @@ app.use(cookieParser());
 app.use(enhancedCSP);
 app.use(sanitizeJSONResponse);
 
-// Trust proxy for accurate IP addresses
-app.set('trust proxy', 1);
+// Trust proxy for accurate IP addresses (essential for production behind reverse proxy)
+app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
 
 // Body parsing middleware with size limits
 app.use(express.json({ limit: '10mb' }));
@@ -291,17 +305,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use(express.static('public'));
 
-// Session configuration with security hardening
+// Session configuration with environment-aware security
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    name: 'connect.sid', // Use default session name for compatibility
+    name: 'connect.sid',
     cookie: { 
-        secure: false, // Allow HTTP for local development
+        secure: process.env.NODE_ENV === 'production', // HTTPS in production, HTTP in development
         httpOnly: true, // Prevent XSS
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax' // Less restrictive for development
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax' // Strict security in production
     },
     genid: () => {
         return crypto.randomBytes(32).toString('hex');
@@ -407,11 +421,18 @@ app.get('/health', (req, res) => {
 
 // Start server with WebSocket support
 server.listen(PORT, () => {
-    console.log(`🚗 Turo Toll Tracker running on http://localhost:${PORT}`);
-    console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
-    console.log(`🔐 Login: http://localhost:${PORT}/`);
-    console.log(`📡 WebSocket server running on ws://localhost:${PORT}`);
+    const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+    console.log(`🚗 Turo Toll Tracker running on ${baseUrl}`);
+    console.log(`📊 Dashboard: ${baseUrl}/dashboard`);
+    console.log(`🔐 Login: ${baseUrl}/`);
+    console.log(`📡 WebSocket server running on ${baseUrl.replace('http', 'ws')}`);
     console.log(`🔒 Data Integrity System: ACTIVE`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    if (process.env.NODE_ENV === 'production') {
+        console.log('✅ Production mode: Enhanced security enabled');
+    } else {
+        console.log('🔧 Development mode: Relaxed rate limiting');
+    }
 });
 
 // Graceful shutdown handling

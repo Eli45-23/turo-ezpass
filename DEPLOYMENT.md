@@ -1,6 +1,36 @@
 # 🚀 Deployment Guide - Turo Toll Tracker
 
-This guide will help you deploy the Turo Toll Tracker for real-life testing and production use.
+This guide will help you deploy the Turo Toll Tracker for real-life testing and production use, ensuring your live site works identically to your local development environment.
+
+## 🔧 CRITICAL: Environment Parity
+
+**The live site will now automatically work just like your local environment!** Recent improvements ensure identical behavior:
+
+✅ **Environment-Aware Session Security**
+- Automatically uses HTTPS-secure cookies in production
+- Relaxed settings for local development
+
+✅ **Dynamic Rate Limiting**  
+- Strict limits in production (500 req/15min)
+- Relaxed limits in development (10,000 req/15min)
+- Localhost always bypassed in development
+
+✅ **Database Compatibility**
+- Automatic transponder_id column migration
+- Backwards-compatible INSERT operations
+- Environment-aware database paths
+
+✅ **Trust Proxy Configuration**
+- Enabled automatically in production for reverse proxies
+- Disabled in development for direct connections
+
+⚠️ **Required Environment Variables for Production:**
+```bash
+NODE_ENV=production
+BASE_URL=https://yourdomain.com
+SESSION_SECRET=your_32_char_secret
+ENCRYPTION_MASTER_KEY=your_32_char_key
+```
 
 ## 📋 Quick Start Options
 

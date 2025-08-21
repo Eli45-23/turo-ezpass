@@ -2,11 +2,16 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcrypt');
 
-const dbPath = path.join(__dirname, '..', 'turo_tolls.db');
+// Database path configuration - environment aware
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'turo_tolls.db');
+console.log(`📂 Database path: ${dbPath}`);
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('❌ Error opening database:', err);
+        console.error('📂 Database path attempted:', dbPath);
+        console.error('🔧 Ensure database file exists and is writable');
     } else {
+        console.log('✅ Database connection established successfully');
         // Enable foreign key constraints for this connection
         db.run('PRAGMA foreign_keys = ON', (err) => {
             if (err) {

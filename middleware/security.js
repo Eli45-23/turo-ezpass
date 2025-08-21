@@ -34,7 +34,7 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 500, // Limit each IP to 500 requests per windowMs (increased for toll sync)
+    max: process.env.NODE_ENV === 'production' ? 500 : 10000, // Higher limit in development
     message: {
         success: false,
         error: 'Too many requests, please try again later',
@@ -43,6 +43,11 @@ const generalLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {
+        // Skip rate limiting in development for localhost
+        if (process.env.NODE_ENV !== 'production' && 
+            (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.includes('localhost'))) {
+            return true;
+        }
         // Skip rate limiting for health check and toll sync operations
         return req.path === '/health' || 
                req.path.startsWith('/api/tolls/') || 
@@ -66,7 +71,7 @@ const tollAccountLimiter = rateLimit({
 // CSV Upload rate limiter - prevent abuse of file upload endpoints
 const csvUploadLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 10, // 10 uploads per 5 minutes
+    max: process.env.NODE_ENV === 'production' ? 10 : 100, // More uploads allowed in development
     message: {
         success: false,
         error: 'Too many file uploads, please try again in 5 minutes',
@@ -74,6 +79,11 @@ const csvUploadLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting in development for localhost
+        return process.env.NODE_ENV !== 'production' && 
+               (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.includes('localhost'));
+    },
     handler: (req, res) => {
         logSecurityEvent('CSV_UPLOAD_RATE_LIMIT', {
             ip: req.ip,
