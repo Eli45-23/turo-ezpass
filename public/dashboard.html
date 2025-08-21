@@ -1012,12 +1012,33 @@
         async function checkAuthentication() {
             try {
                 console.log('🔐 Checking authentication status...');
+                
+                // Check for stored Supabase token
+                const storedToken = localStorage.getItem('supabase_token');
+                const storedSession = localStorage.getItem('supabase_session');
+                
+                console.log('🔍 Stored auth data:', {
+                    hasToken: !!storedToken,
+                    hasSession: !!storedSession,
+                    tokenLength: storedToken?.length || 0
+                });
+                
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Add Authorization header if we have a Supabase token
+                if (storedToken) {
+                    headers['Authorization'] = `Bearer ${storedToken}`;
+                    console.log('🎫 Using stored Supabase token for auth check');
+                } else {
+                    console.log('⚠️ No stored token found, falling back to cookies');
+                }
+                
                 const response = await fetch('/api/auth/status', {
                     method: 'GET',
                     credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers
                 });
                 
                 console.log('🔍 Auth check response:', {

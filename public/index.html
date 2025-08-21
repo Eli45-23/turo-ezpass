@@ -819,8 +819,31 @@
                 });
                 
                 const data = await response.json();
+                console.log('🔍 Login response data:', data);
                 
                 if (data.success) {
+                    // Store Supabase session/token if present
+                    console.log('🎫 Checking for tokens:', {
+                        access_token: !!data.access_token,
+                        session: !!data.session,
+                        session_access_token: data.session?.access_token
+                    });
+                    
+                    if (data.access_token) {
+                        localStorage.setItem('supabase_token', data.access_token);
+                        console.log('✅ Stored access_token from response');
+                    } else if (data.session?.access_token) {
+                        localStorage.setItem('supabase_token', data.session.access_token);
+                        console.log('✅ Stored access_token from session');
+                    } else {
+                        console.warn('⚠️ No access_token found in response');
+                    }
+                    
+                    if (data.session) {
+                        localStorage.setItem('supabase_session', JSON.stringify(data.session));
+                        console.log('✅ Stored session object');
+                    }
+                    
                     showNotification({
                         type: 'success',
                         title: 'Success!',
@@ -867,8 +890,31 @@
                 });
                 
                 const data = await response.json();
+                console.log('🔍 Signup response data:', data);
                 
                 if (data.success) {
+                    // Store Supabase session/token if present
+                    console.log('🎫 Checking for tokens:', {
+                        access_token: !!data.access_token,
+                        session: !!data.session,
+                        session_access_token: data.session?.access_token
+                    });
+                    
+                    if (data.access_token) {
+                        localStorage.setItem('supabase_token', data.access_token);
+                        console.log('✅ Stored access_token from response');
+                    } else if (data.session?.access_token) {
+                        localStorage.setItem('supabase_token', data.session.access_token);
+                        console.log('✅ Stored access_token from session');
+                    } else {
+                        console.warn('⚠️ No access_token found in response');
+                    }
+                    
+                    if (data.session) {
+                        localStorage.setItem('supabase_session', JSON.stringify(data.session));
+                        console.log('✅ Stored session object');
+                    }
+                    
                     showNotification({
                         type: 'success',
                         title: 'Account Created!',

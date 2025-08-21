@@ -330,8 +330,12 @@ app.use((req, res, next) => {
     next();
 });
 
-// Routes
-const authRoutes = require('./routes/auth');
+// Routes - Choose auth system based on environment
+const USE_SUPABASE = process.env.USE_SUPABASE === 'true';
+console.log(`🔐 Authentication system: ${USE_SUPABASE ? 'Supabase' : 'SQLite + Express Sessions'}`);
+const authRoutes = USE_SUPABASE 
+    ? require('./routes/auth_supabase')
+    : require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const { router: tollRoutes } = require('./routes/tolls');
 const invoiceRoutes = require('./routes/invoices');
