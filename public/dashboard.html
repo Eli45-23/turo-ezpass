@@ -4,16 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turo Toll Tracker - Quantum Matrix Dashboard</title>
+    
+    <!-- Prevent caching for Safari compatibility -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Scripts -->
-    <script src="/js/ui-utils.js"></script>
-    <script src="/js/xss-utils.js"></script>
-    <script src="/js/accessibility.js"></script>
+    <!-- Scripts with cache busting -->
+    <script src="/js/ui-utils.js?v=20250821"></script>
+    <script src="/js/xss-utils.js?v=20250821"></script>
+    <script src="/js/accessibility.js?v=20250821"></script>
     
     <style>
         :root {

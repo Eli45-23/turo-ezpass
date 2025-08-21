@@ -67,28 +67,38 @@ self.addEventListener('install', event => {
 });
 
 /**
- * Service Worker Activation
+ * Service Worker Activation - Aggressive cache clearing for Safari compatibility
  */
 self.addEventListener('activate', event => {
-    console.log('🔄 Service Worker activating...');
+    console.log('🔄 Service Worker activating with aggressive cache clearing...');
     
     event.waitUntil(
-        caches.keys()
-            .then(cacheNames => {
+        Promise.all([
+            // Clear ALL caches, including current ones - force fresh fetch
+            caches.keys().then(cacheNames => {
+                console.log('🗑️ Clearing ALL caches for Safari compatibility');
                 return Promise.all(
                     cacheNames.map(cacheName => {
-                        // Delete old caches
-                        if (cacheName !== CACHE_NAME && cacheName !== API_CACHE_NAME) {
-                            console.log('🗑️ Deleting old cache:', cacheName);
-                            return caches.delete(cacheName);
-                        }
+                        console.log('🗑️ Deleting cache:', cacheName);
+                        return caches.delete(cacheName);
                     })
                 );
+            }),
+            // Force all clients to refresh
+            self.clients.matchAll().then(clients => {
+                console.log('🔄 Force refreshing all clients');
+                clients.forEach(client => {
+                    client.postMessage({
+                        type: 'CACHE_CLEARED',
+                        message: 'Service worker cleared all caches'
+                    });
+                });
+                return Promise.resolve();
             })
-            .then(() => {
-                console.log('✅ Service Worker activated');
-                return self.clients.claim();
-            })
+        ]).then(() => {
+            console.log('✅ Service Worker activated with aggressive cache clearing');
+            return self.clients.claim();
+        })
     );
 });
 

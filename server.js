@@ -302,8 +302,22 @@ app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files
-app.use(express.static('public'));
+// Static files with cache control
+app.use(express.static('public', {
+    setHeaders: (res, path) => {
+        // Force no cache for HTML files to fix Safari caching issues
+        if (path.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            res.setHeader('ETag', Date.now().toString());
+        }
+        // Allow caching for other assets but with validation
+        else {
+            res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+        }
+    }
+}));
 
 // Session configuration with environment-aware security
 app.use(session({
