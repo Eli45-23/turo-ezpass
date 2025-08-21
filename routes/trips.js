@@ -209,48 +209,52 @@ router.get('/', requireAuth, async (req, res) => {
                                 }
                             });
                             
-                            // Get personal tolls (unmatched toll charges) with vehicle info
-                            db.all(
-                `SELECT tc.*, ta.provider, ta.account_number, tm.vehicle_plate, tm.vehicle_description
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 LEFT JOIN transponder_mappings tm ON (tc.transponder_id = tm.transponder_number OR tc.plate_number = tm.vehicle_plate) AND tm.host_id = ta.host_id AND tm.is_active = 1
-                 WHERE ta.host_id = ? AND tc.is_matched = 0
-                 ORDER BY tc.toll_date DESC`,
-                [hostId],
-                (err, personalTolls) => {
-                    if (err) {
-                        console.error('❌ Failed to fetch personal tolls:', err);
-                    } else {
-                        transformedTrips.yourTolls = personalTolls.map(toll => ({
-                            id: toll.id,
-                            type: 'Personal Driving',
-                            date: toll.toll_date,
-                            time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
-                                hour: 'numeric', 
-                                minute: '2-digit',
-                                hour12: true 
-                            }),
-                            location: toll.toll_location || 'Unknown Location',
-                            amount: parseFloat(toll.toll_amount || 0),
-                            vehicle: toll.vehicle_description ? `${toll.vehicle_description} (${toll.vehicle_plate})` : `${toll.provider} (${toll.account_number})`,
-                            transponder: toll.transponder_id || toll.plate_number || 'Unknown',
-                            vehicle_plate: toll.vehicle_plate || null
-                        }));
-                    }
-                    
-                        res.json({
-                            success: true,
-                            data: transformedTrips
-                        });
-                    }
-                );
-                        }
-                    );
-                }
-            );
-        }
-    );
+                            // Get personal tolls (unmatched toll charges) with vehicle info using Supabase
+                            const { data: personalTolls, error: personalTollsError } = await supabaseAdmin
+                                .from('toll_charges')
+                                .select(`
+                                    *,
+                                    toll_accounts!inner(provider, account_number, host_id),
+                                    transponder_mappings(vehicle_plate, vehicle_description)
+                                `)
+                                .eq('toll_accounts.host_id', hostId)
+                                .eq('is_matched', false)
+                                .order('toll_date', { ascending: false });
+                            
+                            if (personalTollsError) {
+                                console.error('❌ Failed to fetch personal tolls:', personalTollsError);
+                                transformedTrips.yourTolls = [];
+                            } else {
+                                transformedTrips.yourTolls = (personalTolls || []).map(toll => ({
+                                    id: toll.id,
+                                    type: 'Personal Driving',
+                                    date: toll.toll_date,
+                                    time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit',
+                                        hour12: true 
+                                    }),
+                                    location: toll.toll_location || 'Unknown Location',
+                                    amount: parseFloat(toll.toll_amount || 0),
+                                    vehicle: toll.transponder_mappings?.vehicle_description ? 
+                                        `${toll.transponder_mappings.vehicle_description} (${toll.transponder_mappings.vehicle_plate})` : 
+                                        `${toll.toll_accounts.provider} (${toll.toll_accounts.account_number})`,
+                                    transponder: toll.transponder_id || toll.plate_number || 'Unknown',
+                                    vehicle_plate: toll.transponder_mappings?.vehicle_plate || null
+                                }));
+                            }
+                            
+                            res.json({
+                                success: true,
+                                data: transformedTrips
+                            });
+    } catch (error) {
+        console.error('❌ Exception fetching trips:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch trips'
+        });
+    }
 });
 
 // Get detailed trip information
