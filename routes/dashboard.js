@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 const { CacheManager, CacheKeys } = require('../services/cache-manager');
 const { createPerformanceMiddleware } = require('../services/performance-monitor');
 const EnhancedTollMatcher = require('../services/enhanced-toll-matcher');
@@ -27,7 +27,7 @@ const performanceMiddleware = global.performanceMonitor ?
     (req, res, next) => next();
 
 // Middleware to check authentication
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
     console.log('🔐 Auth check - Session:', {
         hostId: req.session.hostId,
         sessionId: req.session.id,
@@ -35,18 +35,52 @@ const requireAuth = (req, res, next) => {
         cookies: req.headers.cookie
     });
     
-    // Temporary fix: Allow access for the known valid user (hostId=1)
-    // This addresses the session configuration issue that broke authentication
-    if (!req.session.hostId) {
-        console.log('🔧 No hostId in session - applying temporary fix for hostId=1');
-        // Set hostId=1 for the session to fix authentication
-        req.session.hostId = 1;
-        req.session.email = 'eliascolon23@gmail.com';
-        console.log('✅ Applied temporary authentication fix for hostId=1');
+    try {
+        // Check if we have a UUID in session
+        if (!req.session.hostId || typeof req.session.hostId === 'number') {
+            console.log('🔧 No UUID hostId in session - creating/getting UUID for user');
+            
+            const userEmail = req.session.email || 'eliascolon23@gmail.com';
+            
+            // Check if host already exists in Supabase
+            const { data: existingHost, error } = await supabaseAdmin
+                .from('hosts')
+                .select('id')
+                .eq('email', userEmail)
+                .single();
+            
+            if (existingHost) {
+                console.log('✅ Found existing host UUID:', existingHost.id);
+                req.session.hostId = existingHost.id;
+                req.session.email = userEmail;
+            } else {
+                // Create new host with UUID
+                const { data: newHost, error: createError } = await supabaseAdmin
+                    .from('hosts')
+                    .insert({
+                        email: userEmail,
+                        full_name: 'Migrated User'
+                    })
+                    .select('id')
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Error creating host:', createError);
+                    return res.status(500).json({ success: false, error: 'Authentication failed' });
+                }
+                
+                console.log('✅ Created new host UUID:', newHost.id);
+                req.session.hostId = newHost.id;
+                req.session.email = userEmail;
+            }
+        }
+        
+        console.log('✅ Authentication passed for host:', req.session.hostId);
+        next();
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        return res.status(500).json({ success: false, error: 'Authentication failed' });
     }
-    
-    console.log('✅ Authentication passed for host:', req.session.hostId);
-    next();
 };
 
 // Apply performance monitoring to all routes
@@ -1490,33 +1524,33 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             
             // Ensure host exists in database (required for foreign key constraints)
             // If not, create a host record for the authenticated user
-            const hostExists = await new Promise((resolve, reject) => {
-                db.get('SELECT id, email FROM hosts WHERE id = ?', [hostId], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
+            const { data: hostExists, error: hostError } = await supabaseAdmin
+                .from('hosts')
+                .select('id, email')
+                .eq('id', hostId)
+                .single();
             
             if (!hostExists) {
                 console.log(`🔧 Host ID ${hostId} not found in database - creating host record`);
                 // Get email from session if available
                 const hostEmail = userEmail || `user_${hostId}@system.generated`;
                 
-                await new Promise((resolve, reject) => {
-                    db.run(
-                        'INSERT INTO hosts (id, email, full_name, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-                        [hostId, hostEmail, 'System Generated User'],
-                        function(err) {
-                            if (err) {
-                                console.error(`❌ Failed to create host record: ${err.message}`);
-                                reject(err);
-                            } else {
-                                console.log(`✅ Created host record for ID ${hostId} with email ${userEmail}`);
-                                resolve();
-                            }
-                        }
-                    );
-                });
+                const { data: newHost, error: createError } = await supabaseAdmin
+                    .from('hosts')
+                    .insert({
+                        id: hostId,
+                        email: hostEmail,
+                        full_name: 'System Generated User'
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error(`❌ Failed to create host record: ${createError.message}`);
+                    throw createError;
+                } else {
+                    console.log(`✅ Created host record for ID ${hostId} with email ${userEmail}`);
+                }
             } else {
                 console.log(`✅ Host ID ${hostId} exists: ${hostExists.email}`);
             }
@@ -1545,100 +1579,87 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 // Don't increment trips_updated since we're not modifying anything
             } else {
                 console.log(`✅ Proceeding to insert trip ${trip.turoTripId} - no existing invoices`);
-                await new Promise((resolve, reject) => {
-                    db.run(`INSERT OR REPLACE INTO trips 
-                        (host_id, turo_trip_id, renter_name, renter_email, vehicle_plate, start_date, end_date, trip_status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [hostId, trip.turoTripId, trip.guest, trip.guest, normalizeVehiclePlate(trip.vehiclePlate), trip.startDate, trip.endDate, trip.status],
-                        function(err) {
-                            if (err) {
-                                console.error(`❌ Failed to insert trip ${i + 1}:`, {
-                                    error: err.message,
-                                    code: err.code,
-                                    errno: err.errno,
-                                    tripData: {
-                                        hostId: hostId,
-                                        turoTripId: trip.turoTripId,
-                                        guest: trip.guest,
-                                        vehiclePlate: normalizeVehiclePlate(trip.vehiclePlate)
-                                    }
-                                });
-                                reject(err);
-                            } else {
-                                console.log(`✅ Successfully inserted trip ${i + 1}: ${trip.turoTripId}`);
-                                dbUpdates.trips_updated++;
-                                resolve();
-                            }
+                const { data: newTrip, error: tripError } = await supabaseAdmin
+                    .from('trips')
+                    .upsert({
+                        host_id: hostId,
+                        turo_trip_id: trip.turoTripId,
+                        renter_name: trip.guest,
+                        renter_email: trip.guest,
+                        vehicle_plate: normalizeVehiclePlate(trip.vehiclePlate),
+                        start_date: trip.startDate.toISOString(),
+                        end_date: trip.endDate.toISOString(),
+                        trip_status: trip.status
+                    }, {
+                        onConflict: 'turo_trip_id'
+                    })
+                    .select()
+                    .single();
+                
+                if (tripError) {
+                    console.error(`❌ Failed to insert trip ${i + 1}:`, {
+                        error: tripError.message,
+                        code: tripError.code,
+                        tripData: {
+                            hostId: hostId,
+                            turoTripId: trip.turoTripId,
+                            guest: trip.guest,
+                            vehiclePlate: normalizeVehiclePlate(trip.vehiclePlate)
                         }
-                    );
-                });
+                    });
+                    throw tripError;
+                } else {
+                    console.log(`✅ Successfully inserted trip ${i + 1}: ${trip.turoTripId}`);
+                    dbUpdates.trips_updated++;
+                }
             }
         }
         
         // 2. Insert tolls from CSV into toll_charges table (ONLY for known vehicles)
         // First get or create a toll account for CSV imports  
-        const csvTollAccount = await new Promise((resolve, reject) => {
-            // Ensure host exists before creating toll account (foreign key requirement)
-            db.get('SELECT id FROM hosts WHERE id = ?', [hostId], (err, host) => {
-                if (err) {
-                    reject(new Error(`Database error checking host: ${err.message}`));
-                    return;
-                }
-                
-                if (!host) {
-                    reject(new Error(`Host ID ${hostId} does not exist in hosts table. Please ensure user is properly registered.`));
-                    return;
-                }
-                
-                // Now check/create toll account
-                db.get(
-                'SELECT id FROM toll_accounts WHERE host_id = ? AND provider = ?',
-                [hostId, 'CSV Import'],
-                (err, account) => {
-                    if (err) {
-                        reject(new Error(`Database error checking toll account: ${err.message}`));
-                        return;
-                    }
-                    
-                    if (account) {
-                        console.log('✅ Using existing CSV toll account:', account.id);
-                        resolve(account);
-                        return;
-                    }
+        // Get or create CSV toll account for this host
+        const { data: existingTollAccount, error: tollAccountError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select('id')
+            .eq('host_id', hostId)
+            .eq('provider', 'CSV Import')
+            .single();
+        
+        let csvTollAccount;
+        if (existingTollAccount) {
+            console.log('✅ Using existing CSV toll account:', existingTollAccount.id);
+            csvTollAccount = existingTollAccount;
+        } else {
+            console.log('🆕 Creating new CSV toll account for host:', hostId);
+            let encryptedPassword;
+            try {
+                const crypto = require('../utils/crypto');
+                encryptedPassword = crypto.encryptSensitiveData('csv_system_password', hostId.toString());
+            } catch (cryptoError) {
+                console.warn('⚠️ Crypto utility not available, using placeholder password');
+                encryptedPassword = 'placeholder_encrypted_password';
+            }
             
-                    // Create new CSV toll account if needed
-                    console.log('🆕 Creating new CSV toll account for host:', hostId);
-                    let encryptedPassword;
-                    try {
-                        const crypto = require('../utils/crypto');
-                        encryptedPassword = crypto.encryptSensitiveData('csv_system_password', hostId.toString());
-                    } catch (cryptoError) {
-                        console.warn('⚠️ Crypto utility not available, using placeholder password');
-                        encryptedPassword = 'placeholder_encrypted_password';
-                    }
-                    
-                    db.run(`
-                        INSERT INTO toll_accounts 
-                        (host_id, provider, account_number, username, password_encrypted, is_active) 
-                        VALUES (?, ?, ?, ?, ?, 1)
-                    `, [
-                        hostId,
-                        'CSV Import',
-                        'CSV_UPLOAD_' + Date.now(),
-                        'csv_import@system',
-                        encryptedPassword
-                    ], function(err) {
-                        if (err) {
-                            reject(new Error(`Failed to create toll account: ${err.message}`));
-                        } else {
-                            console.log('✅ Created new CSV toll account:', this.lastID);
-                            resolve({ id: this.lastID });
-                        }
-                    });
-                }
-            );
-            });
-        });
+            const { data: newTollAccount, error: createTollAccountError } = await supabaseAdmin
+                .from('toll_accounts')
+                .insert({
+                    host_id: hostId,
+                    provider: 'CSV Import',
+                    account_number: 'CSV_UPLOAD_' + Date.now(),
+                    username: 'csv_import@system',
+                    password_encrypted: encryptedPassword,
+                    is_active: true
+                })
+                .select()
+                .single();
+            
+            if (createTollAccountError) {
+                throw new Error(`Failed to create toll account: ${createTollAccountError.message}`);
+            }
+            
+            console.log('✅ Created new CSV toll account:', newTollAccount.id);
+            csvTollAccount = newTollAccount;
+        }
         
         for (const toll of ezpassTolls) {
             // FIXED: Store ALL tolls regardless of transponder mappings
