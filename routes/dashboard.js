@@ -1694,6 +1694,14 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                         return;
                                     }
                                     
+                                    // Validate toll amount (must be > 0 and <= 200 per database constraint)
+                                    if (!toll.amount || toll.amount <= 0 || toll.amount > 200) {
+                                        console.log(`⚠️ Skipping invalid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
+                                        dbUpdates.tolls_skipped = (dbUpdates.tolls_skipped || 0) + 1;
+                                        resolve();
+                                        return;
+                                    }
+                                    
                                     // Try INSERT with transponder_id first, fallback if column doesn't exist
                                     const tryInsertWithTransponderId = () => {
                                         db.run(`INSERT INTO toll_charges 
@@ -1709,6 +1717,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                                         reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
                                                     } else if (err.message.includes('UNIQUE constraint failed')) {
                                                         reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
+                                                    } else if (err.message.includes('CHECK constraint failed')) {
+                                                        reject(new Error(`Invalid toll amount: $${toll.amount} must be between $0.01 and $200.00`));
                                                     } else {
                                                         reject(new Error(`Failed to insert toll charge: ${err.message}`));
                                                     }
@@ -1732,6 +1742,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                                         reject(new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`));
                                                     } else if (err.message.includes('UNIQUE constraint failed')) {
                                                         reject(new Error(`Duplicate transaction_id: ${toll.laneId} already exists`));
+                                                    } else if (err.message.includes('CHECK constraint failed')) {
+                                                        reject(new Error(`Invalid toll amount: $${toll.amount} must be between $0.01 and $200.00`));
                                                     } else {
                                                         reject(new Error(`Failed to insert toll charge: ${err.message}`));
                                                     }
