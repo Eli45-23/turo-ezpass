@@ -1379,7 +1379,7 @@ function calculateMatchScore(toll, trip, transponderMapping) {
     return score;
 }
 
-async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls) {
+async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, userEmail) {
     // Store CSV results in the database for persistence
     
     const dbUpdates = {
@@ -1500,12 +1500,12 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             if (!hostExists) {
                 console.log(`🔧 Host ID ${hostId} not found in database - creating host record`);
                 // Get email from session if available
-                const userEmail = req.session.email || `user_${hostId}@system.generated`;
+                const hostEmail = userEmail || `user_${hostId}@system.generated`;
                 
                 await new Promise((resolve, reject) => {
                     db.run(
                         'INSERT INTO hosts (id, email, full_name, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-                        [hostId, userEmail, 'System Generated User'],
+                        [hostId, hostEmail, 'System Generated User'],
                         function(err) {
                             if (err) {
                                 console.error(`❌ Failed to create host record: ${err.message}`);
@@ -1884,7 +1884,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             } else if (error.message.includes('host_id')) {
                 errorDetails = 'Host reference is invalid - hosts table missing required record';
             } else {
-                errorDetails = `Foreign key constraint violated - referenced record does not exist. Session info: hostId=${hostId}, email=${req.session?.email || 'unknown'}`;
+                errorDetails = `Foreign key constraint violated - referenced record does not exist. Host ID: ${hostId}`;
             }
         } else if (error.message.includes('UNIQUE constraint failed')) {
             errorType = 'DUPLICATE_RECORD';
@@ -2005,7 +2005,7 @@ router.post('/csv/process-both', requireAuth, upload.fields([
         
         // Store results in database
         console.log('🔍 Starting database storage...');
-        const dbResults = await storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls);
+        const dbResults = await storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, req.session.email);
         console.log('💾 Database storage complete');
         
         // Clear dashboard cache to force fresh data load
@@ -2295,7 +2295,8 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             { matches: [], unmatched: [] }, // Empty matching results for now
             hostId, 
             filteredTuroTrips, 
-            filteredEzpassTolls
+            filteredEzpassTolls,
+            req.session.email
         );
         console.log('💾 Basic CSV storage complete');
         
@@ -2386,7 +2387,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             const matchingResults = await performTollMatching(turoTrips, ezpassTolls, hostId);
             
             // Store matching results
-            const results = await storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls);
+            const results = await storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, req.session.email);
             
             // Clear cache
             const cacheKey = CacheKeys.dashboardSummary(hostId);
