@@ -1,4 +1,4 @@
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
 /**
  * Simple Toll Matcher
@@ -362,32 +362,33 @@ class SimpleTollMatcher {
      * ONLY loads user-defined mappings (not auto-discovered)
      */
     async loadTransponderMappings(hostId) {
-        return new Promise((resolve) => {
+        try {
             const mappings = new Map();
             
-            db.all(
-                `SELECT transponder_number, vehicle_plate, vehicle_description 
-                 FROM transponder_mappings 
-                 WHERE host_id = ? AND is_active = 1 
-                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
-                [hostId],
-                (err, results) => {
-                    if (!err && results) {
-                        results.forEach(mapping => {
-                            // Additional safety check: skip any auto-discovered mappings
-                            if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
-                                mappings.set(mapping.transponder_number, this.normalizePlate(mapping.vehicle_plate));
-                                console.log(`✅ Loaded user-defined mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate}`);
-                            } else {
-                                console.log(`🚫 Skipping auto-discovered mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate}`);
-                            }
-                        });
-                        console.log(`🔗 Loaded ${mappings.size} user-defined transponder mappings (excluding auto-discovered)`);
+            const { data: results, error } = await supabaseAdmin
+                .from('transponder_mappings')
+                .select('transponder_number, vehicle_plate, vehicle_description')
+                .eq('host_id', hostId)
+                .eq('is_active', true)
+                .or('vehicle_description.is.null,vehicle_description.not.ilike.Auto-discovered%');
+            
+            if (!error && results) {
+                results.forEach(mapping => {
+                    // Additional safety check: skip any auto-discovered mappings
+                    if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
+                        mappings.set(mapping.transponder_number, this.normalizePlate(mapping.vehicle_plate));
+                        console.log(`✅ Loaded user-defined mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate}`);
+                    } else {
+                        console.log(`🚫 Skipping auto-discovered mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate}`);
                     }
-                    resolve(mappings);
-                }
-            );
-        });
+                });
+                console.log(`🔗 Loaded ${mappings.size} user-defined transponder mappings (excluding auto-discovered)`);
+            }
+            return mappings;
+        } catch (error) {
+            console.error('❌ Error loading transponder mappings:', error);
+            return new Map();
+        }
     }
     
     /**
@@ -619,24 +620,26 @@ class SimpleTollMatcher {
                 const tollDbId = await this.findTollDatabaseId(match.toll);
                 
                 if (tripDbId && tollDbId) {
-                    await new Promise((resolve, reject) => {
-                        db.run(
-                            `UPDATE toll_charges 
-                             SET trip_id = ?, is_matched = 1, match_confidence = ?, match_method = 'simple_matcher'
-                             WHERE id = ?`,
-                            [tripDbId, match.confidence, tollDbId],
-                            function(err) {
-                                if (err) {
-                                    console.error(`❌ Failed to apply match for toll ${match.toll.laneTransactionId}:`, err);
-                                    reject(err);
-                                } else {
-                                    appliedCount++;
-                                    console.log(`✅ Applied match: Toll ${tollDbId} → Trip ${tripDbId} (${match.confidence})`);
-                                    resolve();
-                                }
-                            }
-                        );
-                    });
+                    try {
+                        const { error } = await supabaseAdmin
+                            .from('toll_charges')
+                            .update({
+                                trip_id: tripDbId,
+                                is_matched: true,
+                                match_confidence: match.confidence,
+                                match_method: 'simple_matcher'
+                            })
+                            .eq('id', tollDbId);
+                        
+                        if (error) {
+                            console.error(`❌ Failed to apply match for toll ${match.toll.laneTransactionId}:`, error);
+                        } else {
+                            appliedCount++;
+                            console.log(`✅ Applied match: Toll ${tollDbId} → Trip ${tripDbId} (${match.confidence})`);
+                        }
+                    } catch (error) {
+                        console.error(`❌ Exception applying match for toll ${match.toll.laneTransactionId}:`, error);
+                    }
                 } else {
                     console.error(`❌ Could not find database IDs for match:`, {
                         trip: match.trip.reservationId,
@@ -658,40 +661,46 @@ class SimpleTollMatcher {
      * Find trip database ID from reservation ID
      */
     async findTripDatabaseId(trip) {
-        return new Promise((resolve) => {
-            db.get(
-                `SELECT id FROM trips WHERE turo_trip_id = ? OR id = ?`,
-                [trip.reservationId, trip.originalTrip.id],
-                (err, result) => {
-                    if (err || !result) {
-                        console.error(`❌ Could not find trip in database:`, trip.reservationId);
-                        resolve(null);
-                    } else {
-                        resolve(result.id);
-                    }
-                }
-            );
-        });
+        try {
+            const { data: result, error } = await supabaseAdmin
+                .from('trips')
+                .select('id')
+                .or(`turo_trip_id.eq.${trip.reservationId},id.eq.${trip.originalTrip.id}`)
+                .single();
+            
+            if (error || !result) {
+                console.error(`❌ Could not find trip in database:`, trip.reservationId);
+                return null;
+            }
+            
+            return result.id;
+        } catch (error) {
+            console.error(`❌ Error finding trip in database:`, error);
+            return null;
+        }
     }
     
     /**
      * Find toll database ID from transaction ID
      */
     async findTollDatabaseId(toll) {
-        return new Promise((resolve) => {
-            db.get(
-                `SELECT id FROM toll_charges WHERE transaction_id = ? OR id = ?`,
-                [toll.laneTransactionId, toll.originalToll.id],
-                (err, result) => {
-                    if (err || !result) {
-                        console.error(`❌ Could not find toll in database:`, toll.laneTransactionId);
-                        resolve(null);
-                    } else {
-                        resolve(result.id);
-                    }
-                }
-            );
-        });
+        try {
+            const { data: result, error } = await supabaseAdmin
+                .from('toll_charges')
+                .select('id')
+                .or(`transaction_id.eq.${toll.laneTransactionId},id.eq.${toll.originalToll.id}`)
+                .single();
+            
+            if (error || !result) {
+                console.error(`❌ Could not find toll in database:`, toll.laneTransactionId);
+                return null;
+            }
+            
+            return result.id;
+        } catch (error) {
+            console.error(`❌ Error finding toll in database:`, error);
+            return null;
+        }
     }
     
     /**

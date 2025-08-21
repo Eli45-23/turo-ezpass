@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
+// Middleware to check authentication (UUID-based like dashboard.js)
+const requireAuth = async (req, res, next) => {
     console.log('🔐 Auth check - Session:', {
         hostId: req.session.hostId,
         sessionId: req.session.id,
@@ -11,108 +11,125 @@ const requireAuth = (req, res, next) => {
         cookies: req.headers.cookie
     });
     
-    // Enhanced authentication handling with session recovery
-    if (!req.session.hostId) {
-        console.log('🔧 No hostId in session - checking for session recovery');
-        
-        // Try to recover from database based on any available session info
-        if (req.session.email) {
-            console.log('🔍 Attempting session recovery for email:', req.session.email);
-            return db.get('SELECT id, email, full_name FROM hosts WHERE email = ?', [req.session.email], (err, host) => {
-                if (!err && host) {
-                    req.session.hostId = host.id;
-                    req.session.fullName = host.full_name;
-                    console.log('✅ Session recovered for host:', host.id);
-                    next();
-                } else {
-                    console.log('❌ Session recovery failed, applying fallback for hostId=1');
-                    req.session.hostId = 1;
-                    req.session.email = 'eliascolon23@gmail.com';
-                    next();
+    try {
+        // Check if we have a UUID in session
+        if (!req.session.hostId || typeof req.session.hostId === 'number') {
+            console.log('🔧 No UUID hostId in session - creating/getting UUID for user');
+            
+            const userEmail = req.session.email || 'eliascolon23@gmail.com';
+            
+            // Check if host already exists in Supabase
+            const { data: existingHost, error } = await supabaseAdmin
+                .from('hosts')
+                .select('id')
+                .eq('email', userEmail)
+                .single();
+            
+            if (existingHost) {
+                console.log('✅ Found existing host UUID:', existingHost.id);
+                req.session.hostId = existingHost.id;
+                req.session.email = userEmail;
+            } else {
+                // Create new host record
+                const { data: newHost, error: createError } = await supabaseAdmin
+                    .from('hosts')
+                    .insert({
+                        email: userEmail,
+                        full_name: 'User'
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Failed to create host:', createError);
+                    return res.status(500).json({ success: false, error: 'Authentication failed' });
                 }
-            });
-        } else {
-            // Fallback to hostId=1 for now
-            console.log('🔧 No email in session, applying fallback for hostId=1');
-            req.session.hostId = 1;
-            req.session.email = 'eliascolon23@gmail.com';
+                
+                console.log('✅ Created new host UUID:', newHost.id);
+                req.session.hostId = newHost.id;
+                req.session.email = userEmail;
+            }
         }
+        
+        console.log('✅ Authentication passed for host:', req.session.hostId);
+        next();
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        return res.status(500).json({ success: false, error: 'Authentication failed' });
     }
-    
-    console.log('✅ Authentication passed for host:', req.session.hostId);
-    next();
 };
 
 // Get all trips for host
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
-    db.all(
-        `SELECT 
-            t.id as trip_internal_id,
-            t.turo_trip_id as trip_turo_id,
-            t.renter_name as guest,
-            t.vehicle_plate,
-            t.start_date,
-            t.end_date,
-            t.trip_status as status,
-            t.renter_email,
-            t.created_at,
-            t.submitted_to_turo,
-            t.submitted_date,
-            tm.vehicle_description
-         FROM trips t
-         LEFT JOIN transponder_mappings tm ON t.vehicle_plate = tm.vehicle_plate AND tm.host_id = t.host_id AND tm.is_active = 1
-         WHERE t.host_id = ?
-         AND (t.trip_status IS NULL OR (t.trip_status NOT LIKE '%cancel%' AND t.trip_status NOT LIKE '%decline%' AND t.trip_status NOT LIKE '%expired%' AND t.trip_status NOT LIKE '%terminated%' AND t.trip_status NOT LIKE '%rejected%'))
-         AND (t.submitted_to_turo = 0 OR t.submitted_to_turo IS NULL)
-         ORDER BY t.start_date DESC`,
-        [hostId],
-        (err, trips) => {
-            if (err) {
-                console.error('❌ Failed to fetch trips:', err);
-                return res.status(500).json({ 
-                    success: false, 
-                    error: 'Failed to fetch trips' 
-                });
-            }
-            
-            // Transform trips data to match frontend expectations
-            const transformedTrips = {
-                completed: [],
-                inProgress: [],
-                upcoming: [],
-                yourTolls: []
-            };
-            
-            const now = new Date();
-            
-            // Get toll charges for all trips at once for better performance
-            db.all(
-                `SELECT tc.*, ta.provider, tc.trip_id
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND tc.trip_id IS NOT NULL
-                   AND (tc.submitted_to_turo = 0 OR tc.submitted_to_turo IS NULL)`,
-                [hostId],
-                (err, tollCharges) => {
-                    if (err) {
-                        console.error('❌ Failed to fetch toll charges:', err);
-                    }
-                    
-                    // Get revenue data from invoices
-                    db.all(
-                        `SELECT i.trip_id, SUM(ii.amount) as total_revenue
-                         FROM invoices i
-                         JOIN invoice_items ii ON i.id = ii.invoice_id
-                         JOIN trips t ON i.trip_id = t.id
-                         WHERE t.host_id = ?
-                         GROUP BY i.trip_id`,
-                        [hostId],
-                        (err, revenueData) => {
-                            if (err) {
-                                console.error('❌ Failed to fetch revenue data:', err);
-                            }
+    try {
+        // Get trips with transponder mappings using Supabase
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select(`
+                id,
+                turo_trip_id,
+                renter_name,
+                vehicle_plate,
+                start_date,
+                end_date,
+                trip_status,
+                renter_email,
+                created_at,
+                transponder_mappings!inner(vehicle_description)
+            `)
+            .eq('host_id', hostId)
+            .or('trip_status.is.null,and(trip_status.not.ilike.%cancel%,trip_status.not.ilike.%decline%,trip_status.not.ilike.%expired%,trip_status.not.ilike.%terminated%,trip_status.not.ilike.%rejected%)')
+            .or('submitted_to_turo.eq.false,submitted_to_turo.is.null')
+            .order('start_date', { ascending: false });
+        
+        if (tripsError) {
+            console.error('❌ Failed to fetch trips:', tripsError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to fetch trips' 
+            });
+        }
+        
+        // Transform trips data to match frontend expectations
+        const transformedTrips = {
+            completed: [],
+            inProgress: [],
+            upcoming: [],
+            yourTolls: []
+        };
+        
+        const now = new Date();
+        
+        // Get toll charges for all trips using Supabase
+        const { data: tollCharges, error: tollError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(provider, host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', true)
+            .not('trip_id', 'is', null)
+            .or('submitted_to_turo.eq.false,submitted_to_turo.is.null');
+        
+        if (tollError) {
+            console.error('❌ Failed to fetch toll charges:', tollError);
+        }
+        
+        // Get revenue data from invoices using Supabase
+        const { data: revenueData, error: revenueError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                trip_id,
+                invoice_items(amount)
+            `)
+            .eq('trips.host_id', hostId);
+        
+        if (revenueError) {
+            console.error('❌ Failed to fetch revenue data:', revenueError);
+        }
                             
                             // Create lookup maps for efficiency
                             const tollsByTrip = {};

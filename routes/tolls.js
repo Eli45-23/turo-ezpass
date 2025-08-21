@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 const { createCSVUploadMiddleware, cleanupFile } = require('../middleware/csv-validation');
 const { verificationStatusLimiter } = require('../middleware/security');
 const EnhancedTollMatcher = require('../services/enhanced-toll-matcher');
@@ -13,53 +13,109 @@ const tollCSVUpload = createCSVUploadMiddleware({
     maxFileSize: 8 * 1024 * 1024 // 8MB for toll data
 });
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-    if (!req.session.hostId) {
-        return res.status(401).json({ 
-            success: false, 
-            error: 'Authentication required' 
-        });
+// Middleware to check authentication (UUID-based like other routes)
+const requireAuth = async (req, res, next) => {
+    console.log('🔐 Auth check - Session:', {
+        hostId: req.session.hostId,
+        sessionId: req.session.id,
+        path: req.path
+    });
+    
+    try {
+        // Check if we have a UUID in session
+        if (!req.session.hostId || typeof req.session.hostId === 'number') {
+            console.log('🔧 No UUID hostId in session - creating/getting UUID for user');
+            
+            const userEmail = req.session.email || 'eliascolon23@gmail.com';
+            
+            // Check if host already exists in Supabase
+            const { data: existingHost, error } = await supabaseAdmin
+                .from('hosts')
+                .select('id')
+                .eq('email', userEmail)
+                .single();
+            
+            if (existingHost) {
+                console.log('✅ Found existing host UUID:', existingHost.id);
+                req.session.hostId = existingHost.id;
+                req.session.email = userEmail;
+            } else {
+                // Create new host record
+                const { data: newHost, error: createError } = await supabaseAdmin
+                    .from('hosts')
+                    .insert({
+                        email: userEmail,
+                        full_name: 'User'
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Failed to create host:', createError);
+                    return res.status(500).json({ success: false, error: 'Authentication failed' });
+                }
+                
+                console.log('✅ Created new host UUID:', newHost.id);
+                req.session.hostId = newHost.id;
+                req.session.email = userEmail;
+            }
+        }
+        
+        console.log('✅ Authentication passed for host:', req.session.hostId);
+        next();
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        return res.status(500).json({ success: false, error: 'Authentication failed' });
     }
-    next();
 };
 
 // Clear existing toll data for testing
-router.delete('/clear/:accountId', requireAuth, (req, res) => {
+router.delete('/clear/:accountId', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const accountId = req.params.accountId;
     
-    // Verify account belongs to host
-    db.get(
-        `SELECT * FROM toll_accounts WHERE id = ? AND host_id = ?`,
-        [accountId, hostId],
-        (err, account) => {
-            if (err || !account) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Toll account not found' 
-                });
-            }
-            
-            db.run(
-                `DELETE FROM toll_charges WHERE toll_account_id = ?`,
-                [accountId],
-                function(err) {
-                    if (err) {
-                        return res.status(500).json({
-                            success: false,
-                            error: 'Failed to clear toll data'
-                        });
-                    }
-                    
-                    res.json({
-                        success: true,
-                        message: `Cleared ${this.changes} existing toll charges`
-                    });
-                }
-            );
+    try {
+        // Verify account belongs to host
+        const { data: account, error: accountError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select('*')
+            .eq('id', accountId)
+            .eq('host_id', hostId)
+            .single();
+        
+        if (accountError || !account) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Toll account not found' 
+            });
         }
-    );
+        
+        // Delete toll charges for this account
+        const { data: deletedCharges, error: deleteError } = await supabaseAdmin
+            .from('toll_charges')
+            .delete()
+            .eq('toll_account_id', accountId)
+            .select();
+        
+        if (deleteError) {
+            console.error('❌ Error clearing toll data:', deleteError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to clear toll data'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `Cleared ${deletedCharges?.length || 0} existing toll charges`
+        });
+    } catch (error) {
+        console.error('❌ Exception clearing toll data:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to clear toll data'
+        });
+    }
 });
 
 // Import tolls from CSV file
@@ -246,51 +302,61 @@ router.post('/sync/:accountId', requireAuth, (req, res) => {
 });
 
 // Get toll charges for a specific trip
-router.get('/trip/:tripId', requireAuth, (req, res) => {
+router.get('/trip/:tripId', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const tripId = req.params.tripId;
     
-    // Verify trip belongs to host
-    db.get(
-        `SELECT * FROM trips WHERE id = ? AND host_id = ?`,
-        [tripId, hostId],
-        (err, trip) => {
-            if (err || !trip) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Trip not found' 
-                });
-            }
-            
-            // Get toll charges within trip dates
-            db.all(
-                `SELECT tc.*
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ?
-                   AND tc.toll_date BETWEEN ? AND ?
-                 ORDER BY tc.toll_date DESC`,
-                [hostId, trip.start_date, trip.end_date],
-                (err, charges) => {
-                    if (err) {
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to fetch toll charges' 
-                        });
-                    }
-                    
-                    res.json({
-                        success: true,
-                        data: {
-                            trip: trip,
-                            charges: charges,
-                            totalAmount: charges.reduce((sum, c) => sum + c.toll_amount, 0)
-                        }
-                    });
-                }
-            );
+    try {
+        // Verify trip belongs to host
+        const { data: trip, error: tripError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('id', tripId)
+            .eq('host_id', hostId)
+            .single();
+        
+        if (tripError || !trip) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Trip not found' 
+            });
         }
-    );
+        
+        // Get toll charges within trip dates
+        const { data: charges, error: chargesError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .gte('toll_date', trip.start_date)
+            .lte('toll_date', trip.end_date)
+            .order('toll_date', { ascending: false });
+        
+        if (chargesError) {
+            console.error('❌ Error fetching toll charges:', chargesError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to fetch toll charges' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                trip: trip,
+                charges: charges || [],
+                totalAmount: (charges || []).reduce((sum, c) => sum + (c.toll_amount || 0), 0)
+            }
+        });
+    } catch (error) {
+        console.error('❌ Exception fetching trip toll charges:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch toll charges' 
+        });
+    }
 });
 
 // Match tolls to trips automatically
@@ -622,84 +688,70 @@ async function importTollsFromCSV(csvData, hostId) {
  * Get or create a toll account for CSV imports
  */
 async function getOrCreateCSVTollAccount(hostId) {
-    return new Promise((resolve, reject) => {
+    try {
         // First validate that host exists to prevent FK constraint violation
-        db.get(
-            'SELECT id FROM hosts WHERE id = ?',
-            [hostId],
-            (err, host) => {
-                if (err) {
-                    reject(new Error(`Database error checking host: ${err.message}`));
-                    return;
-                }
-                
-                if (!host) {
-                    reject(new Error(`Host ID ${hostId} does not exist - cannot create toll account`));
-                    return;
-                }
-                
-                // Try to find existing CSV account
-                db.get(
-                    'SELECT * FROM toll_accounts WHERE host_id = ? AND provider = ?',
-                    [hostId, 'CSV Import'],
-                    (err, account) => {
-                        if (err) {
-                            reject(new Error(`Database error checking toll account: ${err.message}`));
-                            return;
-                        }
-                        
-                        if (account) {
-                            console.log(`✅ Using existing CSV toll account ${account.id} for host ${hostId}`);
-                            resolve(account);
-                            return;
-                        }
-                        
-                        // Create new CSV toll account with all required fields
-                        const accountNumber = 'CSV_UPLOAD_' + Date.now();
-                        
-                        // Use crypto utility to encrypt password
-                        let encryptedPassword;
-                        try {
-                            const crypto = require('../utils/crypto');
-                            encryptedPassword = crypto.encryptSensitiveData('csv_system_password', hostId.toString());
-                        } catch (cryptoError) {
-                            console.warn('⚠️ Crypto utility not available, using placeholder password');
-                            encryptedPassword = 'placeholder_encrypted_password';
-                        }
-                        
-                        db.run(`
-                            INSERT INTO toll_accounts 
-                            (host_id, provider, account_number, username, password_encrypted, is_active) 
-                            VALUES (?, ?, ?, ?, ?, 1)
-                        `, [
-                            hostId,
-                            'CSV Import',
-                            accountNumber,
-                            'csv_import@system',
-                            encryptedPassword
-                        ], function(err) {
-                            if (err) {
-                                if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                    reject(new Error(`Cannot create toll account: Host ID ${hostId} does not exist`));
-                                } else {
-                                    reject(new Error(`Failed to create toll account: ${err.message}`));
-                                }
-                            } else {
-                                const newAccount = {
-                                    id: this.lastID,
-                                    host_id: hostId,
-                                    provider: 'CSV Import',
-                                    account_number: accountNumber
-                                };
-                                console.log(`✅ Created new CSV toll account ${newAccount.id} for host ${hostId}`);
-                                resolve(newAccount);
-                            }
-                        });
-                    }
-                );
+        const { data: host, error: hostError } = await supabaseAdmin
+            .from('hosts')
+            .select('id')
+            .eq('id', hostId)
+            .single();
+        
+        if (hostError || !host) {
+            throw new Error(`Host ID ${hostId} does not exist - cannot create toll account`);
+        }
+        
+        // Try to find existing CSV account
+        const { data: account, error: accountError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select('*')
+            .eq('host_id', hostId)
+            .eq('provider', 'CSV Import')
+            .single();
+        
+        if (account) {
+            console.log(`✅ Using existing CSV toll account ${account.id} for host ${hostId}`);
+            return account;
+        }
+        
+        // Create new CSV toll account with all required fields
+        const accountNumber = 'CSV_UPLOAD_' + Date.now();
+        
+        // Use crypto utility to encrypt password
+        let encryptedPassword;
+        try {
+            const crypto = require('../utils/crypto');
+            encryptedPassword = crypto.encryptSensitiveData('csv_system_password', hostId.toString());
+        } catch (cryptoError) {
+            console.warn('⚠️ Crypto utility not available, using placeholder password');
+            encryptedPassword = 'placeholder_encrypted_password';
+        }
+        
+        const { data: newAccount, error: createError } = await supabaseAdmin
+            .from('toll_accounts')
+            .insert({
+                host_id: hostId,
+                provider: 'CSV Import',
+                account_number: accountNumber,
+                username: 'csv_import@system',
+                password_encrypted: encryptedPassword,
+                is_active: true
+            })
+            .select()
+            .single();
+        
+        if (createError) {
+            if (createError.code === '23503') { // Foreign key constraint
+                throw new Error(`Cannot create toll account: Host ID ${hostId} does not exist`);
+            } else {
+                throw new Error(`Failed to create toll account: ${createError.message}`);
             }
-        );
-    });
+        }
+        
+        console.log(`✅ Created new CSV toll account ${newAccount.id} for host ${hostId}`);
+        return newAccount;
+    } catch (error) {
+        throw error;
+    }
 }
 
 // SIMPLE & BULLETPROOF toll matching algorithm - gets 95%+ accuracy
