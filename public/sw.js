@@ -18,7 +18,7 @@ const STATIC_CACHE_FILES = [
     '/',
     '/index.html',
     '/dashboard.html',
-    '/style.css',
+    '/login-style.css',
     '/css/accessibility.css',
     '/js/xss-utils.js',
     '/js/accessibility.js',
