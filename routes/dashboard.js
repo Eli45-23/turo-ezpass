@@ -1488,8 +1488,38 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 status: trip.status
             });
             
-            // Note: Host existence is guaranteed by requireAuth middleware
-            // No need to re-verify as authentication already ensures valid hostId
+            // Ensure host exists in database (required for foreign key constraints)
+            // If not, create a host record for the authenticated user
+            const hostExists = await new Promise((resolve, reject) => {
+                db.get('SELECT id, email FROM hosts WHERE id = ?', [hostId], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                });
+            });
+            
+            if (!hostExists) {
+                console.log(`🔧 Host ID ${hostId} not found in database - creating host record`);
+                // Get email from session if available
+                const userEmail = req.session.email || `user_${hostId}@system.generated`;
+                
+                await new Promise((resolve, reject) => {
+                    db.run(
+                        'INSERT INTO hosts (id, email, full_name, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+                        [hostId, userEmail, 'System Generated User'],
+                        function(err) {
+                            if (err) {
+                                console.error(`❌ Failed to create host record: ${err.message}`);
+                                reject(err);
+                            } else {
+                                console.log(`✅ Created host record for ID ${hostId} with email ${userEmail}`);
+                                resolve();
+                            }
+                        }
+                    );
+                });
+            } else {
+                console.log(`✅ Host ID ${hostId} exists: ${hostExists.email}`);
+            }
             
             // Check if trip already exists and has invoices (preserve for toll memory system)
             const existingTripWithInvoice = await new Promise((resolve, reject) => {
@@ -1548,9 +1578,20 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         // 2. Insert tolls from CSV into toll_charges table (ONLY for known vehicles)
         // First get or create a toll account for CSV imports  
         const csvTollAccount = await new Promise((resolve, reject) => {
-            // Host existence guaranteed by requireAuth middleware
-            // Directly check/create toll account
-            db.get(
+            // Ensure host exists before creating toll account (foreign key requirement)
+            db.get('SELECT id FROM hosts WHERE id = ?', [hostId], (err, host) => {
+                if (err) {
+                    reject(new Error(`Database error checking host: ${err.message}`));
+                    return;
+                }
+                
+                if (!host) {
+                    reject(new Error(`Host ID ${hostId} does not exist in hosts table. Please ensure user is properly registered.`));
+                    return;
+                }
+                
+                // Now check/create toll account
+                db.get(
                 'SELECT id FROM toll_accounts WHERE host_id = ? AND provider = ?',
                 [hostId, 'CSV Import'],
                 (err, account) => {
@@ -1596,6 +1637,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                     });
                 }
             );
+            });
         });
         
         for (const toll of ezpassTolls) {
@@ -1790,7 +1832,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             } else if (error.message.includes('host_id')) {
                 errorDetails = 'Host reference is invalid - hosts table missing required record';
             } else {
-                errorDetails = 'Foreign key constraint violated - referenced record does not exist';
+                errorDetails = `Foreign key constraint violated - referenced record does not exist. Session info: hostId=${hostId}, email=${req.session?.email || 'unknown'}`;
             }
         } else if (error.message.includes('UNIQUE constraint failed')) {
             errorType = 'DUPLICATE_RECORD';
