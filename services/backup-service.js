@@ -278,40 +278,44 @@ class BackupService {
      */
     async getTableChanges(tableName, sinceTimestamp) {
         return new Promise((resolve, reject) => {
-            // Try different timestamp columns
-            const timestampColumns = ['updated_at', 'created_at', 'modified_at', 'timestamp'];
-            let query = null;
-            
-            for (const col of timestampColumns) {
-                try {
-                    query = `SELECT * FROM ${tableName} WHERE ${col} > ? ORDER BY ${col} DESC`;
-                    break;
-                } catch (error) {
-                    // Column doesn't exist, try next
-                    continue;
-                }
-            }
-            
-            if (!query) {
-                // No timestamp column found, get all records (not ideal but functional)
-                query = `SELECT * FROM ${tableName}`;
-                db.all(query, [], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                });
-                return;
-            }
-            
-            db.all(query, [sinceTimestamp], (err, rows) => {
+            // First check which timestamp columns exist
+            db.all(`PRAGMA table_info(${tableName})`, [], (err, columns) => {
                 if (err) {
-                    // If query fails, try without timestamp filter
-                    db.all(`SELECT COUNT(*) as count FROM ${tableName}`, [], (countErr, countRows) => {
-                        if (countErr) reject(countErr);
-                        else resolve([]); // Return empty to avoid full table dump
-                    });
-                } else {
-                    resolve(rows || []);
+                    console.warn(`⚠️ Could not get table info for ${tableName}: ${err.message}`);
+                    resolve([]);
+                    return;
                 }
+                
+                // Find available timestamp columns
+                const timestampColumns = ['updated_at', 'created_at', 'modified_at', 'timestamp'];
+                const availableColumns = columns.map(col => col.name);
+                let timestampColumn = null;
+                
+                for (const col of timestampColumns) {
+                    if (availableColumns.includes(col)) {
+                        timestampColumn = col;
+                        break;
+                    }
+                }
+                
+                if (!timestampColumn) {
+                    // No timestamp column found, return empty to avoid full table dump
+                    console.warn(`⚠️ No timestamp column found in ${tableName}, skipping incremental changes`);
+                    resolve([]);
+                    return;
+                }
+                
+                // Query with available timestamp column
+                const query = `SELECT * FROM ${tableName} WHERE ${timestampColumn} > ? ORDER BY ${timestampColumn} DESC`;
+                
+                db.all(query, [sinceTimestamp], (err, rows) => {
+                    if (err) {
+                        console.warn(`⚠️ Error querying ${tableName} for changes: ${err.message}`);
+                        resolve([]);
+                    } else {
+                        resolve(rows || []);
+                    }
+                });
             });
         });
     }

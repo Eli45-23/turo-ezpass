@@ -389,6 +389,10 @@ scheduler.start();
 const automatedReporting = require('./services/automated-reporting');
 automatedReporting.initialize().catch(console.error);
 
+// Initialize Supabase admin client globally for services
+const { supabaseAdmin } = require('./config/supabase');
+global.supabaseAdmin = supabaseAdmin;
+
 // Initialize late toll detection service
 const LateTollDetector = require('./services/late-toll-detector');
 const lateTollDetector = new LateTollDetector();

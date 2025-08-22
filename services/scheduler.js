@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const TuroIntegrationService = require('./turo-integration');
 const NotificationManager = require('./notification-manager');
 const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
 /**
  * Scheduled Tasks Service
@@ -303,15 +304,19 @@ class SchedulerService {
      */
 
     async getAllActiveHosts() {
-        return new Promise((resolve, reject) => {
-            db.all(
-                `SELECT id, email FROM hosts WHERE created_at > datetime('now', '-1 year')`,
-                (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                }
-            );
-        });
+        try {
+            // Use Supabase to get hosts with proper UUID format
+            const { data: hosts, error } = await supabaseAdmin
+                .from('hosts')
+                .select('id, email')
+                .gte('created_at', new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString());
+            
+            if (error) throw error;
+            return hosts || [];
+        } catch (error) {
+            console.error('❌ Error getting active hosts:', error);
+            return [];
+        }
     }
 
     async getTripsReadyForInvoicing() {

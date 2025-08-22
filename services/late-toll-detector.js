@@ -157,13 +157,8 @@ class LateTollDetector {
                 .insert({
                     trip_id: trip.id,
                     toll_charge_id: toll.id,
-                    original_submission_date: originalSubmissionDate.toISOString(),
-                    detection_date: new Date().toISOString(),
-                    toll_amount: toll.toll_amount,
-                    toll_location: toll.toll_location,
-                    toll_date: toll.toll_date,
-                    status: 'detected',
-                    host_id: trip.host_id
+                    amount: toll.toll_amount,
+                    status: 'new'
                 })
                 .select()
                 .single();
