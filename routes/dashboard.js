@@ -2324,6 +2324,11 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             
             // Start simple matching following user's 4-step process
             console.log('🚀 Starting simple toll matching after CSV import...');
+            
+            // Add small delay to ensure all database transactions have committed
+            console.log('⏱️ Waiting 2 seconds for database consistency...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
             const matchResult = await simpleMatcher.matchTollsToTrips(hostId, filteredTuroTrips, filteredEzpassTolls, progressCallback);
             
             // Send final completion event
