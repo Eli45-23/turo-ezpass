@@ -2762,17 +2762,10 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         // Use the invoicesForHost we already retrieved
         const tripsInInvoices = invoicesForHost?.map(invoice => ({ trip_id: invoice.trip_id })) || [];
             
-        const { data: tripsInTollCharges } = await supabaseAdmin
-            .from('toll_charges')
-            .select('trip_id, toll_accounts!inner(host_id)')
-            .eq('toll_accounts.host_id', hostId);
+        // Only preserve trips that have invoices - delete everything else
+        const tripIdsToPreserve = tripsInInvoices?.filter(inv => inv.trip_id != null).map(inv => inv.trip_id) || [];
         
-        const tripIdsToPreserve = [
-            ...(tripsInInvoices?.filter(inv => inv.trip_id != null).map(inv => inv.trip_id) || []),
-            ...(tripsInTollCharges?.filter(tc => tc.trip_id != null).map(tc => tc.trip_id) || [])
-        ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
-        
-        // Delete trips WITHOUT invoices AND not referenced by preserved toll_charges
+        // Delete trips WITHOUT invoices
         console.log('🗑️ Deleting trips without invoices or toll references...');
         let deleteTripsQuery = supabaseAdmin
             .from('trips')
@@ -2788,71 +2781,18 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         
         if (deleteTripsError) throw deleteTripsError;
         results.trips_without_invoices_deleted = deletedTrips || 0;
-        console.log(`🗑️ Deleted ${results.trips_without_invoices_deleted} trips without invoices or toll references`);
+        console.log(`🗑️ Deleted ${results.trips_without_invoices_deleted} trips without invoices`);
         
-        // Get toll account IDs referenced by archived toll charges - ONLY for this host
-        const { data: referencedTollAccounts } = await supabaseAdmin
-            .from('toll_charges')
-            .select('toll_account_id, toll_accounts!inner(host_id)')
-            .eq('is_archived', true)
-            .eq('toll_accounts.host_id', hostId);
-        
-        const tollAccountIdsToPreserve = referencedTollAccounts?.filter(tc => tc.toll_account_id != null).map(tc => tc.toll_account_id) || [];
-        
-        // Delete toll accounts NOT referenced by archived toll charges
-        console.log('🗑️ Deleting toll accounts not referenced by archived charges...');
-        let deleteTollAccountsQuery = supabaseAdmin
+        // Delete ALL toll accounts for this host (users can re-add them)
+        console.log('🗑️ Deleting ALL toll accounts for fresh start...');
+        const { count: deletedTollAccounts, error: deleteTollAccountsError } = await supabaseAdmin
             .from('toll_accounts')
             .delete({ count: 'exact' })
             .eq('host_id', hostId);
-            
-        if (tollAccountIdsToPreserve.length > 0) {
-            deleteTollAccountsQuery = deleteTollAccountsQuery.not('id', 'in', '(' + tollAccountIdsToPreserve.join(',') + ')');
-        }
-        // If no toll accounts to preserve, all toll accounts will be deleted for this host
-        
-        const { count: deletedTollAccounts, error: deleteTollAccountsError } = await deleteTollAccountsQuery;
         
         if (deleteTollAccountsError) throw deleteTollAccountsError;
         results.toll_accounts_deleted = deletedTollAccounts || 0;
-        console.log(`🗑️ Deleted ${results.toll_accounts_deleted} toll accounts (preserved those referenced by archived charges)`);
-        
-        // Check for missing toll_accounts that are referenced by archived charges
-        if (tollAccountIdsToPreserve.length > 0) {
-            const { data: existingTollAccounts } = await supabaseAdmin
-                .from('toll_accounts')
-                .select('id')
-                .in('id', tollAccountIdsToPreserve);
-            
-            const existingIds = existingTollAccounts?.map(ta => ta.id) || [];
-            const missingAccountIds = tollAccountIdsToPreserve.filter(id => !existingIds.includes(id));
-            
-            if (missingAccountIds.length > 0) {
-                console.log(`🔧 Recreating ${missingAccountIds.length} missing toll_accounts for archived charges`);
-                
-                const missingAccountsToInsert = missingAccountIds.map(accountId => ({
-                    id: accountId,
-                    host_id: hostId,
-                    provider: 'ARCHIVED',
-                    account_number: `ARCHIVED-${accountId}`,
-                    username: 'archived@system',
-                    password_encrypted: 'archived_password',
-                    is_active: false
-                }));
-                
-                const { error: insertError } = await supabaseAdmin
-                    .from('toll_accounts')
-                    .insert(missingAccountsToInsert);
-                
-                if (insertError) {
-                    console.warn(`⚠️ Could not recreate missing toll_accounts:`, insertError.message);
-                } else {
-                    console.log(`✅ Recreated ${missingAccountIds.length} toll_accounts`);
-                }
-            } else {
-                console.log('✅ All archived toll charges have valid toll_account references');
-            }
-        }
+        console.log(`🗑️ Deleted ${results.toll_accounts_deleted} toll accounts for fresh start`);
         
         // Clear late tolls detected table - reuse hostTripIds from above
         
