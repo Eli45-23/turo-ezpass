@@ -2677,8 +2677,8 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         console.log('📁 Getting toll charge IDs that are in invoices...');
         const { data: tollChargesInInvoices, error: invoiceItemsError } = await supabaseAdmin
             .from('invoice_items')
-            .select(`toll_charge_id, invoices!inner(host_id)`)
-            .eq('invoices.host_id', hostId);
+            .select(`toll_charge_id, invoices!inner(trip_id, trips!inner(host_id))`)
+            .eq('invoices.trips.host_id', hostId);
             
         if (invoiceItemsError) {
             console.log('❌ Error querying invoice_items:', invoiceItemsError);
