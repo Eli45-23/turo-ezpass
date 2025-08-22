@@ -179,12 +179,12 @@ class SimpleTollMatcher {
         
         const extracted = trips.map((trip, index) => {
             const extracted = {
-                reservationId: trip.turoTripId || trip.reservationId,
-                guest: trip.guest,
-                vehicle: trip.vehiclePlate,
+                reservationId: trip.turo_trip_id || trip.turoTripId || trip.reservationId,
+                guest: trip.renter_name || trip.guest,
+                vehicle: trip.vehicle_plate || trip.vehiclePlate,
                 vehicleName: trip.vehicleName || trip.vehicle || '',
-                tripStart: this.parseDate(trip.startDate),
-                tripEnd: this.parseDate(trip.endDate),
+                tripStart: this.parseDate(trip.start_date || trip.startDate),
+                tripEnd: this.parseDate(trip.end_date || trip.endDate),
                 originalTrip: trip // Keep reference for database updates
             };
             
@@ -256,17 +256,17 @@ class SimpleTollMatcher {
         
         const extracted = tolls.map((toll, index) => {
             const extracted = {
-                laneTransactionId: toll.laneId || toll.transactionId || toll.id,
-                tagOrPlate: toll.plateNumber || toll.transponderId || toll.transponder_id,
-                postedDate: toll.postedDate ? new Date(toll.postedDate) : null,
+                laneTransactionId: toll.transaction_id || toll.laneId || toll.transactionId || toll.id,
+                tagOrPlate: toll.plate_number || toll.plateNumber || toll.transponder_id || toll.transponderId,
+                postedDate: toll.posted_date ? new Date(toll.posted_date) : (toll.postedDate ? new Date(toll.postedDate) : null),
                 agency: toll.agency || '',
-                entryPlaza: toll.entryPlaza || '',
-                exitPlaza: toll.exitPlaza || '',
-                tollLocation: toll.location || '',
-                tollClass: toll.class || '',
-                tollDate: this.parseDate(toll.transactionDate || toll.date),
+                entryPlaza: toll.entry_plaza || toll.entryPlaza || '',
+                exitPlaza: toll.exit_plaza || toll.exitPlaza || '',
+                tollLocation: toll.toll_location || toll.location || '',
+                tollClass: toll.toll_class || toll.class || '',
+                tollDate: this.parseDate(toll.charge_date || toll.toll_date || toll.transactionDate || toll.date),
                 tollTime: this.extractTime(toll),
-                amount: Math.abs(parseFloat(toll.amount)) || 0,
+                amount: Math.abs(parseFloat(toll.toll_amount || toll.amount)) || 0,
                 originalToll: toll // Keep reference for database updates
             };
             
@@ -664,7 +664,13 @@ class SimpleTollMatcher {
         try {
             console.log(`🔍 DEBUG: Looking for trip ${trip.reservationId} in database...`);
             
-            // First try to find by turo_trip_id (most common case)
+            // If the originalTrip already has a database ID, use it directly
+            if (trip.originalTrip && trip.originalTrip.id) {
+                console.log(`✅ Using existing database ID: ${trip.originalTrip.id} for trip ${trip.reservationId}`);
+                return trip.originalTrip.id;
+            }
+            
+            // Otherwise, search by turo_trip_id
             const { data: result, error } = await supabaseAdmin
                 .from('trips')
                 .select('id, turo_trip_id, vehicle_plate')
@@ -674,20 +680,6 @@ class SimpleTollMatcher {
             if (result) {
                 console.log(`✅ Found trip by turo_trip_id: ${result.id} (${result.turo_trip_id}, plate: ${result.vehicle_plate})`);
                 return result.id;
-            }
-            
-            // If not found and we have originalTrip.id, try that
-            if (trip.originalTrip && trip.originalTrip.id) {
-                const { data: result2, error: error2 } = await supabaseAdmin
-                    .from('trips')
-                    .select('id, turo_trip_id, vehicle_plate')
-                    .eq('id', trip.originalTrip.id)
-                    .single();
-                
-                if (result2) {
-                    console.log(`✅ Found trip by database ID: ${result2.id} (${result2.turo_trip_id}, plate: ${result2.vehicle_plate})`);
-                    return result2.id;
-                }
             }
             
             console.error(`❌ Could not find trip in database:`, {
@@ -709,30 +701,22 @@ class SimpleTollMatcher {
         try {
             console.log(`🔍 DEBUG: Looking for toll ${toll.laneTransactionId} in database...`);
             
-            // First try to find by transaction_id
+            // If the originalToll already has a database ID, use it directly
+            if (toll.originalToll && toll.originalToll.id) {
+                console.log(`✅ Using existing database ID: ${toll.originalToll.id} for toll ${toll.laneTransactionId}`);
+                return toll.originalToll.id;
+            }
+            
+            // Otherwise, search by transaction_id
             const { data: result, error } = await supabaseAdmin
                 .from('toll_charges')
-                .select('id, transaction_id, amount, charge_date')
+                .select('id, transaction_id, toll_amount, charge_date')
                 .eq('transaction_id', toll.laneTransactionId)
                 .single();
             
             if (result) {
-                console.log(`✅ Found toll by transaction_id: ${result.id} (${result.transaction_id}, $${result.amount})`);
+                console.log(`✅ Found toll by transaction_id: ${result.id} (${result.transaction_id}, $${result.toll_amount})`);
                 return result.id;
-            }
-            
-            // If not found and we have originalToll.id, try that
-            if (toll.originalToll && toll.originalToll.id) {
-                const { data: result2, error: error2 } = await supabaseAdmin
-                    .from('toll_charges')
-                    .select('id, transaction_id, amount, charge_date')
-                    .eq('id', toll.originalToll.id)
-                    .single();
-                
-                if (result2) {
-                    console.log(`✅ Found toll by database ID: ${result2.id} (${result2.transaction_id}, $${result2.amount})`);
-                    return result2.id;
-                }
             }
             
             console.error(`❌ Could not find toll in database:`, {

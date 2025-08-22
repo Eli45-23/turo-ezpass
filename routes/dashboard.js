@@ -2329,7 +2329,49 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             console.log('⏱️ Waiting 2 seconds for database consistency...');
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            const matchResult = await simpleMatcher.matchTollsToTrips(hostId, filteredTuroTrips, filteredEzpassTolls, progressCallback);
+            // Fetch database records instead of using CSV objects
+            console.log('🔍 Fetching database records for matching...');
+            
+            // Get trips from database (recently inserted)
+            const { data: databaseTrips, error: tripsError } = await supabaseAdmin
+                .from('trips')
+                .select('*')
+                .eq('host_id', hostId)
+                .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)')
+                .order('created_at', { ascending: false })
+                .limit(filteredTuroTrips.length + 50); // Get recent trips plus buffer
+            
+            if (tripsError) {
+                console.error('❌ Error fetching database trips:', tripsError);
+                throw tripsError;
+            }
+            
+            // Get toll charges from database (recently inserted) 
+            const { data: databaseTolls, error: tollsError } = await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId)
+                .or('is_archived.is.null,is_archived.eq.false')
+                .order('created_at', { ascending: false })
+                .limit(filteredEzpassTolls.length + 50); // Get recent tolls plus buffer
+            
+            if (tollsError) {
+                console.error('❌ Error fetching database tolls:', tollsError);
+                throw tollsError;
+            }
+            
+            console.log(`🔍 Found ${databaseTrips?.length || 0} trips and ${databaseTolls?.length || 0} tolls in database`);
+            
+            // Filter to only recently imported trips/tolls by matching against CSV data
+            const recentTripIds = new Set(filteredTuroTrips.map(trip => trip.turoTripId));
+            const recentTrips = databaseTrips?.filter(trip => recentTripIds.has(trip.turo_trip_id)) || [];
+            
+            console.log(`🎯 Filtered to ${recentTrips.length} recently imported trips for matching`);
+            
+            const matchResult = await simpleMatcher.matchTollsToTrips(hostId, recentTrips, databaseTolls, progressCallback);
             
             // Send final completion event
             const sendToHost = req.app.get('sendToHost');
