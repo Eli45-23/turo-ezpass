@@ -2573,7 +2573,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
     try {
-        console.log('🧽 Clearing ALL data except Invoices and Transponders - requested by host:', hostId);
+        console.log('🧽 Clearing ALL data except Invoices and Transponders - requested by host:', hostId, 'type:', typeof hostId);
         console.log('🚀 Starting clear data operation...');
         
         const results = {
@@ -2591,23 +2591,63 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         console.log('📊 Counting preserved data...');
         
         console.log('📊 Counting invoices...');
-        const { count: invoicesCount, error: invoicesCountError } = await supabaseAdmin
-            .from('invoices')
-            .select('*', { count: 'exact', head: true })
+        // Get trip IDs for this host first
+        const { data: hostTrips, error: hostTripsError } = await supabaseAdmin
+            .from('trips')
+            .select('id')
             .eq('host_id', hostId);
             
+        if (hostTripsError) {
+            console.log('❌ Error getting host trips for invoice count:', {
+                error: hostTripsError,
+                message: hostTripsError?.message,
+                code: hostTripsError?.code,
+                details: hostTripsError?.details,
+                hint: hostTripsError?.hint,
+                hostId: hostId,
+                hostIdType: typeof hostId
+            });
+            throw hostTripsError;
+        }
+        
+        const hostTripIds = hostTrips?.map(trip => trip.id) || [];
+        console.log(`📊 Found ${hostTripIds.length} trips for host ${hostId}`);
+        
+        // Get and count invoices for those trips
+        const { data: invoicesForHost, error: invoicesCountError } = hostTripIds.length > 0 
+            ? await supabaseAdmin
+                .from('invoices')
+                .select('id, trip_id')
+                .in('trip_id', hostTripIds)
+            : { data: [], error: null };
+            
+        const invoicesCount = invoicesForHost?.length || 0;
+            
         if (invoicesCountError) {
-            console.log('❌ Error counting invoices:', invoicesCountError);
+            console.log('❌ Error counting invoices:', {
+                error: invoicesCountError,
+                message: invoicesCountError?.message,
+                code: invoicesCountError?.code,
+                details: invoicesCountError?.details,
+                hint: invoicesCountError?.hint,
+                hostId: hostId,
+                hostTripIds: hostTripIds?.length
+            });
             throw invoicesCountError;
         }
         
+        // We already have the invoices from above
+        const hostInvoiceIds = invoicesForHost?.map(invoice => invoice.id) || [];
+        console.log(`📊 Found ${invoicesCount} invoices for host ${hostId}`);
+        
         console.log('📊 Counting invoice items...');
-        const { count: invoiceItemsCount, error: invoiceItemsCountError } = await supabaseAdmin
-            .from('invoice_items')
-            .select('*', { count: 'exact', head: true })
-            .in('invoice_id', 
-                supabaseAdmin.from('invoices').select('id').eq('host_id', hostId)
-            );
+        // Count invoice items for those invoices
+        const { count: invoiceItemsCount, error: invoiceItemsCountError } = hostInvoiceIds.length > 0
+            ? await supabaseAdmin
+                .from('invoice_items')
+                .select('*', { count: 'exact', head: true })
+                .in('invoice_id', hostInvoiceIds)
+            : { count: 0, error: null };
             
         if (invoiceItemsCountError) {
             console.log('❌ Error counting invoice items:', invoiceItemsCountError);
@@ -2718,10 +2758,8 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         console.log(`🗑️ Deleted ${results.toll_charges_without_invoices_deleted} toll charges not in invoices`);
         
         // Get trip IDs that are in invoices or referenced by toll charges - ONLY for this host
-        const { data: tripsInInvoices } = await supabaseAdmin
-            .from('invoices')
-            .select('trip_id')
-            .eq('host_id', hostId);
+        // Use the invoicesForHost we already retrieved
+        const tripsInInvoices = invoicesForHost?.map(invoice => ({ trip_id: invoice.trip_id })) || [];
             
         const { data: tripsInTollCharges } = await supabaseAdmin
             .from('toll_charges')
