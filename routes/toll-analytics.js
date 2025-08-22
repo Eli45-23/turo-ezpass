@@ -2,59 +2,61 @@ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-    const timestamp = new Date().toISOString();
-    const fullCookieHeader = req.headers.cookie || 'NO COOKIES';
-    const sessionInfo = req.session ? {
-        id: req.session.id,
-        hostId: req.session.hostId,
-        keys: Object.keys(req.session),
-        fullSession: JSON.stringify(req.session, null, 2)
-    } : 'NO SESSION OBJECT';
-    
-    console.log('🔐 DETAILED Auth check for toll-analytics:', {
-        timestamp,
-        hasSession: !!req.session,
-        sessionInfo,
-        fullCookieHeader,
-        userAgent: req.headers['user-agent'],
-        ip: req.ip,
-        path: req.path,
-        method: req.method,
-        origin: req.headers.origin,
-        referer: req.headers.referer
-    });
-    
-    // Temporary fix for missing hostId - apply in middleware
-    if (req.session && !req.session.hostId) {
-        console.log('🔧 No hostId in session - applying temporary fix for hostId=1');
-        req.session.hostId = 1;
-        req.session.email = 'eliascolon23@gmail.com';
-    }
-    
-    if (!req.session || !req.session.hostId) {
-        console.error('❌ DETAILED Authentication failed:', {
-            timestamp,
-            reason: !req.session ? 'No session object' : 'No hostId in session',
-            hasSession: !!req.session,
-            sessionInfo,
-            fullCookieHeader,
-            requestUrl: req.originalUrl
-        });
-        return res.status(401).json({ 
-            success: false, 
-            error: 'Authentication required - no valid session' 
-        });
-    }
-    
-    console.log('✅ DETAILED Authentication passed:', {
-        timestamp,
+// Middleware to check authentication (UUID-based like trips.js)
+const requireAuth = async (req, res, next) => {
+    console.log('🔐 Auth check - Session:', {
         hostId: req.session.hostId,
         sessionId: req.session.id,
-        sessionValid: true
+        path: req.path,
+        cookies: req.headers.cookie
     });
-    next();
+    
+    try {
+        // Check if we have a UUID in session
+        if (!req.session.hostId || typeof req.session.hostId === 'number') {
+            console.log('🔧 No UUID hostId in session - creating/getting UUID for user');
+            
+            const userEmail = req.session.email || 'eliascolon23@gmail.com';
+            
+            // Check if host already exists in Supabase
+            const { data: existingHost, error } = await supabaseAdmin
+                .from('hosts')
+                .select('id')
+                .eq('email', userEmail)
+                .single();
+            
+            if (existingHost) {
+                console.log('✅ Found existing host UUID:', existingHost.id);
+                req.session.hostId = existingHost.id;
+                req.session.email = userEmail;
+            } else {
+                // Create new host record
+                const { data: newHost, error: createError } = await supabaseAdmin
+                    .from('hosts')
+                    .insert({
+                        email: userEmail,
+                        full_name: 'User'
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Failed to create host:', createError);
+                    return res.status(500).json({ success: false, error: 'Authentication failed' });
+                }
+                
+                console.log('✅ Created new host UUID:', newHost.id);
+                req.session.hostId = newHost.id;
+                req.session.email = userEmail;
+            }
+        }
+        
+        console.log('✅ Authentication passed for host:', req.session.hostId);
+        next();
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        return res.status(500).json({ success: false, error: 'Authentication failed' });
+    }
 };
 
 // Get toll overview analytics
@@ -281,7 +283,7 @@ async function getTollAnalytics(hostId, startDate, endDate) {
                 id,
                 toll_amount,
                 toll_location,
-                charge_date,
+                toll_date,
                 toll_accounts!inner(host_id)
             `)
             .eq('toll_accounts.host_id', hostId)
@@ -290,8 +292,8 @@ async function getTollAnalytics(hostId, startDate, endDate) {
         // Add date filtering if provided
         if (startDate && endDate) {
             query = query
-                .gte('charge_date', startDate)
-                .lte('charge_date', endDate);
+                .gte('toll_date', startDate)
+                .lte('toll_date', endDate);
         }
         
         const { data: tollCharges, error } = await query;
@@ -352,7 +354,7 @@ async function getAdditionalTollData(hostId, startDate, endDate) {
                 .select(`
                     toll_location,
                     toll_amount,
-                    charge_date,
+                    toll_date,
                     toll_accounts!inner(host_id)
                 `)
                 .eq('toll_accounts.host_id', hostId)
@@ -360,8 +362,8 @@ async function getAdditionalTollData(hostId, startDate, endDate) {
             
             if (startDate && endDate) {
                 query = query
-                    .gte('charge_date', startDate)
-                    .lte('charge_date', endDate);
+                    .gte('toll_date', startDate)
+                    .lte('toll_date', endDate);
             }
             
             return query;
@@ -397,13 +399,13 @@ async function getAdditionalTollData(hostId, startDate, endDate) {
         }
         console.log('✅ Most used route result:', mostUsedRoute);
         
-        // Get peak hour (extract hour from charge_date)
+        // Get peak hour (extract hour from toll_date)
         let peakTime = { hour: '--', percentage: '0' };
         if (allTolls && allTolls.length > 0) {
             const hourCounts = {};
             allTolls.forEach(toll => {
-                if (toll.charge_date) {
-                    const date = new Date(toll.charge_date);
+                if (toll.toll_date) {
+                    const date = new Date(toll.toll_date);
                     const hour = `${date.getHours().toString().padStart(2, '0')}:00`;
                     hourCounts[hour] = (hourCounts[hour] || 0) + 1;
                 }
@@ -478,12 +480,12 @@ async function getTollTrends(hostId, period, months) {
             .from('toll_charges')
             .select(`
                 toll_amount,
-                charge_date,
+                toll_date,
                 toll_accounts!inner(host_id)
             `)
             .eq('toll_accounts.host_id', hostId)
             .or('is_archived.is.null,is_archived.eq.false')
-            .gte('charge_date', cutoffDate.toISOString());
+            .gte('toll_date', cutoffDate.toISOString());
         
         if (error) {
             throw error;
@@ -493,9 +495,9 @@ async function getTollTrends(hostId, period, months) {
         const periodMap = new Map();
         
         (tollCharges || []).forEach(toll => {
-            if (!toll.charge_date) return;
+            if (!toll.toll_date) return;
             
-            const date = new Date(toll.charge_date);
+            const date = new Date(toll.toll_date);
             let periodKey;
             
             switch(period) {
@@ -548,6 +550,8 @@ async function getTollTrends(hostId, period, months) {
 // Get top toll locations
 async function getTopTollLocations(hostId, limit) {
     try {
+        console.log('🔍 Getting top toll locations for hostId:', hostId, 'limit:', limit);
+        
         // Get toll charges with account and trip info
         const { data: tollData, error } = await supabaseAdmin
             .from('toll_charges')
@@ -561,7 +565,12 @@ async function getTopTollLocations(hostId, limit) {
             .eq('toll_accounts.host_id', hostId)
             .or('is_archived.is.null,is_archived.eq.false');
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Database error in getTopTollLocations:', error);
+            throw error;
+        }
+        
+        console.log(`📊 Found ${tollData?.length || 0} toll charges for location analysis`);
 
         // Group by toll location and calculate stats
         const locationStats = {};
@@ -621,7 +630,12 @@ async function getVehicleTollImpact(hostId) {
             .eq('host_id', hostId)
             .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
 
-        if (tripsError) throw tripsError;
+        if (tripsError) {
+            console.error('❌ Database error fetching trips in getVehicleTollImpact:', tripsError);
+            throw tripsError;
+        }
+        
+        console.log(`📊 Found ${trips?.length || 0} trips for vehicle impact analysis`);
 
         // Get toll charges for this host
         const { data: tollCharges, error: tollError } = await supabaseAdmin
@@ -633,7 +647,12 @@ async function getVehicleTollImpact(hostId) {
             .eq('toll_accounts.host_id', hostId)
             .or('is_archived.is.null,is_archived.eq.false');
 
-        if (tollError) throw tollError;
+        if (tollError) {
+            console.error('❌ Database error fetching toll charges in getVehicleTollImpact:', tollError);
+            throw tollError;
+        }
+        
+        console.log(`📊 Found ${tollCharges?.length || 0} toll charges for vehicle impact analysis`);
 
         // Group trips by vehicle
         const vehicleStats = {};
@@ -748,8 +767,11 @@ async function getAvgCostPerTrip(hostId, limit) {
             .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
         
         if (tripsError) {
+            console.error('❌ Database error fetching trips in getAvgCostPerTrip:', tripsError);
             throw tripsError;
         }
+        
+        console.log(`📊 Found ${trips?.length || 0} trips for average cost analysis`);
         
         // Get all toll charges for the host (excluding archived ones)
         const { data: tollCharges, error: tollError } = await supabaseAdmin
@@ -759,13 +781,14 @@ async function getAvgCostPerTrip(hostId, limit) {
                 trip_id,
                 plate_number,
                 toll_amount,
-                charge_date,
+                toll_date,
                 toll_accounts!inner(host_id)
             `)
             .eq('toll_accounts.host_id', hostId)
             .or('is_archived.is.null,is_archived.eq.false');
         
         if (tollError) {
+            console.error('❌ Database error fetching toll charges in getAvgCostPerTrip:', tollError);
             throw tollError;
         }
         
@@ -802,7 +825,7 @@ async function getAvgCostPerTrip(hostId, limit) {
                     shouldInclude = true;
                 } else if (toll.plate_number === plate) {
                     // Check if toll date overlaps with any trip for this vehicle
-                    const tollDate = new Date(toll.charge_date);
+                    const tollDate = new Date(toll.toll_date);
                     const matchingTrips = (trips || []).filter(trip => 
                         trip.vehicle_plate === plate &&
                         new Date(trip.start_date) <= tollDate &&
@@ -928,7 +951,7 @@ router.get('/routes/export', async (req, res) => {
             .select(`
                 toll_location,
                 toll_amount,
-                charge_date,
+                toll_date,
                 trip_id,
                 trips(id, turo_trip_id, vehicle_plate)
             `)
@@ -964,8 +987,8 @@ router.get('/routes/export', async (req, res) => {
                 locationData.vehicles.add(toll.trips.vehicle_plate);
             }
             
-            if (toll.charge_date) {
-                const date = toll.charge_date.split('T')[0];
+            if (toll.toll_date) {
+                const date = toll.toll_date.split('T')[0];
                 locationData.dates.add(date);
             }
         });
@@ -1007,8 +1030,8 @@ router.get('/time-analysis', async (req, res) => {
         // Get all toll charges with charge dates
         const { data: tollCharges, error } = await supabaseAdmin
             .from('toll_charges')
-            .select('toll_amount, charge_date')
-            .not('charge_date', 'is', null);
+            .select('toll_amount, toll_date')
+            .not('toll_date', 'is', null);
         
         if (error) {
             throw error;
@@ -1019,7 +1042,7 @@ router.get('/time-analysis', async (req, res) => {
         const dailyMap = new Map();
         
         (tollCharges || []).forEach(toll => {
-            const date = new Date(toll.charge_date);
+            const date = new Date(toll.toll_date);
             const hour = date.getHours();
             const dayOfWeek = date.getDay();
             const amount = toll.toll_amount || 0;
@@ -1103,7 +1126,7 @@ async function calculateProfitAnalysis(hostId, startDate, endDate) {
                 id,
                 toll_amount,
                 toll_location,
-                charge_date,
+                toll_date,
                 trip_id,
                 toll_accounts!inner(host_id),
                 trips(id, turo_trip_id, trip_revenue)
@@ -1114,8 +1137,8 @@ async function calculateProfitAnalysis(hostId, startDate, endDate) {
         // Add date filtering if provided
         if (startDate && endDate) {
             query = query
-                .gte('charge_date', startDate)
-                .lte('charge_date', endDate);
+                .gte('toll_date', startDate)
+                .lte('toll_date', endDate);
         }
         
         const { data: tollCharges, error } = await query;
@@ -1189,7 +1212,7 @@ async function calculateRecoveryMetrics(hostId) {
                 id,
                 toll_amount,
                 status,
-                charge_date,
+                toll_date,
                 toll_accounts!inner(host_id)
             `)
             .eq('toll_accounts.host_id', hostId)
@@ -1216,7 +1239,7 @@ async function calculateRecoveryMetrics(hostId) {
         if (recoveredCharges.length > 0) {
             const now = new Date();
             const recoveryDays = recoveredCharges.map(toll => {
-                const tollDate = new Date(toll.charge_date);
+                const tollDate = new Date(toll.toll_date);
                 return (now - tollDate) / (1000 * 60 * 60 * 24); // Days
             });
             avgRecoveryDays = recoveryDays.reduce((sum, days) => sum + days, 0) / recoveryDays.length;
@@ -1257,8 +1280,11 @@ async function getZeroTollTrips(hostId, limit) {
             .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
         
         if (tripsError) {
+            console.error('❌ Database error fetching trips in getZeroTollTrips:', tripsError);
             throw tripsError;
         }
+        
+        console.log(`📊 Found ${trips?.length || 0} trips for zero toll analysis`);
         
         // Get all toll charges for the host
         const { data: tollCharges, error: tollError } = await supabaseAdmin
@@ -1268,14 +1294,17 @@ async function getZeroTollTrips(hostId, limit) {
                 trip_id,
                 plate_number,
                 toll_amount,
-                charge_date,
+                toll_date,
                 toll_accounts!inner(host_id)
             `)
             .eq('toll_accounts.host_id', hostId);
         
         if (tollError) {
+            console.error('❌ Database error fetching toll charges in getZeroTollTrips:', tollError);
             throw tollError;
         }
+        
+        console.log(`📊 Found ${tollCharges?.length || 0} toll charges for zero toll analysis`);
         
         // Group trips by vehicle and calculate zero toll metrics
         const vehicleMap = new Map();
@@ -1308,7 +1337,7 @@ async function getZeroTollTrips(hostId, limit) {
                 }
                 // Check if toll matches by plate and date overlap
                 if (toll.plate_number === plate) {
-                    const tollDate = new Date(toll.charge_date);
+                    const tollDate = new Date(toll.toll_date);
                     const tripStart = new Date(trip.start_date);
                     const tripEnd = new Date(trip.end_date);
                     return tollDate >= tripStart && tollDate <= tripEnd;
@@ -1385,12 +1414,12 @@ async function calculateRiskAssessment(hostId) {
                 id,
                 toll_amount,
                 toll_location,
-                charge_date,
+                toll_date,
                 toll_accounts!inner(host_id)
             `)
             .eq('toll_accounts.host_id', hostId)
             .or('is_archived.is.null,is_archived.eq.false')
-            .gte('charge_date', thirtyDaysAgo.toISOString());
+            .gte('toll_date', thirtyDaysAgo.toISOString());
         
         if (error) {
             throw error;
@@ -1405,7 +1434,7 @@ async function calculateRiskAssessment(hostId) {
         
         // Calculate unique days with tolls
         const uniqueDays = new Set(
-            tollCharges?.map(toll => toll.charge_date?.split('T')[0])
+            tollCharges?.map(toll => toll.toll_date?.split('T')[0])
                 .filter(date => date)
         ).size;
         
