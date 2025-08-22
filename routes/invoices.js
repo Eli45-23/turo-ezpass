@@ -356,325 +356,365 @@ router.get('/:invoiceId', requireAuth, async (req, res) => {
 });
 
 // Send invoice to renter (mock implementation)
-router.post('/:invoiceId/send', requireAuth, (req, res) => {
+router.post('/:invoiceId/send', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const invoiceId = req.params.invoiceId;
     
-    // Verify invoice belongs to host
-    db.get(
-        `SELECT i.*, t.renter_email, t.renter_name
-         FROM invoices i
-         JOIN trips t ON i.trip_id = t.id
-         WHERE i.id = ? AND t.host_id = ?`,
-        [invoiceId, hostId],
-        (err, invoice) => {
-            if (err || !invoice) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Invoice not found' 
-                });
-            }
-            
-            // Mock sending email (in production, integrate with email service)
-            console.log(`Sending invoice ${invoice.invoice_number} to ${invoice.renter_email}`);
-            
-            // Update invoice status
-            db.run(
-                `UPDATE invoices SET status = 'sent', sent_date = CURRENT_TIMESTAMP WHERE id = ?`,
-                [invoiceId],
-                (err) => {
-                    if (err) {
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to update invoice status' 
-                        });
-                    }
-                    
-                    res.json({
-                        success: true,
-                        message: `Invoice sent to ${invoice.renter_name} (${invoice.renter_email})`
-                    });
-                }
-            );
+    try {
+        // Verify invoice belongs to host using Supabase
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(renter_email, renter_name, host_id)
+            `)
+            .eq('id', invoiceId)
+            .eq('trips.host_id', hostId)
+            .single();
+
+        if (invoiceError || !invoice) {
+            console.error('❌ Invoice not found:', invoiceError);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Invoice not found' 
+            });
         }
-    );
+        
+        // Mock sending email (in production, integrate with email service)
+        console.log(`Sending invoice ${invoice.invoice_number} to ${invoice.trips.renter_email}`);
+        
+        // Update invoice status using Supabase
+        const { error: updateError } = await supabaseAdmin
+            .from('invoices')
+            .update({
+                status: 'sent',
+                sent_date: new Date().toISOString()
+            })
+            .eq('id', invoiceId);
+
+        if (updateError) {
+            console.error('❌ Failed to update invoice status:', updateError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to update invoice status' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `Invoice sent to ${invoice.trips.renter_name} (${invoice.trips.renter_email})`
+        });
+    } catch (error) {
+        console.error('❌ Error sending invoice:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to send invoice'
+        });
+    }
 });
 
 // Process payment through Turo (mock implementation)
-router.post('/:invoiceId/charge', requireAuth, (req, res) => {
+router.post('/:invoiceId/charge', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const invoiceId = req.params.invoiceId;
     
-    // Verify invoice belongs to host
-    db.get(
-        `SELECT i.*, t.turo_trip_id
-         FROM invoices i
-         JOIN trips t ON i.trip_id = t.id
-         WHERE i.id = ? AND t.host_id = ?`,
-        [invoiceId, hostId],
-        (err, invoice) => {
-            if (err || !invoice) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Invoice not found' 
-                });
-            }
-            
-            // Mock Turo API call to add extra charge
-            const turoChargeId = 'TURO-' + Date.now();
-            console.log(`Processing Turo charge for trip ${invoice.turo_trip_id}: $${invoice.total_amount}`);
-            
-            // Update invoice status
-            db.run(
-                `UPDATE invoices 
-                 SET status = 'paid', 
-                     paid_date = CURRENT_TIMESTAMP, 
-                     turo_charge_id = ?
-                 WHERE id = ?`,
-                [turoChargeId, invoiceId],
-                (err) => {
-                    if (err) {
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to update invoice status' 
-                        });
-                    }
-                    
-                    res.json({
-                        success: true,
-                        message: 'Charge processed through Turo successfully',
-                        turoChargeId: turoChargeId,
-                        amount: invoice.total_amount
-                    });
-                }
-            );
+    try {
+        // Verify invoice belongs to host using Supabase
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(turo_trip_id, host_id)
+            `)
+            .eq('id', invoiceId)
+            .eq('trips.host_id', hostId)
+            .single();
+
+        if (invoiceError || !invoice) {
+            console.error('❌ Invoice not found:', invoiceError);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Invoice not found' 
+            });
         }
-    );
+        
+        // Mock Turo API call to add extra charge
+        const turoChargeId = 'TURO-' + Date.now();
+        console.log(`Processing Turo charge for trip ${invoice.trips.turo_trip_id}: $${invoice.total_amount}`);
+        
+        // Update invoice status using Supabase
+        const { error: updateError } = await supabaseAdmin
+            .from('invoices')
+            .update({
+                status: 'paid',
+                paid_date: new Date().toISOString(),
+                turo_charge_id: turoChargeId
+            })
+            .eq('id', invoiceId);
+
+        if (updateError) {
+            console.error('❌ Failed to update invoice status:', updateError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to update invoice status' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Charge processed through Turo successfully',
+            turoChargeId: turoChargeId,
+            amount: invoice.total_amount
+        });
+    } catch (error) {
+        console.error('❌ Error processing charge:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to process charge'
+        });
+    }
 });
 
 // Delete invoice
-router.delete('/:invoiceId', requireAuth, (req, res) => {
+router.delete('/:invoiceId', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const invoiceId = req.params.invoiceId;
     
-    // Verify invoice belongs to host
-    db.get(
-        `SELECT i.*, t.renter_name
-         FROM invoices i
-         JOIN trips t ON i.trip_id = t.id
-         WHERE i.id = ? AND t.host_id = ?`,
-        [invoiceId, hostId],
-        (err, invoice) => {
-            if (err || !invoice) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Invoice not found' 
-                });
-            }
-            
-            // Delete invoice items first (foreign key constraint)
-            db.run(
-                `DELETE FROM invoice_items WHERE invoice_id = ?`,
-                [invoiceId],
-                function(err) {
-                    if (err) {
-                        console.error('Error deleting invoice items:', err);
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to delete invoice items' 
-                        });
-                    }
-                    
-                    // Delete the invoice
-                    db.run(
-                        `DELETE FROM invoices WHERE id = ?`,
-                        [invoiceId],
-                        function(err) {
-                            if (err) {
-                                console.error('Error deleting invoice:', err);
-                                return res.status(500).json({ 
-                                    success: false, 
-                                    error: 'Failed to delete invoice' 
-                                });
-                            }
-                            
-                            console.log(`✅ Invoice ${invoice.invoice_number} deleted successfully`);
-                            
-                            res.json({
-                                success: true,
-                                message: `Invoice ${invoice.invoice_number} has been deleted successfully`
-                            });
-                        }
-                    );
-                }
-            );
+    try {
+        // Verify invoice belongs to host using Supabase
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(renter_name, host_id)
+            `)
+            .eq('id', invoiceId)
+            .eq('trips.host_id', hostId)
+            .single();
+
+        if (invoiceError || !invoice) {
+            console.error('❌ Invoice not found:', invoiceError);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Invoice not found' 
+            });
         }
-    );
+        
+        // Delete invoice items first (foreign key constraint) using Supabase
+        const { error: itemsError } = await supabaseAdmin
+            .from('invoice_items')
+            .delete()
+            .eq('invoice_id', invoiceId);
+
+        if (itemsError) {
+            console.error('❌ Error deleting invoice items:', itemsError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to delete invoice items' 
+            });
+        }
+        
+        // Delete the invoice using Supabase
+        const { error: deleteError } = await supabaseAdmin
+            .from('invoices')
+            .delete()
+            .eq('id', invoiceId);
+
+        if (deleteError) {
+            console.error('❌ Error deleting invoice:', deleteError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to delete invoice' 
+            });
+        }
+        
+        console.log(`✅ Invoice ${invoice.invoice_number} deleted successfully`);
+        
+        res.json({
+            success: true,
+            message: `Invoice ${invoice.invoice_number} has been deleted successfully`
+        });
+    } catch (error) {
+        console.error('❌ Error deleting invoice:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to delete invoice'
+        });
+    }
 });
 
 // Update invoice details
-router.put('/:invoiceId', requireAuth, (req, res) => {
+router.put('/:invoiceId', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const invoiceId = req.params.invoiceId;
     const { status, processingFee, notes } = req.body;
     
-    // Verify invoice belongs to host
-    db.get(
-        `SELECT i.*, t.renter_name
-         FROM invoices i
-         JOIN trips t ON i.trip_id = t.id
-         WHERE i.id = ? AND t.host_id = ?`,
-        [invoiceId, hostId],
-        (err, invoice) => {
-            if (err || !invoice) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Invoice not found' 
-                });
-            }
-            
-            // Build update query dynamically based on provided fields
-            const updates = [];
-            const values = [];
-            
-            if (status !== undefined) {
-                updates.push('status = ?');
-                values.push(status);
-            }
-            
-            if (processingFee !== undefined) {
-                updates.push('processing_fee = ?');
-                values.push(processingFee);
-            }
-            
-            if (notes !== undefined) {
-                updates.push('validation_notes = ?');
-                values.push(notes);
-            }
-            
-            if (updates.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'No valid fields provided to update'
-                });
-            }
-            
-            values.push(invoiceId);
-            
-            db.run(
-                `UPDATE invoices SET ${updates.join(', ')} WHERE id = ?`,
-                values,
-                function(err) {
-                    if (err) {
-                        console.error('Error updating invoice:', err);
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to update invoice' 
-                        });
-                    }
-                    
-                    console.log(`✅ Invoice ${invoice.invoice_number} updated successfully`);
-                    
-                    res.json({
-                        success: true,
-                        message: `Invoice ${invoice.invoice_number} updated successfully`,
-                        invoiceId: parseInt(invoiceId),
-                        updatedFields: updates.length
-                    });
-                }
-            );
+    try {
+        // Verify invoice belongs to host using Supabase
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(renter_name, host_id)
+            `)
+            .eq('id', invoiceId)
+            .eq('trips.host_id', hostId)
+            .single();
+
+        if (invoiceError || !invoice) {
+            console.error('❌ Invoice not found:', invoiceError);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Invoice not found' 
+            });
         }
-    );
+        
+        // Build update object dynamically based on provided fields
+        const updateData = {};
+        let updatedFieldsCount = 0;
+        
+        if (status !== undefined) {
+            updateData.status = status;
+            updatedFieldsCount++;
+        }
+        
+        if (processingFee !== undefined) {
+            updateData.processing_fee = processingFee;
+            updatedFieldsCount++;
+        }
+        
+        if (notes !== undefined) {
+            updateData.validation_notes = notes;
+            updatedFieldsCount++;
+        }
+        
+        if (updatedFieldsCount === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No valid fields provided to update'
+            });
+        }
+        
+        // Update invoice using Supabase
+        const { error: updateError } = await supabaseAdmin
+            .from('invoices')
+            .update(updateData)
+            .eq('id', invoiceId);
+
+        if (updateError) {
+            console.error('❌ Error updating invoice:', updateError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to update invoice' 
+            });
+        }
+        
+        console.log(`✅ Invoice ${invoice.invoice_number} updated successfully`);
+        
+        res.json({
+            success: true,
+            message: `Invoice ${invoice.invoice_number} updated successfully`,
+            invoiceId: parseInt(invoiceId),
+            updatedFields: updatedFieldsCount
+        });
+    } catch (error) {
+        console.error('❌ Error updating invoice:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update invoice'
+        });
+    }
 });
 
 // Unsubmit invoice - reverse trip submission
-router.delete('/:invoiceId/unsubmit', requireAuth, (req, res) => {
+router.delete('/:invoiceId/unsubmit', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const invoiceId = req.params.invoiceId;
     
-    // Get invoice and verify it belongs to host
-    db.get(
-        `SELECT i.*, t.turo_trip_id 
-         FROM invoices i
-         JOIN trips t ON i.trip_id = t.id
-         WHERE i.id = ? AND t.host_id = ?`,
-        [invoiceId, hostId],
-        (err, invoice) => {
-            if (err || !invoice) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Invoice not found' 
-                });
-            }
-            
-            const tripId = invoice.trip_id;
-            const tripTuroId = invoice.turo_trip_id;
-            
-            // Start transaction to reverse submission
-            db.serialize(() => {
-                db.run('BEGIN TRANSACTION');
-                
-                // Delete invoice items first (foreign key constraint)
-                db.run(
-                    `DELETE FROM invoice_items WHERE invoice_id = ?`,
-                    [invoiceId],
-                    function(err) {
-                        if (err) {
-                            db.run('ROLLBACK');
-                            return res.status(500).json({ 
-                                success: false, 
-                                error: 'Failed to delete invoice items' 
-                            });
-                        }
-                        
-                        // Delete invoice
-                        db.run(
-                            `DELETE FROM invoices WHERE id = ?`,
-                            [invoiceId],
-                            function(err) {
-                                if (err) {
-                                    db.run('ROLLBACK');
-                                    return res.status(500).json({ 
-                                        success: false, 
-                                        error: 'Failed to delete invoice' 
-                                    });
-                                }
-                                
-                                // Update trip to unsubmit it
-                                db.run(
-                                    `UPDATE trips 
-                                     SET submitted_to_turo = 0, submitted_date = NULL 
-                                     WHERE id = ?`,
-                                    [tripId],
-                                    function(err) {
-                                        if (err) {
-                                            db.run('ROLLBACK');
-                                            return res.status(500).json({ 
-                                                success: false, 
-                                                error: 'Failed to unsubmit trip' 
-                                            });
-                                        }
-                                        
-                                        db.run('COMMIT');
-                                        
-                                        res.json({
-                                            success: true,
-                                            message: 'Trip successfully unsubmitted',
-                                            trip: {
-                                                id: tripId,
-                                                turoTripId: tripTuroId,
-                                                submitted: false
-                                            }
-                                        });
-                                    }
-                                );
-                            }
-                        );
-                    }
-                );
+    try {
+        // Get invoice and verify it belongs to host using Supabase
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(id, turo_trip_id, host_id)
+            `)
+            .eq('id', invoiceId)
+            .eq('trips.host_id', hostId)
+            .single();
+
+        if (invoiceError || !invoice) {
+            console.error('❌ Invoice not found:', invoiceError);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Invoice not found' 
             });
         }
-    );
+        
+        const tripId = invoice.trips.id;
+        const tripTuroId = invoice.trips.turo_trip_id;
+        
+        // Delete invoice items first (foreign key constraint)
+        const { error: itemsError } = await supabaseAdmin
+            .from('invoice_items')
+            .delete()
+            .eq('invoice_id', invoiceId);
+
+        if (itemsError) {
+            console.error('❌ Error deleting invoice items:', itemsError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to delete invoice items' 
+            });
+        }
+        
+        // Delete invoice
+        const { error: deleteError } = await supabaseAdmin
+            .from('invoices')
+            .delete()
+            .eq('id', invoiceId);
+
+        if (deleteError) {
+            console.error('❌ Error deleting invoice:', deleteError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to delete invoice' 
+            });
+        }
+        
+        // Update trip to unsubmit it
+        const { error: updateError } = await supabaseAdmin
+            .from('trips')
+            .update({
+                submitted_to_turo: false,
+                submitted_date: null
+            })
+            .eq('id', tripId);
+
+        if (updateError) {
+            console.error('❌ Error unsubmitting trip:', updateError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to unsubmit trip' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Trip successfully unsubmitted',
+            trip: {
+                id: tripId,
+                turoTripId: tripTuroId,
+                submitted: false
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error unsubmitting invoice:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to unsubmit invoice'
+        });
+    }
 });
 
 module.exports = router;
