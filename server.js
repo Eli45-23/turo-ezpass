@@ -361,7 +361,7 @@ const notificationRoutes = require('./routes/notifications');
 const analyticsRoutes = require('./routes/analytics');
 const mlMatchingRoutes = require('./routes/ml-matching');
 const mlTrainingRoutes = require('./routes/ml-training');
-const backupRoutes = require('./routes/backup');
+// const backupRoutes = require('./routes/backup'); // Disabled - using Supabase instead of SQLite
 
 // Database initialization
 const db = require('./config/database');
@@ -390,12 +390,12 @@ const automatedReporting = require('./services/automated-reporting');
 automatedReporting.initialize().catch(console.error);
 
 // Initialize backup service with automatic scheduling
-const BackupService = require('./services/backup-service');
-const backupService = new BackupService();
-const backupSchedule = backupService.scheduleAutomaticBackups();
+// const BackupService = require('./services/backup-service'); // Disabled - using Supabase
+// const backupService = new BackupService();
+// const backupSchedule = backupService.scheduleAutomaticBackups();
 
 // Make backup service available globally
-global.backupService = backupService;
+// global.backupService = backupService;
 
 // Dashboard redirect for user convenience
 app.get('/dashboard', (req, res) => {
@@ -417,7 +417,7 @@ app.use('/api/toll-analytics', analyticsLimiter, require('./routes/toll-analytic
 app.use('/api/enhanced-smart-status', dashboardLimiter, require('./routes/enhanced-smart-status'));
 app.use('/api/ml-matching', mlOperationsLimiter, mlMatchingRoutes);
 app.use('/api/ml-training', mlOperationsLimiter, mlTrainingRoutes);
-app.use('/api/backup', dashboardLimiter, backupRoutes);
+// app.use('/api/backup', dashboardLimiter, backupRoutes); // Disabled - using Supabase
 
 // Main page route
 app.get('/', (req, res) => {

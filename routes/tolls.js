@@ -451,70 +451,88 @@ router.post('/match', requireAuth, (req, res) => {
 });
 
 // Get unmatched toll charges
-router.get('/unmatched', requireAuth, (req, res) => {
+router.get('/unmatched', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
-    db.all(
-        `SELECT tc.*, ta.username as account_name
-         FROM toll_charges tc
-         JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-         WHERE ta.host_id = ? AND tc.is_matched = 0
-         ORDER BY tc.toll_date DESC`,
-        [hostId],
-        (err, charges) => {
-            if (err) {
-                console.error('Error fetching unmatched tolls:', err);
-                return res.status(500).json({ 
-                    success: false, 
-                    error: 'Failed to fetch unmatched toll charges' 
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: charges
+    try {
+        const { data: charges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(username, host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', false)
+            .order('toll_date', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Error fetching unmatched tolls:', error);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to fetch unmatched toll charges' 
             });
         }
-    );
+        
+        // Transform data to match expected format
+        const transformedCharges = (charges || []).map(charge => ({
+            ...charge,
+            account_name: charge.toll_accounts.username
+        }));
+        
+        res.json({
+            success: true,
+            data: transformedCharges
+        });
+    } catch (error) {
+        console.error('❌ Exception fetching unmatched tolls:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch unmatched toll charges' 
+        });
+    }
 });
 
 // Get verification status for pending tolls
-router.get('/verification-status', verificationStatusLimiter, requireAuth, (req, res) => {
+router.get('/verification-status', verificationStatusLimiter, requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
-    // Get counts of tolls by verification status
-    db.all(
-        `SELECT 
-            COUNT(*) as total_tolls,
-            SUM(CASE WHEN is_matched = 1 THEN 1 ELSE 0 END) as matched_tolls,
-            SUM(CASE WHEN is_matched = 0 THEN 1 ELSE 0 END) as unmatched_tolls
-         FROM toll_charges tc
-         JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-         WHERE ta.host_id = ?`,
-        [hostId],
-        (err, result) => {
-            if (err) {
-                console.error('Error fetching verification status:', err);
-                return res.status(500).json({ 
-                    success: false, 
-                    error: 'Unable to check verification status at this time. Please try again in a few moments.',
-                    technical_error: process.env.NODE_ENV === 'development' ? err.message : undefined
-                });
-            }
-            
-            const status = result[0] || { total_tolls: 0, matched_tolls: 0, unmatched_tolls: 0 };
-            
-            res.json({
-                success: true,
-                data: {
-                    total: parseInt(status.total_tolls),
-                    matched: parseInt(status.matched_tolls),
-                    unmatched: parseInt(status.unmatched_tolls),
-                    verification_complete: status.unmatched_tolls === 0
-                }
+    try {
+        // Get counts of tolls by verification status using Supabase
+        const { data: totalTolls, error: totalError } = await supabaseAdmin
+            .from('toll_charges')
+            .select('id, is_matched, toll_accounts!inner(host_id)')
+            .eq('toll_accounts.host_id', hostId);
+        
+        if (totalError) {
+            console.error('❌ Error fetching verification status:', totalError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Unable to check verification status at this time. Please try again in a few moments.',
+                technical_error: process.env.NODE_ENV === 'development' ? totalError.message : undefined
             });
         }
-    );
+        
+        const total = totalTolls?.length || 0;
+        const matched = totalTolls?.filter(toll => toll.is_matched === true).length || 0;
+        const unmatched = total - matched;
+        
+        res.json({
+            success: true,
+            data: {
+                total: total,
+                matched: matched,
+                unmatched: unmatched,
+                verification_complete: unmatched === 0
+            }
+        });
+    } catch (error) {
+        console.error('❌ Exception fetching verification status:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Unable to check verification status at this time. Please try again in a few moments.',
+            technical_error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 });
 
 /**
@@ -559,127 +577,83 @@ async function importTollsFromCSV(csvData, hostId) {
             // Get or create default toll account for CSV imports
             const tollAccount = await getOrCreateCSVTollAccount(hostId);
             
-            // Start database transaction for batch insert
-            db.run('BEGIN TRANSACTION', async (err) => {
-                if (err) {
-                    return reject(new Error(`Failed to start transaction: ${err.message}`));
-                }
+            let imported = 0;
+            const errors = [];
+            const tollCharges = [];
+            
+            // Process all rows and prepare for batch insert
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
                 
-                let imported = 0;
-                const errors = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        
-        try {
-            const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
-            
-            const tollData = {
-                date: columns[columnIndices.date] || '',
-                location: columns[columnIndices.location] || 'Unknown Location',
-                amount: parseFloat(columns[columnIndices.amount] || '0'),
-                plate: columns[columnIndices.plate] || '',
-                account: columns[columnIndices.account] || ''
-            };
-            
-            // Validate required data
-            if (!tollData.date || tollData.amount <= 0) {
-                errors.push(`Row ${i + 1}: Invalid date or amount`);
-                continue;
-            }
-            
-            // Parse date
-            const tollDate = new Date(tollData.date);
-            if (isNaN(tollDate.getTime())) {
-                errors.push(`Row ${i + 1}: Invalid date format`);
-                continue;
-            }
-            
-            // Insert toll charge with FK validation
-            await new Promise((resolve, reject) => {
-                // Validate toll_account_id exists before insert
-                db.get(
-                    'SELECT id FROM toll_accounts WHERE id = ?',
-                    [tollAccount.id],
-                    (err, account) => {
-                        if (err) {
-                            reject(new Error(`Database error validating toll account: ${err.message}`));
-                            return;
-                        }
-                        
-                        if (!account) {
-                            reject(new Error(`Toll account ID ${tollAccount.id} does not exist`));
-                            return;
-                        }
-                        
-                        // Proceed with insert
-                        db.run(`
-                            INSERT INTO toll_charges 
-                            (toll_account_id, toll_date, toll_location, toll_amount, plate_number, is_matched) 
-                            VALUES (?, ?, ?, ?, ?, 0)
-                        `, [
-                            tollAccount.id,
-                            tollDate.toISOString(),
-                            tollData.location,
-                            tollData.amount,
-                            tollData.plate
-                        ], function(err) {
-                            if (err) {
-                                if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                    reject(new Error(`Foreign key constraint violation: toll_account_id ${tollAccount.id} or invalid data`));
-                                } else {
-                                    reject(new Error(`Failed to insert toll charge: ${err.message}`));
-                                }
-                            } else {
-                                resolve(this.lastID);
-                            }
-                        });
+                try {
+                    const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
+                    
+                    const tollData = {
+                        date: columns[columnIndices.date] || '',
+                        location: columns[columnIndices.location] || 'Unknown Location',
+                        amount: parseFloat(columns[columnIndices.amount] || '0'),
+                        plate: columns[columnIndices.plate] || '',
+                        account: columns[columnIndices.account] || ''
+                    };
+                    
+                    // Validate required data
+                    if (!tollData.date || tollData.amount <= 0) {
+                        errors.push(`Row ${i + 1}: Invalid date or amount`);
+                        continue;
                     }
-                );
-            });
+                    
+                    // Parse date
+                    const tollDate = new Date(tollData.date);
+                    if (isNaN(tollDate.getTime())) {
+                        errors.push(`Row ${i + 1}: Invalid date format`);
+                        continue;
+                    }
+                    
+                    // Prepare toll charge for batch insert
+                    tollCharges.push({
+                        toll_account_id: tollAccount.id,
+                        toll_date: tollDate.toISOString(),
+                        toll_location: tollData.location,
+                        toll_amount: tollData.amount,
+                        plate_number: tollData.plate,
+                        is_matched: false
+                    });
+                    
+                } catch (error) {
+                    errors.push(`Row ${i + 1}: ${error.message}`);
+                }
+            }
             
-            imported++;
+            // If more than 50% of rows failed, reject
+            if (errors.length > 0 && errors.length > tollCharges.length * 0.5) {
+                throw new Error(`CSV import failed: ${errors.join('; ')}`);
+            }
             
-        } catch (error) {
-            errors.push(`Row ${i + 1}: ${error.message}`);
-        }
+            // Batch insert toll charges with Supabase
+            if (tollCharges.length > 0) {
+                const { data: insertedCharges, error: insertError } = await supabaseAdmin
+                    .from('toll_charges')
+                    .insert(tollCharges)
+                    .select();
+                
+                if (insertError) {
+                    console.error('❌ Error inserting toll charges:', insertError);
+                    throw new Error(`Failed to insert toll charges: ${insertError.message}`);
                 }
                 
-                // Complete transaction
-                if (errors.length > 0 && errors.length > imported * 0.5) {
-                    // If more than 50% of rows failed, rollback
-                    db.run('ROLLBACK', (rollbackErr) => {
-                        if (rollbackErr) {
-                            console.error('❌ Failed to rollback transaction:', rollbackErr);
-                        }
-                        reject(new Error(`CSV import failed: ${errors.join('; ')}`));
-                    });
-                } else {
-                    // Commit successful import
-                    db.run('COMMIT', (commitErr) => {
-                        if (commitErr) {
-                            console.error('❌ Failed to commit transaction:', commitErr);
-                            db.run('ROLLBACK');
-                            reject(new Error(`Failed to commit CSV import: ${commitErr.message}`));
-                        } else {
-                            console.log(`✅ Imported ${imported} toll charges from CSV (transaction committed)`);
-                            resolve({
-                                imported,
-                                errors: errors.length > 0 ? errors : undefined
-                            });
-                        }
-                    });
-                }
+                imported = insertedCharges?.length || 0;
+            }
+            
+            console.log(`✅ Imported ${imported} toll charges from CSV via Supabase`);
+            resolve({
+                imported,
+                errors: errors.length > 0 ? errors : undefined
             });
+            
         } catch (error) {
-            // Rollback on any error
-            db.run('ROLLBACK', (rollbackErr) => {
-                if (rollbackErr) {
-                    console.error('❌ Failed to rollback on error:', rollbackErr);
-                }
-                reject(new Error(`CSV import failed: ${error.message}`));
-            });
+            console.error('❌ CSV import error:', error);
+            reject(new Error(`CSV import failed: ${error.message}`));
         }
     });
 }
