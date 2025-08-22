@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 const analyticsEngine = require('../services/analytics-engine');
 const automatedReporting = require('../services/automated-reporting');
 
@@ -178,41 +178,61 @@ router.get('/performance/toll-matching', requireAuth, async (req, res) => {
         const hostId = req.session.hostId;
         const { days = 30 } = req.query;
         
-        const query = `
-            SELECT 
-                DATE(tc.created_at) as date,
-                COUNT(*) as total_charges,
-                COUNT(CASE WHEN tc.trip_id IS NOT NULL THEN 1 END) as matched_charges,
-                ROUND(COUNT(CASE WHEN tc.trip_id IS NOT NULL THEN 1 END) * 100.0 / COUNT(*), 2) as accuracy_rate
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE ta.host_id = ? 
-            AND tc.created_at >= datetime('now', '-' || ? || ' days')
-            GROUP BY DATE(tc.created_at)
-            ORDER BY date
-        `;
+        // Get date range
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
         
-        db.all(query, [hostId], (err, rows) => {
-            if (err) {
-                console.error('Error fetching toll matching trends:', err);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to fetch toll matching trends'
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    trends: rows,
-                    summary: {
-                        averageAccuracy: rows.length > 0 ? 
-                            rows.reduce((sum, row) => sum + row.accuracy_rate, 0) / rows.length : 0,
-                        totalCharges: rows.reduce((sum, row) => sum + row.total_charges, 0),
-                        totalMatched: rows.reduce((sum, row) => sum + row.matched_charges, 0)
-                    }
-                }
+        // Get toll charges with analytics data using Supabase
+        const { data: charges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                created_at,
+                trip_id,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .gte('created_at', daysAgo.toISOString());
+
+        if (error) {
+            console.error('Error fetching toll matching trends:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch toll matching trends'
             });
+        }
+
+        // Group charges by date and calculate metrics
+        const dailyStats = {};
+        charges.forEach(charge => {
+            const date = new Date(charge.created_at).toISOString().split('T')[0];
+            if (!dailyStats[date]) {
+                dailyStats[date] = { total: 0, matched: 0 };
+            }
+            dailyStats[date].total++;
+            if (charge.trip_id) {
+                dailyStats[date].matched++;
+            }
+        });
+
+        // Convert to array and calculate accuracy rates
+        const trends = Object.entries(dailyStats).map(([date, stats]) => ({
+            date,
+            total_charges: stats.total,
+            matched_charges: stats.matched,
+            accuracy_rate: Math.round((stats.matched / stats.total) * 100 * 100) / 100
+        })).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        res.json({
+            success: true,
+            data: {
+                trends,
+                summary: {
+                    averageAccuracy: trends.length > 0 ? 
+                        trends.reduce((sum, row) => sum + row.accuracy_rate, 0) / trends.length : 0,
+                    totalCharges: trends.reduce((sum, row) => sum + row.total_charges, 0),
+                    totalMatched: trends.reduce((sum, row) => sum + row.matched_charges, 0)
+                }
+            }
         });
     } catch (error) {
         console.error('Error fetching toll matching trends:', error);
@@ -228,52 +248,64 @@ router.get('/performance/system', requireAuth, async (req, res) => {
     try {
         const hostId = req.session.hostId;
         
-        const query = `
-            SELECT 
-                ta.provider,
-                ta.last_sync,
-                COUNT(tc.id) as total_synced_charges,
-                AVG(
-                    CASE WHEN ta.last_sync IS NOT NULL THEN
-                        (julianday('now') - julianday(ta.last_sync)) * 24
-                    ELSE NULL END
-                ) as hours_since_last_sync
-            FROM toll_accounts ta
-            LEFT JOIN toll_charges tc ON ta.id = tc.toll_account_id 
-                AND tc.created_at >= datetime('now', '-7 days')
-            WHERE ta.host_id = ? AND ta.is_active = 1
-            GROUP BY ta.id, ta.provider
-        `;
+        // Get 7 days ago for filtering recent charges
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
-        db.all(query, [hostId], (err, rows) => {
-            if (err) {
-                console.error('Error fetching system metrics:', err);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to fetch system metrics'
-                });
-            }
-            
-            const systemHealth = rows.map(row => ({
-                provider: row.provider,
-                lastSync: row.last_sync,
-                hoursSinceLastSync: row.hours_since_last_sync,
-                totalSyncedCharges: row.total_synced_charges,
-                status: row.hours_since_last_sync < 24 ? 'healthy' : 
-                       row.hours_since_last_sync < 48 ? 'warning' : 'critical'
-            }));
-            
-            const overallHealth = systemHealth.length > 0 ? 
-                systemHealth.filter(s => s.status === 'healthy').length / systemHealth.length * 100 : 0;
-            
-            res.json({
-                success: true,
-                data: {
-                    accounts: systemHealth,
-                    overallHealth: overallHealth,
-                    status: overallHealth >= 80 ? 'healthy' : overallHealth >= 60 ? 'warning' : 'critical'
-                }
+        // Get toll accounts with charge counts from Supabase
+        const { data: accounts, error: accountsError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select('*')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
+
+        if (accountsError) {
+            console.error('Error fetching toll accounts:', accountsError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch system metrics'
             });
+        }
+
+        // Get recent charges for each account
+        const systemHealth = [];
+        for (const account of accounts) {
+            const { data: charges, error: chargesError } = await supabaseAdmin
+                .from('toll_charges')
+                .select('id')
+                .eq('toll_account_id', account.id)
+                .gte('created_at', sevenDaysAgo.toISOString());
+
+            if (chargesError) {
+                console.error('Error fetching charges for account:', chargesError);
+                continue;
+            }
+
+            // Calculate hours since last sync
+            const hoursSinceLastSync = account.last_sync ? 
+                (new Date() - new Date(account.last_sync)) / (1000 * 60 * 60) : null;
+
+            systemHealth.push({
+                provider: account.provider,
+                lastSync: account.last_sync,
+                hoursSinceLastSync: hoursSinceLastSync,
+                totalSyncedCharges: charges?.length || 0,
+                status: !hoursSinceLastSync ? 'unknown' :
+                       hoursSinceLastSync < 24 ? 'healthy' : 
+                       hoursSinceLastSync < 48 ? 'warning' : 'critical'
+            });
+        }
+        
+        const overallHealth = systemHealth.length > 0 ? 
+            systemHealth.filter(s => s.status === 'healthy').length / systemHealth.length * 100 : 0;
+        
+        res.json({
+            success: true,
+            data: {
+                accounts: systemHealth,
+                overallHealth: overallHealth,
+                status: overallHealth >= 80 ? 'healthy' : overallHealth >= 60 ? 'warning' : 'critical'
+            }
         });
     } catch (error) {
         console.error('Error fetching system metrics:', error);
@@ -569,33 +601,32 @@ router.get('/reports', requireAuth, async (req, res) => {
     try {
         const hostId = req.session.hostId;
         
-        const query = `
-            SELECT 
+        // Get reports from Supabase
+        const { data: reports, error } = await supabaseAdmin
+            .from('bi_reports')
+            .select(`
                 report_type,
                 report_name,
                 report_summary,
                 period_start,
                 period_end,
                 generated_at
-            FROM bi_reports
-            WHERE host_id = ?
-            ORDER BY generated_at DESC
-            LIMIT 50
-        `;
+            `)
+            .eq('host_id', hostId)
+            .order('generated_at', { ascending: false })
+            .limit(50);
         
-        db.all(query, [hostId], (err, rows) => {
-            if (err) {
-                console.error('Error fetching reports:', err);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to fetch reports'
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: rows
+        if (error) {
+            console.error('Error fetching reports:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch reports'
             });
+        }
+        
+        res.json({
+            success: true,
+            data: reports || []
         });
     } catch (error) {
         console.error('Error fetching reports:', error);
