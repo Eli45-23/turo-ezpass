@@ -2740,7 +2740,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
                 
                 if (tollChargeIdsInInvoices.length > 0) {
                     console.log(`🗑️ Excluding ${tollChargeIdsInInvoices.length} toll charges that are in invoices`);
-                    deleteTollChargesQuery = deleteTollChargesQuery.not('id', 'in', tollChargeIdsInInvoices);
+                    deleteTollChargesQuery = deleteTollChargesQuery.not('id', 'in', '(' + tollChargeIdsInInvoices.join(',') + ')');
                 } else {
                     console.log('🗑️ No toll charges to preserve - deleting all toll charges for this host');
                 }
@@ -2780,7 +2780,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
             .eq('host_id', hostId);
             
         if (tripIdsToPreserve.length > 0) {
-            deleteTripsQuery = deleteTripsQuery.not('id', 'in', tripIdsToPreserve);
+            deleteTripsQuery = deleteTripsQuery.not('id', 'in', '(' + tripIdsToPreserve.join(',') + ')');
         }
         // If no trips to preserve, all trips will be deleted for this host
         
@@ -2807,7 +2807,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
             .eq('host_id', hostId);
             
         if (tollAccountIdsToPreserve.length > 0) {
-            deleteTollAccountsQuery = deleteTollAccountsQuery.not('id', 'in', tollAccountIdsToPreserve);
+            deleteTollAccountsQuery = deleteTollAccountsQuery.not('id', 'in', '(' + tollAccountIdsToPreserve.join(',') + ')');
         }
         // If no toll accounts to preserve, all toll accounts will be deleted for this host
         
