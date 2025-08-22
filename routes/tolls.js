@@ -360,94 +360,112 @@ router.get('/trip/:tripId', requireAuth, async (req, res) => {
 });
 
 // Match tolls to trips automatically
-router.post('/match', requireAuth, (req, res) => {
+router.post('/match', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
-    // Get all unmatched toll charges
-    db.all(
-        `SELECT tc.*, ta.host_id
-         FROM toll_charges tc
-         JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-         WHERE ta.host_id = ? AND tc.is_matched = 0`,
-        [hostId],
-        (err, unmatchedCharges) => {
-            if (err) {
-                return res.status(500).json({ 
-                    success: false, 
-                    error: 'Failed to fetch unmatched charges' 
-                });
-            }
-            
-            // Get all trips for matching
-            db.all(
-                `SELECT * FROM trips WHERE host_id = ?`,
-                [hostId],
-                (err, trips) => {
-                    if (err) {
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to fetch trips' 
-                        });
+    try {
+        // Get all unmatched toll charges from Supabase
+        const { data: unmatchedCharges, error: chargesError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', false);
+
+        if (chargesError) {
+            console.error('❌ Error fetching unmatched charges:', chargesError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to fetch unmatched charges' 
+            });
+        }
+        
+        // Get all trips from Supabase
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('host_id', hostId);
+
+        if (tripsError) {
+            console.error('❌ Error fetching trips:', tripsError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to fetch trips' 
+            });
+        }
+        
+        let matchedCount = 0;
+        const updatePromises = [];
+        
+        for (const charge of unmatchedCharges) {
+            const matchingTrip = trips.find(trip => {
+                const chargeDate = new Date(charge.toll_date);
+                const startDate = new Date(trip.start_date);
+                const endDate = new Date(trip.end_date);
+                
+                // Add 4-hour buffer for matching
+                const bufferMs = 4 * 60 * 60 * 1000;
+                const adjustedStart = new Date(startDate.getTime() - bufferMs);
+                const adjustedEnd = new Date(endDate.getTime() + bufferMs);
+                
+                const dateMatch = chargeDate >= adjustedStart && chargeDate <= adjustedEnd;
+                
+                // Improved plate matching logic
+                let plateMatch = true; // Default to true for date-based matching
+                
+                if (charge.plate_number && trip.vehicle_plate) {
+                    // If trip has a real license plate (short and no spaces)
+                    if (trip.vehicle_plate.length <= 10 && !trip.vehicle_plate.includes(' ')) {
+                        plateMatch = charge.plate_number === trip.vehicle_plate;
+                    } else {
+                        // For trips with vehicle descriptions, use consistent plate mapping
+                        const plates = ['ABC123', 'XYZ789', 'DEF456', 'GHI789', 'JKL012'];
+                        const expectedPlate = plates[trip.id % plates.length];
+                        plateMatch = charge.plate_number === expectedPlate;
                     }
-                    
-                    let matchedCount = 0;
-                    
-                    unmatchedCharges.forEach(charge => {
-                        const matchingTrip = trips.find(trip => {
-                            const chargeDate = new Date(charge.toll_date);
-                            const startDate = new Date(trip.start_date);
-                            const endDate = new Date(trip.end_date);
-                            
-                            // Add 4-hour buffer for matching
-                            const bufferMs = 4 * 60 * 60 * 1000;
-                            const adjustedStart = new Date(startDate.getTime() - bufferMs);
-                            const adjustedEnd = new Date(endDate.getTime() + bufferMs);
-                            
-                            const dateMatch = chargeDate >= adjustedStart && chargeDate <= adjustedEnd;
-                            
-                            // Improved plate matching logic
-                            let plateMatch = true; // Default to true for date-based matching
-                            
-                            if (charge.plate_number && trip.vehicle_plate) {
-                                // If trip has a real license plate (short and no spaces)
-                                if (trip.vehicle_plate.length <= 10 && !trip.vehicle_plate.includes(' ')) {
-                                    plateMatch = charge.plate_number === trip.vehicle_plate;
-                                } else {
-                                    // For trips with vehicle descriptions, use consistent plate mapping
-                                    const plates = ['ABC123', 'XYZ789', 'DEF456', 'GHI789', 'JKL012'];
-                                    const expectedPlate = plates[trip.id % plates.length];
-                                    plateMatch = charge.plate_number === expectedPlate;
-                                }
-                            }
-                            
-                            return dateMatch && plateMatch;
-                        });
-                        
-                        if (matchingTrip) {
-                            db.run(
-                                `UPDATE toll_charges 
-                                 SET trip_id = ?, is_matched = 1 
-                                 WHERE id = ?`,
-                                [matchingTrip.id, charge.id],
-                                (err) => {
-                                    if (!err) matchedCount++;
-                                }
-                            );
+                }
+                
+                return dateMatch && plateMatch;
+            });
+            
+            if (matchingTrip) {
+                const updatePromise = supabaseAdmin
+                    .from('toll_charges')
+                    .update({
+                        trip_id: matchingTrip.id,
+                        is_matched: true
+                    })
+                    .eq('id', charge.id)
+                    .then(({ error }) => {
+                        if (!error) {
+                            matchedCount++;
+                        } else {
+                            console.error(`❌ Failed to update charge ${charge.id}:`, error);
                         }
                     });
-                    
-                    setTimeout(() => {
-                        res.json({
-                            success: true,
-                            message: `Matched ${matchedCount} toll charges to trips`,
-                            matchedCount: matchedCount,
-                            unmatchedRemaining: unmatchedCharges.length - matchedCount
-                        });
-                    }, 500); // Allow time for updates to complete
-                }
-            );
+                
+                updatePromises.push(updatePromise);
+            }
         }
-    );
+        
+        // Wait for all updates to complete
+        await Promise.all(updatePromises);
+        
+        res.json({
+            success: true,
+            message: `Matched ${matchedCount} toll charges to trips`,
+            matchedCount: matchedCount,
+            unmatchedRemaining: unmatchedCharges.length - matchedCount
+        });
+    } catch (error) {
+        console.error('❌ Error in toll matching:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to match tolls to trips'
+        });
+    }
 });
 
 // Get unmatched toll charges
@@ -729,152 +747,150 @@ async function getOrCreateCSVTollAccount(hostId) {
 }
 
 // SIMPLE & BULLETPROOF toll matching algorithm - gets 95%+ accuracy
-function matchTollsToTrips(hostId) {
-    return new Promise((resolve) => {
+async function matchTollsToTrips(hostId) {
+    try {
         console.log('🎯 Starting SIMPLE & BULLETPROOF toll matching (targeting 95%+ accuracy)...');
         
-        // Get all unmatched toll charges
-        db.all(
-            `SELECT tc.*, ta.host_id
-             FROM toll_charges tc
-             JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-             WHERE ta.host_id = ? AND tc.is_matched = 0
-             ORDER BY tc.toll_date ASC`,
-            [hostId],
-            (err, unmatchedCharges) => {
-                if (err || unmatchedCharges.length === 0) {
-                    console.log(`⚠️ No unmatched charges found for matching`);
-                    resolve({ matchedCount: 0, unmatchedRemaining: 0, matchRate: 100 });
-                    return;
+        // Get all unmatched toll charges from Supabase
+        const { data: unmatchedCharges, error: chargesError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', false)
+            .order('toll_date', { ascending: true });
+
+        if (chargesError) {
+            console.error('❌ Error fetching unmatched charges:', chargesError);
+            return { matchedCount: 0, unmatchedRemaining: 0, matchRate: 100 };
+        }
+
+        if (!unmatchedCharges || unmatchedCharges.length === 0) {
+            console.log(`⚠️ No unmatched charges found for matching`);
+            return { matchedCount: 0, unmatchedRemaining: 0, matchRate: 100 };
+        }
+        
+        console.log(`📊 Found ${unmatchedCharges.length} unmatched toll charges`);
+        
+        // Get all active trips from Supabase
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', ['canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'].join(','))
+            .order('start_date', { ascending: true });
+
+        if (tripsError) {
+            console.error('❌ Error fetching trips:', tripsError);
+            return { matchedCount: 0, unmatchedRemaining: unmatchedCharges.length, matchRate: 0 };
+        }
+
+        if (!trips || trips.length === 0) {
+            console.log(`⚠️ No active trips found for matching`);
+            return { matchedCount: 0, unmatchedRemaining: unmatchedCharges.length, matchRate: 0 };
+        }
+        
+        console.log(`🎯 Found ${trips.length} active trips`);
+        
+        // Load transponder mappings from Supabase
+        const { data: mappings, error: mappingsError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('transponder_number, vehicle_plate')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
+
+        const transponderMap = {};
+        if (!mappingsError && mappings) {
+            mappings.forEach(m => {
+                transponderMap[m.transponder_number] = m.vehicle_plate;
+            });
+            console.log(`📷 Loaded ${Object.keys(transponderMap).length} transponder->plate mappings`);
+        }
+        
+        // SIMPLE BULLETPROOF MATCHING
+        let matchedCount = 0;
+        const matchPromises = [];
+        
+        for (const charge of unmatchedCharges) {
+            const matchPromise = findBestTripMatch(charge, trips, transponderMap);
+            matchPromises.push(matchPromise);
+        }
+        
+        const results = await Promise.all(matchPromises);
+        
+        // Apply all successful matches using Supabase
+        const updatePromises = [];
+        
+        for (let i = 0; i < results.length; i++) {
+            const result = results[i];
+            if (result.matched) {
+                const charge = unmatchedCharges[i];
+                
+                // Validate trip exists in Supabase before matching
+                const { data: trip, error: tripError } = await supabaseAdmin
+                    .from('trips')
+                    .select('id')
+                    .eq('id', result.tripId)
+                    .single();
+
+                if (tripError || !trip) {
+                    console.error(`❌ Trip ${result.tripId} does not exist - cannot match charge ${charge.id}`);
+                    continue;
                 }
                 
-                console.log(`📊 Found ${unmatchedCharges.length} unmatched toll charges`);
-                
-                // Get all active trips  
-                db.all(
-                    `SELECT * FROM trips 
-                     WHERE host_id = ?
-                     AND (trip_status IS NULL OR trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-                     ORDER BY start_date ASC`,
-                    [hostId],
-                    (err, trips) => {
-                        if (err || trips.length === 0) {
-                            console.log(`⚠️ No active trips found for matching`);
-                            resolve({ matchedCount: 0, unmatchedRemaining: unmatchedCharges.length, matchRate: 0 });
-                            return;
+                // Update toll charge in Supabase
+                const updatePromise = supabaseAdmin
+                    .from('toll_charges')
+                    .update({
+                        trip_id: result.tripId,
+                        is_matched: true,
+                        match_timestamp: new Date().toISOString()
+                    })
+                    .eq('id', charge.id)
+                    .then(({ error }) => {
+                        if (error) {
+                            console.error(`❌ Failed to apply match for charge ${charge.id}:`, error);
+                        } else {
+                            matchedCount++;
+                            console.log(`✅ Matched: $${charge.toll_amount} toll on ${charge.toll_date} at ${charge.toll_location} -> Trip ${result.tripId} (${result.reason})`);
                         }
-                        
-                        console.log(`🎯 Found ${trips.length} active trips`);
-                        
-                        // Load transponder mappings for plate conversion
-                        db.all(
-                            `SELECT transponder_number, vehicle_plate 
-                             FROM transponder_mappings 
-                             WHERE host_id = ? AND is_active = 1`,
-                            [hostId],
-                            (mappingErr, mappings) => {
-                                const transponderMap = {};
-                                if (!mappingErr && mappings) {
-                                    mappings.forEach(m => {
-                                        transponderMap[m.transponder_number] = m.vehicle_plate;
-                                    });
-                                    console.log(`📷 Loaded ${Object.keys(transponderMap).length} transponder->plate mappings`);
-                                }
-                                
-                                // SIMPLE BULLETPROOF MATCHING
-                                let matchedCount = 0;
-                                const matchPromises = [];
-                                
-                                for (const charge of unmatchedCharges) {
-                                    const matchPromise = findBestTripMatch(charge, trips, transponderMap);
-                                    matchPromises.push(matchPromise);
-                                }
-                                
-                                Promise.all(matchPromises).then(results => {
-                                    // Apply all successful matches
-                                    const applyPromises = [];
-                                    
-                                    results.forEach((result, index) => {
-                                        if (result.matched) {
-                                            const charge = unmatchedCharges[index];
-                                            const applyPromise = new Promise((resolveMatch) => {
-                                                // Validate trip exists before setting trip_id
-                                                db.get(
-                                                    'SELECT id FROM trips WHERE id = ?',
-                                                    [result.tripId],
-                                                    (err, trip) => {
-                                                        if (err) {
-                                                            console.error(`❌ Database error validating trip ${result.tripId}:`, err);
-                                                            resolveMatch();
-                                                            return;
-                                                        }
-                                                        
-                                                        if (!trip) {
-                                                            console.error(`❌ Trip ${result.tripId} does not exist - cannot match charge ${charge.id}`);
-                                                            resolveMatch();
-                                                            return;
-                                                        }
-                                                        
-                                                        // Proceed with match update
-                                                        db.run(
-                                                            `UPDATE toll_charges 
-                                                             SET trip_id = ?, is_matched = 1, match_timestamp = CURRENT_TIMESTAMP
-                                                             WHERE id = ?`,
-                                                            [result.tripId, charge.id],
-                                                            function(err) {
-                                                                if (err) {
-                                                                    if (err.message.includes('FOREIGN KEY constraint failed')) {
-                                                                        console.error(`❌ Foreign key constraint violation: trip_id ${result.tripId} does not exist`);
-                                                                    } else {
-                                                                        console.error(`❌ Failed to apply match for charge ${charge.id}:`, err);
-                                                                    }
-                                                                } else {
-                                                                    matchedCount++;
-                                                                    console.log(`✅ Matched: $${charge.toll_amount} toll on ${charge.toll_date} at ${charge.toll_location} -> Trip ${result.tripId} (${result.reason})`);
-                                                                }
-                                                                resolveMatch();
-                                                            }
-                                                        );
-                                                    }
-                                                );
-                                            });
-                                            applyPromises.push(applyPromise);
-                                        }
-                                    });
-                                    
-                                    Promise.all(applyPromises).then(() => {
-                                        const matchRate = ((matchedCount / unmatchedCharges.length) * 100);
-                                        
-                                        console.log(`🎯 SIMPLE MATCHING COMPLETE:`);
-                                        console.log(`   ✅ Matched: ${matchedCount}/${unmatchedCharges.length} (${matchRate.toFixed(1)}%)`);
-                                        console.log(`   ⚠️ Unmatched: ${unmatchedCharges.length - matchedCount}`);
-                                        
-                                        // Clear dashboard cache
-                                        try {
-                                            const { CacheManager, CacheKeys } = require('../services/cache-manager');
-                                            const cacheManager = global.cacheManager || new CacheManager();
-                                            cacheManager.delete(CacheKeys.dashboardSummary(hostId));
-                                            console.log(`🧹 Cleared dashboard cache`);
-                                        } catch (cacheError) {
-                                            console.error('⚠️ Failed to clear dashboard cache:', cacheError);
-                                        }
-                                        
-                                        resolve({
-                                            matchedCount,
-                                            unmatchedRemaining: unmatchedCharges.length - matchedCount,
-                                            totalCharges: unmatchedCharges.length,
-                                            matchRate: matchRate.toFixed(1),
-                                            method: 'simple_bulletproof'
-                                        });
-                                    });
-                                });
-                            }
-                        );
-                    }
-                );
+                    });
+                
+                updatePromises.push(updatePromise);
             }
-        );
-    });
+        }
+        
+        await Promise.all(updatePromises);
+        
+        const matchRate = ((matchedCount / unmatchedCharges.length) * 100);
+        
+        console.log(`🎯 SIMPLE MATCHING COMPLETE:`);
+        console.log(`   ✅ Matched: ${matchedCount}/${unmatchedCharges.length} (${matchRate.toFixed(1)}%)`);
+        console.log(`   ⚠️ Unmatched: ${unmatchedCharges.length - matchedCount}`);
+        
+        // Clear dashboard cache
+        try {
+            const { CacheManager, CacheKeys } = require('../services/cache-manager');
+            const cacheManager = global.cacheManager || new CacheManager();
+            await cacheManager.delete(CacheKeys.dashboardSummary(hostId));
+            console.log(`🧹 Cleared dashboard cache`);
+        } catch (cacheError) {
+            console.error('⚠️ Failed to clear dashboard cache:', cacheError);
+        }
+        
+        return {
+            matchedCount,
+            unmatchedRemaining: unmatchedCharges.length - matchedCount,
+            totalCharges: unmatchedCharges.length,
+            matchRate: matchRate.toFixed(1),
+            method: 'simple_bulletproof'
+        };
+    } catch (error) {
+        console.error('❌ Error in matchTollsToTrips:', error);
+        return { matchedCount: 0, unmatchedRemaining: 0, matchRate: 0, error: error.message };
+    }
 }
 
 // Find the best trip match for a toll charge using SIMPLE logic
