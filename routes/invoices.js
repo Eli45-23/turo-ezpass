@@ -267,63 +267,92 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // Get invoice details
-router.get('/:invoiceId', requireAuth, (req, res) => {
+router.get('/:invoiceId', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const invoiceId = req.params.invoiceId;
     
-    // Get invoice with trip details
-    db.get(
-        `SELECT 
-            i.*,
-            t.renter_name,
-            t.renter_email,
-            t.turo_trip_id,
-            t.vehicle_plate,
-            t.start_date,
-            t.end_date
-         FROM invoices i
-         JOIN trips t ON i.trip_id = t.id
-         WHERE i.id = ? AND t.host_id = ?`,
-        [invoiceId, hostId],
-        (err, invoice) => {
-            if (err || !invoice) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Invoice not found' 
-                });
-            }
-            
-            // Get invoice line items
-            db.all(
-                `SELECT 
-                    ii.*,
-                    tc.toll_date,
-                    tc.toll_location,
-                    tc.plate_number,
-                    tc.transaction_id
-                 FROM invoice_items ii
-                 JOIN toll_charges tc ON ii.toll_charge_id = tc.id
-                 WHERE ii.invoice_id = ?`,
-                [invoiceId],
-                (err, items) => {
-                    if (err) {
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Failed to fetch invoice items' 
-                        });
-                    }
-                    
-                    res.json({
-                        success: true,
-                        data: {
-                            invoice: invoice,
-                            items: items
-                        }
-                    });
-                }
-            );
+    try {
+        // Get invoice with trip details
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(
+                    renter_name,
+                    renter_email,
+                    turo_trip_id,
+                    vehicle_plate,
+                    start_date,
+                    end_date,
+                    host_id
+                )
+            `)
+            .eq('id', invoiceId)
+            .eq('trips.host_id', hostId)
+            .single();
+        
+        if (invoiceError || !invoice) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Invoice not found' 
+            });
         }
-    );
+        
+        // Get invoice line items
+        const { data: items, error: itemsError } = await supabaseAdmin
+            .from('invoice_items')
+            .select(`
+                *,
+                toll_charges(
+                    toll_date,
+                    toll_location,
+                    plate_number,
+                    transaction_id
+                )
+            `)
+            .eq('invoice_id', invoiceId);
+        
+        if (itemsError) {
+            console.error('❌ Error fetching invoice items:', itemsError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Failed to fetch invoice items' 
+            });
+        }
+        
+        // Flatten the structure to match expected format
+        const flattenedInvoice = {
+            ...invoice,
+            renter_name: invoice.trips.renter_name,
+            renter_email: invoice.trips.renter_email,
+            turo_trip_id: invoice.trips.turo_trip_id,
+            vehicle_plate: invoice.trips.vehicle_plate,
+            start_date: invoice.trips.start_date,
+            end_date: invoice.trips.end_date
+        };
+        
+        const flattenedItems = (items || []).map(item => ({
+            ...item,
+            toll_date: item.toll_charges?.toll_date,
+            toll_location: item.toll_charges?.toll_location,
+            plate_number: item.toll_charges?.plate_number,
+            transaction_id: item.toll_charges?.transaction_id
+        }));
+        
+        res.json({
+            success: true,
+            data: {
+                invoice: flattenedInvoice,
+                items: flattenedItems
+            }
+        });
+    } catch (error) {
+        console.error('❌ Exception fetching invoice details:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch invoice details' 
+        });
+    }
 });
 
 // Send invoice to renter (mock implementation)
