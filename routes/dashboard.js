@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { supabaseAdmin } = require('../config/supabase');
-const { db } = require('../config/database-supabase');
 const { CacheManager, CacheKeys } = require('../services/cache-manager');
 const { createPerformanceMiddleware } = require('../services/performance-monitor');
 const EnhancedTollMatcher = require('../services/enhanced-toll-matcher');
@@ -154,145 +153,165 @@ router.get('/summary', requireAuth, async (req, res) => {
 });
 
 // Optimized summary query function
+// Optimized dashboard summary query using Supabase
 async function executeOptimizedSummaryQuery(hostId) {
-    return new Promise((resolve, reject) => {
-        // Split into two queries to maintain proper ordering
-        const summaryQuery = `
-            SELECT 
-                (SELECT COUNT(*) FROM trips WHERE host_id = ? 
-                 AND (trip_status IS NULL OR (trip_status NOT LIKE '%cancel%' AND trip_status NOT LIKE '%decline%' AND trip_status NOT LIKE '%expired%' AND trip_status NOT LIKE '%terminated%' AND trip_status NOT LIKE '%rejected%'))) as total_trips,
-                (SELECT COUNT(*) FROM toll_accounts WHERE host_id = ? AND is_active = 1) as active_toll_accounts,
-                (SELECT COUNT(*) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as pending_charges_count,
-                (SELECT COALESCE(SUM(tc.toll_amount), 0) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as pending_charges_total,
-                (SELECT COUNT(*) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as matched_charges_count,
-                (SELECT COALESCE(SUM(tc.toll_amount), 0) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as matched_charges_total,
-                (SELECT COALESCE(SUM(i.total_amount), 0) FROM invoices i 
-                 JOIN trips t ON i.trip_id = t.id 
-                 WHERE t.host_id = ? AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))) as total_revenue,
-                (SELECT COALESCE(SUM(i.total_amount), 0) FROM invoices i 
-                 JOIN trips t ON i.trip_id = t.id 
-                 WHERE t.host_id = ? AND i.status = 'paid' AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))) as collected_revenue,
-                (SELECT COALESCE(SUM(i.total_amount), 0) FROM invoices i 
-                 JOIN trips t ON i.trip_id = t.id 
-                 WHERE t.host_id = ? AND i.status IN ('pending', 'sent') AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))) as outstanding_revenue,
-                -- Additional toll statistics
-                (SELECT COUNT(*) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as total_toll_charges,
-                (SELECT COALESCE(SUM(tc.toll_amount), 0) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as total_toll_amount,
-                (SELECT COUNT(*) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND tc.is_matched = 1 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as matched_charges_count,
-                (SELECT COUNT(DISTINCT tc.toll_location) FROM toll_charges tc 
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id 
-                 WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)) as unique_toll_locations,
-                (SELECT COUNT(DISTINCT t.vehicle_plate) FROM trips t 
-                 WHERE t.host_id = ? AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected')) AND EXISTS (
-                     SELECT 1 FROM toll_charges tc WHERE tc.trip_id = t.id AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-                 )) as vehicles_with_tolls
-        `;
+    try {
+        console.log('📊 Fetching dashboard summary for host:', hostId);
         
-        const activityQuery = `
-            SELECT 
-                tc.toll_date,
-                tc.toll_location,
-                tc.toll_amount,
-                COALESCE(
-                    tr_turo.renter_name,
-                    tr_id.renter_name,
-                    'Unmatched'
-                ) as renter_name,
-                tc.created_at as timestamp
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            LEFT JOIN trips tr_turo ON tc.trip_id = tr_turo.turo_trip_id 
-                AND (tr_turo.trip_status IS NULL OR tr_turo.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-            LEFT JOIN trips tr_id ON tc.trip_id = tr_id.id 
-                AND (tr_id.trip_status IS NULL OR tr_id.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-            ORDER BY tc.toll_date DESC, tc.created_at DESC
-            LIMIT 20
-        `;
+        // Fetch all trips for this host
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', ['canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'].join(','));
+
+        if (tripsError) {
+            console.error('❌ Error fetching trips:', tripsError);
+            throw tripsError;
+        }
+
+        // Fetch all toll accounts for this host
+        const { data: tollAccounts, error: accountsError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select('*')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
+
+        if (accountsError) {
+            console.error('❌ Error fetching toll accounts:', accountsError);
+            throw accountsError;
+        }
+
+        // Fetch all toll charges for this host
+        const { data: tollCharges, error: chargesError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .not('is_archived', 'eq', true);
+
+        if (chargesError) {
+            console.error('❌ Error fetching toll charges:', chargesError);
+            throw chargesError;
+        }
+
+        // Fetch all invoices for this host
+        const { data: invoices, error: invoicesError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                *,
+                trips!inner(host_id, trip_status)
+            `)
+            .eq('trips.host_id', hostId)
+            .not('trips.trip_status', 'in', ['canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'].join(','));
+
+        if (invoicesError) {
+            console.error('❌ Error fetching invoices:', invoicesError);
+            // Don't throw - invoices might not exist yet
+        }
+
+        // Calculate metrics
+        const totalTrips = trips?.length || 0;
+        const activeTollAccounts = tollAccounts?.length || 0;
         
-        // Execute summary query first (14 parameters now)
-        db.get(summaryQuery, [hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId, hostId], (err, summaryResult) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            
-            // Execute activity query second to maintain ordering
-            db.all(activityQuery, [hostId], (err, activityResults) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                
-                const recentActivity = activityResults || [];
-                
-                // Calculate additional real-time metrics
-                const totalTollCharges = summaryResult.total_toll_charges || 0;
-                const matchedCharges = summaryResult.matched_charges_count || 0;
-                const pendingCharges = summaryResult.pending_charges_count || 0;
-                const tripTolls = totalTollCharges - pendingCharges;
-                const matchRate = tripTolls > 0 ? 
-                    (matchedCharges / tripTolls * 100) : 0;
-                
-                const collectionRate = summaryResult.total_revenue > 0 ?
-                    (summaryResult.collected_revenue / summaryResult.total_revenue * 100) : 0;
-                
-                const avgTollPerTrip = summaryResult.total_trips > 0 ?
-                    (summaryResult.total_toll_amount / summaryResult.total_trips) : 0;
-                
-                const summary = {
-                    // Main metrics for frontend (matching expected field names)
-                    totalTolls: totalTollCharges,
-                    matchedTolls: summaryResult.matched_charges_count || 0,
-                    personalTolls: summaryResult.pending_charges_count || 0,
-                    personalAmount: (summaryResult.pending_charges_total || 0).toFixed(2),
-                    matchedAmount: (summaryResult.matched_charges_total || 0).toFixed(2),
-                    monthlyRevenue: (summaryResult.total_revenue || 0).toFixed(2),
-                    matchingAccuracy: matchRate.toFixed(1),
-                    
-                    // Detailed metrics (keeping existing names for backward compatibility)
-                    totalTrips: summaryResult.total_trips || 0,
-                    activeTollAccounts: summaryResult.active_toll_accounts || 0,
-                    pendingCharges: summaryResult.pending_charges_count || 0,
-                    pendingChargesTotal: summaryResult.pending_charges_total || 0,
-                    matchedCharges: summaryResult.matched_charges_count || 0,
-                    matchedChargesTotal: summaryResult.matched_charges_total || 0,
-                    totalRevenue: summaryResult.total_revenue || 0,
-                    collectedRevenue: summaryResult.collected_revenue || 0,
-                    outstandingRevenue: summaryResult.outstanding_revenue || 0,
-                    recentActivity: recentActivity,
-                    
-                    // Additional real-time toll metrics
-                    totalTollCharges: totalTollCharges,
-                    totalTollAmount: summaryResult.total_toll_amount || 0,
-                    uniqueTollLocations: summaryResult.unique_toll_locations || 0,
-                    vehiclesWithTolls: summaryResult.vehicles_with_tolls || 0,
-                    
-                    // Calculated percentages and averages
-                    matchRate: matchRate.toFixed(1),
-                    collectionRate: collectionRate.toFixed(1),
-                    avgTollPerTrip: avgTollPerTrip.toFixed(2),
-                    tripsWithTolls: recentActivity.filter(a => a.renter_name !== 'Unmatched').length
+        const pendingCharges = tollCharges?.filter(tc => !tc.is_matched) || [];
+        const matchedCharges = tollCharges?.filter(tc => tc.is_matched) || [];
+        
+        const pendingChargesCount = pendingCharges.length;
+        const pendingChargesTotal = pendingCharges.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0);
+        const matchedChargesCount = matchedCharges.length;
+        const matchedChargesTotal = matchedCharges.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0);
+        
+        const totalTollCharges = tollCharges?.length || 0;
+        const totalTollAmount = tollCharges?.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0) || 0;
+        
+        const uniqueTollLocations = new Set(tollCharges?.map(tc => tc.toll_location) || []).size;
+        
+        // Revenue calculations
+        const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+        const collectedRevenue = invoices?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+        const outstandingRevenue = invoices?.filter(inv => ['pending', 'sent'].includes(inv.status)).reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+        
+        // Vehicles with tolls
+        const tripsWithTolls = trips?.filter(trip => 
+            tollCharges?.some(tc => tc.trip_id === trip.id)
+        ) || [];
+        const vehiclesWithTolls = new Set(tripsWithTolls.map(trip => trip.vehicle_plate)).size;
+        
+        // Recent activity - get last 20 toll charges with trip info
+        const recentActivity = tollCharges
+            ?.sort((a, b) => new Date(b.toll_date) - new Date(a.toll_date))
+            .slice(0, 20)
+            .map(tc => {
+                const trip = trips?.find(t => t.id === tc.trip_id);
+                return {
+                    toll_date: tc.toll_date,
+                    toll_location: tc.toll_location,
+                    toll_amount: tc.toll_amount,
+                    renter_name: trip?.renter_name || 'Unmatched',
+                    timestamp: tc.created_at
                 };
-                
-                resolve(summary);
-            });
+            }) || [];
+
+        // Calculate rates
+        const tripTolls = totalTollCharges - pendingChargesCount;
+        const matchRate = tripTolls > 0 ? (matchedChargesCount / tripTolls * 100) : 0;
+        const collectionRate = totalRevenue > 0 ? (collectedRevenue / totalRevenue * 100) : 0;
+        const avgTollPerTrip = totalTrips > 0 ? (totalTollAmount / totalTrips) : 0;
+
+        const summary = {
+            // Main metrics for frontend (matching expected field names)
+            totalTolls: totalTollCharges,
+            matchedTolls: matchedChargesCount,
+            personalTolls: pendingChargesCount,
+            personalAmount: pendingChargesTotal.toFixed(2),
+            matchedAmount: matchedChargesTotal.toFixed(2),
+            monthlyRevenue: totalRevenue.toFixed(2),
+            matchingAccuracy: matchRate.toFixed(1),
+            
+            // Detailed metrics (keeping existing names for backward compatibility)
+            totalTrips: totalTrips,
+            activeTollAccounts: activeTollAccounts,
+            pendingCharges: pendingChargesCount,
+            pendingChargesTotal: pendingChargesTotal,
+            matchedCharges: matchedChargesCount,
+            matchedChargesTotal: matchedChargesTotal,
+            totalRevenue: totalRevenue,
+            collectedRevenue: collectedRevenue,
+            outstandingRevenue: outstandingRevenue,
+            recentActivity: recentActivity,
+            
+            // Additional real-time toll metrics
+            totalTollCharges: totalTollCharges,
+            totalTollAmount: totalTollAmount,
+            uniqueTollLocations: uniqueTollLocations,
+            vehiclesWithTolls: vehiclesWithTolls,
+            
+            // Calculated percentages and averages
+            matchRate: matchRate.toFixed(1),
+            collectionRate: collectionRate.toFixed(1),
+            avgTollPerTrip: avgTollPerTrip.toFixed(2),
+            tripsWithTolls: recentActivity.filter(a => a.renter_name !== 'Unmatched').length,
+            
+            // System info
+            last_updated: new Date().toISOString(),
+            host_id: hostId
+        };
+        
+        console.log('✅ Dashboard summary calculated:', {
+            trips: totalTrips,
+            tollCharges: totalTollCharges,
+            pending: pendingChargesCount,
+            matched: matchedChargesCount
         });
-    });
+        
+        return summary;
+    } catch (error) {
+        console.error('❌ Error in executeOptimizedSummaryQuery:', error);
+        throw error;
+    }
 }
 
 // Get all toll accounts for host
