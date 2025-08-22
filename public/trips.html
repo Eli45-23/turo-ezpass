@@ -1058,7 +1058,8 @@
         <main class="trips-main">
             <div class="trips-content">
                 <!-- Late Tolls Alert Widget -->
-            <div id="late-tolls-widget" class="late-tolls-widget" style="display: none;">
+            <!-- Late tolls widget replaced by dedicated tab -->
+            <div id="late-tolls-widget" class="late-tolls-widget" style="display: none !important;">
                 <div class="late-tolls-header">
                     <div class="late-tolls-icon">⚠️</div>
                     <div class="late-tolls-content">
@@ -1128,6 +1129,18 @@
                         Loading...
                     </div>
                 </div>
+                
+                <div class="overview-card" onclick="showTab('late-tolls')">
+                    <div class="overview-header">
+                        <div class="overview-icon" style="background: #f59e0b;">⚠️</div>
+                    </div>
+                    <div class="overview-value" id="late-tolls-count">0</div>
+                    <div class="overview-label">Late Tolls</div>
+                    <div class="overview-change warning">
+                        <span>⚠️</span>
+                        <span id="late-tolls-amount">$0.00</span>
+                    </div>
+                </div>
             </div>
             
             <!-- Controls -->
@@ -1179,6 +1192,10 @@
                         Your Tolls
                         <span class="tab-badge" id="your-tolls-badge">0</span>
                     </button>
+                    <button class="tab-button" onclick="showTab('late-tolls')" id="late-tolls-tab">
+                        Late Tolls
+                        <span class="tab-badge" id="late-tolls-badge">0</span>
+                    </button>
                 </div>
                 
                 <!-- Tab Content: Completed -->
@@ -1206,6 +1223,13 @@
                 <div class="tab-content" id="your-tolls-content">
                     <div class="trips-grid" id="your-tolls-trips">
                         <!-- Personal driving tolls will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Tab Content: Late Tolls -->
+                <div class="tab-content" id="late-tolls-content">
+                    <div class="trips-grid" id="late-tolls-trips">
+                        <!-- Late tolls will be populated here -->
                     </div>
                 </div>
             </div>
@@ -1239,7 +1263,6 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
             loadTrips();
-            loadLateTolls();
             setupEventListeners();
         });
         
@@ -1295,6 +1318,7 @@
                 renderTrips('in-progress', tripsData.inProgress);
                 renderTrips('upcoming', tripsData.upcoming);
                 renderPersonalTolls(tripsData.yourTolls);
+                renderLateTolls(tripsData.lateTolls || []);
                 updateCounts();
                 
                 hideLoading();
@@ -1539,6 +1563,99 @@
             `;
         }
         
+        function renderLateTolls(lateTollTrips) {
+            const container = document.getElementById('late-tolls-trips');
+            
+            if (lateTollTrips.length === 0) {
+                container.innerHTML = createEmptyState('late-tolls');
+                return;
+            }
+            
+            container.innerHTML = lateTollTrips.map(trip => createLateTollCard(trip)).join('');
+        }
+        
+        function createLateTollCard(trip) {
+            const statusClass = 'late-toll';
+            const statusText = 'Late Toll';
+            
+            const detectionDate = new Date(trip.detectionDate).toLocaleDateString();
+            
+            return `
+                <div class="trip-card late-toll-card" style="border-left: 4px solid #f59e0b;">
+                    <div class="trip-header">
+                        <div class="trip-info">
+                            <div class="trip-id">Trip #${trip.id}</div>
+                            <div class="trip-vehicle">Vehicle: ${trip.vehicle_description || trip.vehicle}</div>
+                            <div class="trip-guest">Guest: ${trip.guest}</div>
+                            <div class="trip-dates">
+                                <span>📅</span>
+                                ${new Date(trip.startDate).toLocaleDateString()} ${new Date(trip.startDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${new Date(trip.endDate).toLocaleDateString()} ${new Date(trip.endDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            </div>
+                            <div class="late-toll-info" style="color: #d97706; font-weight: 600; margin-top: 0.5rem;">
+                                ⚠️ Late tolls detected on ${detectionDate}
+                            </div>
+                        </div>
+                        <div class="trip-status">
+                            <div class="status-badge late-toll" style="background: #f59e0b; color: white;">
+                                ⚠️ ${statusText}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trip-details">
+                        <div class="trip-stat">
+                            <div class="trip-stat-value">${trip.duration}</div>
+                            <div class="trip-stat-label">Duration</div>
+                        </div>
+                        <div class="trip-stat">
+                            <div class="trip-stat-value">$${trip.lateTollTotal.toFixed(2)}</div>
+                            <div class="trip-stat-label">Late Tolls</div>
+                        </div>
+                        <div class="trip-stat">
+                            <div class="trip-stat-value">${trip.status}</div>
+                            <div class="trip-stat-label">Status</div>
+                        </div>
+                    </div>
+                    
+                    <div class="trip-tolls" style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: var(--radius-md); margin: 1rem 0;">
+                        <div class="tolls-header" style="background: #fef3c7; padding: 0.75rem; border-radius: var(--radius-md) var(--radius-md) 0 0;">
+                            <div class="tolls-title" style="font-weight: 600; color: #92400e;">⚠️ Late Toll Charges (${trip.lateTolls.length})</div>
+                            <div style="font-size: var(--text-sm); color: #b45309; margin-top: 0.25rem;">
+                                These charges were detected after the trip was submitted to Turo
+                            </div>
+                        </div>
+                        <div class="tolls-list" style="padding: 0.75rem;">
+                            ${trip.lateTolls.map(toll => `
+                                <div class="toll-item" style="background: white; border: 1px solid #fed7aa; border-radius: var(--radius-sm); padding: 0.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div class="toll-info">
+                                        <div class="toll-location" style="font-weight: 600; color: var(--ink);">${toll.location}</div>
+                                        <div class="toll-time" style="font-size: var(--text-sm); color: var(--ink-muted);">${toll.time}</div>
+                                        ${toll.transactionId ? `<div class="toll-txn-id" style="font-size: var(--text-xs); color: var(--ink-muted);">Txn ID: ${toll.transactionId}</div>` : ''}
+                                    </div>
+                                    <div class="toll-amount" style="font-weight: 600; color: #dc2626; font-size: 1.125rem;">$${toll.amount.toFixed(2)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="trip-actions">
+                        <button class="btn btn-primary btn-sm" onclick="acknowledgeLateToll('${trip.internalId}')">
+                            <span>✅</span>
+                            Acknowledge
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="createSupplementalInvoice('${trip.internalId}')">
+                            <span>📄</span>
+                            Create Invoice
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="viewLateTollDetails('${trip.internalId}')">
+                            <span>👁️</span>
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
         function createEmptyState(category) {
             const states = {
                 completed: {
@@ -1560,6 +1677,11 @@
                     icon: '🛣️',
                     title: 'No Personal Tolls',
                     text: 'Toll charges from your personal driving will appear here for tracking.'
+                },
+                'late-tolls': {
+                    icon: '⚠️',
+                    title: 'No Late Tolls',
+                    text: 'Late tolls detected after trip submission will appear here for review and action.'
                 }
             };
             
@@ -1605,11 +1727,18 @@
             updateEl('upcoming-count', data.upcoming.length.toString());
             updateEl('personal-tolls-count', data.yourTolls.length.toString());
             
+            // Update late tolls
+            const lateTolls = data.lateTolls || [];
+            updateEl('late-tolls-count', lateTolls.length.toString());
+            const lateTollsTotal = lateTolls.reduce((sum, trip) => sum + (trip.lateTollTotal || 0), 0);
+            updateEl('late-tolls-amount', `$${lateTollsTotal.toFixed(2)}`);
+            
             // Update badges
             updateEl('completed-badge', data.completed.length.toString());
             updateEl('in-progress-badge', data.inProgress.length.toString());
             updateEl('upcoming-badge', data.upcoming.length.toString());
             updateEl('your-tolls-badge', data.yourTolls.length.toString());
+            updateEl('late-tolls-badge', lateTolls.length.toString());
         }
         
         function filterTrips() {
@@ -1622,7 +1751,8 @@
                 completed: filterTripArray(originalTripsData.completed || [], searchTerm, dateFilter, vehicleFilter),
                 inProgress: filterTripArray(originalTripsData.inProgress || [], searchTerm, dateFilter, vehicleFilter),
                 upcoming: filterTripArray(originalTripsData.upcoming || [], searchTerm, dateFilter, vehicleFilter),
-                yourTolls: filterTripArray(originalTripsData.yourTolls || [], searchTerm, dateFilter, vehicleFilter)
+                yourTolls: filterTripArray(originalTripsData.yourTolls || [], searchTerm, dateFilter, vehicleFilter),
+                lateTolls: filterTripArray(originalTripsData.lateTolls || [], searchTerm, dateFilter, vehicleFilter)
             };
             
             // Update the display with filtered data
@@ -1630,6 +1760,7 @@
             renderTrips('in-progress', filteredData.inProgress);
             renderTrips('upcoming', filteredData.upcoming);
             renderPersonalTolls(filteredData.yourTolls);
+            renderLateTolls(filteredData.lateTolls || []);
             updateCounts(filteredData);
         }
         
@@ -2304,6 +2435,61 @@
                     type: 'error',
                     title: 'Error', 
                     message: 'Failed to acknowledge late tolls'
+                });
+            }
+        }
+
+        // Late Toll Action Functions
+        async function acknowledgeLateToll(tripId) {
+            try {
+                // For now, show notification - could call API to acknowledge all tolls for this trip
+                showNotification({
+                    type: 'info',
+                    title: 'Feature Coming Soon',
+                    message: 'Individual trip acknowledgment is coming in a future update. Use the Late Tolls tab to acknowledge all.'
+                });
+            } catch (error) {
+                console.error('Error acknowledging late toll:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Error',
+                    message: 'Failed to acknowledge late toll'
+                });
+            }
+        }
+
+        async function createSupplementalInvoice(tripId) {
+            try {
+                // For now, show notification - could implement supplemental invoice creation
+                showNotification({
+                    type: 'info',
+                    title: 'Feature Coming Soon',
+                    message: 'Supplemental invoice creation is coming in a future update.'
+                });
+            } catch (error) {
+                console.error('Error creating supplemental invoice:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Error',
+                    message: 'Failed to create supplemental invoice'
+                });
+            }
+        }
+
+        async function viewLateTollDetails(tripId) {
+            try {
+                // Show detailed view of late toll trip
+                showNotification({
+                    type: 'info',
+                    title: 'Late Toll Details',
+                    message: `Viewing details for trip ${tripId}. Full details view coming soon.`
+                });
+            } catch (error) {
+                console.error('Error viewing late toll details:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Error',
+                    message: 'Failed to view late toll details'
                 });
             }
         }

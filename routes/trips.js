@@ -151,7 +151,8 @@ router.get('/', requireAuth, async (req, res) => {
             completed: [],
             inProgress: [],
             upcoming: [],
-            yourTolls: []
+            yourTolls: [],
+            lateTolls: []
         };
         
         const now = new Date();
@@ -268,11 +269,98 @@ router.get('/', requireAuth, async (req, res) => {
             });
         }
         
+        // Get late tolls detected for submitted trips
+        const { data: lateTolls, error: lateTollsError } = await supabaseAdmin
+            .from('late_tolls_detected')
+            .select(`
+                *,
+                trips!inner(
+                    id,
+                    turo_trip_id,
+                    vehicle_plate,
+                    renter_name,
+                    start_date,
+                    end_date,
+                    host_id
+                ),
+                toll_charges!inner(
+                    toll_location,
+                    toll_amount,
+                    toll_date,
+                    transaction_id
+                )
+            `)
+            .eq('trips.host_id', hostId)
+            .order('detection_date', { ascending: false });
+
+        if (!lateTollsError && lateTolls && lateTolls.length > 0) {
+            // Group late tolls by trip
+            const lateTollsByTrip = {};
+            
+            lateTolls.forEach(lateToll => {
+                const tripId = lateToll.trips.turo_trip_id;
+                if (!lateTollsByTrip[tripId]) {
+                    lateTollsByTrip[tripId] = {
+                        id: tripId,
+                        internalId: lateToll.trips.id,
+                        guest: lateToll.trips.renter_name,
+                        vehicle: lateToll.trips.vehicle_plate,
+                        startDate: lateToll.trips.start_date,
+                        endDate: lateToll.trips.end_date,
+                        detectionDate: lateToll.detection_date,
+                        status: lateToll.status,
+                        lateTolls: [],
+                        lateTollTotal: 0
+                    };
+                }
+                
+                // Add the toll to this trip
+                const tollData = {
+                    id: lateToll.id,
+                    location: lateToll.toll_charges.toll_location || 'Unknown Location',
+                    date: lateToll.toll_charges.toll_date,
+                    amount: parseFloat(lateToll.toll_charges.toll_amount || 0),
+                    transactionId: lateToll.toll_charges.transaction_id,
+                    time: lateToll.toll_charges.toll_date ? 
+                        new Date(lateToll.toll_charges.toll_date).toLocaleDateString() + ' ' +
+                        new Date(lateToll.toll_charges.toll_date).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit', 
+                            hour12: true 
+                        }) : 'Unknown'
+                };
+                
+                lateTollsByTrip[tripId].lateTolls.push(tollData);
+                lateTollsByTrip[tripId].lateTollTotal += tollData.amount;
+                
+                // Keep track of the most recent status and detection date for the trip
+                if (lateToll.detection_date > lateTollsByTrip[tripId].detectionDate) {
+                    lateTollsByTrip[tripId].detectionDate = lateToll.detection_date;
+                    lateTollsByTrip[tripId].status = lateToll.status;
+                }
+            });
+            
+            // Convert to array and add additional trip properties
+            transformedTrips.lateTolls = Object.values(lateTollsByTrip).map(trip => {
+                const startDate = new Date(trip.startDate);
+                const endDate = new Date(trip.endDate);
+                
+                return {
+                    ...trip,
+                    duration: calculateDuration(startDate, endDate),
+                    vehicle_description: vehicleDescriptions[trip.vehicle] || '',
+                    tolls: trip.lateTolls, // For compatibility with existing card renderer
+                    tollTotal: trip.lateTollTotal // For compatibility with existing card renderer
+                };
+            });
+        }
+        
         console.log('📊 Trip summary:', {
             completed: transformedTrips.completed.length,
             inProgress: transformedTrips.inProgress.length,
             upcoming: transformedTrips.upcoming.length,
-            personalTolls: transformedTrips.yourTolls.length
+            personalTolls: transformedTrips.yourTolls.length,
+            lateTolls: transformedTrips.lateTolls.length
         });
         
         res.json({
