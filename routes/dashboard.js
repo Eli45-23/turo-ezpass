@@ -2675,10 +2675,12 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         
         // Get toll charge IDs that are in invoices (to archive them) - ONLY for this host
         console.log('📁 Getting toll charge IDs that are in invoices...');
-        const { data: tollChargesInInvoices, error: invoiceItemsError } = await supabaseAdmin
-            .from('invoice_items')
-            .select(`toll_charge_id, invoices!inner(trip_id, trips!inner(host_id))`)
-            .eq('invoices.trips.host_id', hostId);
+        const { data: tollChargesInInvoices, error: invoiceItemsError } = hostInvoiceIds.length > 0 
+            ? await supabaseAdmin
+                .from('invoice_items')
+                .select('toll_charge_id')
+                .in('invoice_id', hostInvoiceIds)
+            : { data: [], error: null };
             
         if (invoiceItemsError) {
             console.log('❌ Error querying invoice_items:', invoiceItemsError);
@@ -2694,8 +2696,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
             const { error: archiveError } = await supabaseAdmin
                 .from('toll_charges')
                 .update({ is_archived: true })
-                .in('id', tollChargeIdsInInvoices)
-                .eq('toll_accounts.host_id', hostId);
+                .in('id', tollChargeIdsInInvoices);
             
             if (archiveError) {
                 console.log('❌ Error archiving toll charges:', archiveError);
