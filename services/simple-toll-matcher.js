@@ -264,7 +264,7 @@ class SimpleTollMatcher {
                 exitPlaza: toll.exit_plaza || toll.exitPlaza || '',
                 tollLocation: toll.toll_location || toll.location || '',
                 tollClass: toll.toll_class || toll.class || '',
-                tollDate: this.parseDate(toll.charge_date || toll.toll_date || toll.transactionDate || toll.date),
+                tollDate: this.parseDate(toll.toll_date || toll.transactionDate || toll.date),
                 tollTime: this.extractTime(toll),
                 amount: Math.abs(parseFloat(toll.toll_amount || toll.amount)) || 0,
                 originalToll: toll // Keep reference for database updates
@@ -626,8 +626,7 @@ class SimpleTollMatcher {
                             .update({
                                 trip_id: tripDbId,
                                 is_matched: true,
-                                match_confidence: match.confidence,
-                                match_method: 'simple_matcher'
+                                match_timestamp: new Date().toISOString()
                             })
                             .eq('id', tollDbId);
                         

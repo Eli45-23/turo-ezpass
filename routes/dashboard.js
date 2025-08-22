@@ -2920,4 +2920,64 @@ router.post('/test-simple-matcher', requireAuth, async (req, res) => {
     }
 });
 
+// Test endpoint to run matching on existing data
+router.get('/test-matching', requireAuth, async (req, res) => {
+    const hostId = req.session.hostId;
+    
+    try {
+        console.log('🧪 Testing toll matching with existing database data...');
+        
+        // Get all trips
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)')
+            .order('start_date', { ascending: false });
+            
+        if (tripsError) {
+            console.error('❌ Error fetching trips:', tripsError);
+            throw tripsError;
+        }
+        
+        // Get all tolls (use account ID 3 directly since we know it exists)
+        const { data: tolls, error: tollsError } = await supabaseAdmin
+            .from('toll_charges')
+            .select('*')
+            .eq('toll_account_id', 3)
+            .order('toll_date', { ascending: false });
+            
+        console.log('🔍 Tolls query result:', { tollsCount: tolls?.length, tollsError });
+            
+        if (tollsError) {
+            console.error('❌ Error fetching tolls:', tollsError);
+            throw tollsError;
+        }
+        
+        console.log(`🔍 Found ${trips?.length || 0} trips and ${tolls?.length || 0} tolls`);
+        
+        // Run matching
+        const SimpleTollMatcher = require('../services/simple-toll-matcher');
+        const simpleMatcher = new SimpleTollMatcher();
+        const matchResult = await simpleMatcher.matchTollsToTrips(hostId, trips, tolls, (progress) => {
+            console.log('🔄 Matching progress:', progress);
+        });
+        
+        res.json({
+            success: true,
+            message: 'Matching test completed',
+            result: matchResult,
+            trips: trips?.length || 0,
+            tolls: tolls?.length || 0
+        });
+        
+    } catch (error) {
+        console.error('❌ Test matching failed:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Test matching failed'
+        });
+    }
+});
+
 module.exports = router;
