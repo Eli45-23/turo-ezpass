@@ -660,15 +660,11 @@ router.get('/late-tolls', requireAuth, async (req, res) => {
                     end_date,
                     host_id
                 ),
-                toll_charges(
+                toll_charges!inner(
                     toll_location,
                     toll_amount,
                     toll_date,
                     transaction_id
-                ),
-                invoices(
-                    invoice_number,
-                    total_amount
                 )
             `)
             .eq('trips.host_id', hostId)
@@ -704,8 +700,8 @@ router.get('/late-tolls', requireAuth, async (req, res) => {
             transactionId: toll.toll_charges?.transaction_id,
             detectionDate: toll.detection_date,
             status: toll.status,
-            originalInvoice: toll.invoices?.invoice_number,
-            originalInvoiceAmount: parseFloat(toll.invoices?.total_amount || 0),
+            originalInvoice: null,
+            originalInvoiceAmount: 0,
             resolutionNotes: toll.resolution_notes,
             resolvedAt: toll.resolved_at
         }));
@@ -801,111 +797,6 @@ router.put('/late-tolls/:lateTollId/resolve', requireAuth, async (req, res) => {
     }
 });
 
-// Late tolls endpoints
-router.get('/late-tolls', requireAuth, async (req, res) => {
-    const hostId = req.session.hostId;
-
-    try {
-        console.log('📋 Fetching late tolls for host:', hostId);
-
-        const { data: lateTolls, error } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .select(`
-                *,
-                trips!inner(turo_trip_id, renter_name, vehicle_plate),
-                toll_charges!inner(toll_location, toll_amount, toll_date)
-            `)
-            .eq('host_id', hostId)
-            .order('detection_date', { ascending: false });
-
-        if (error) {
-            console.error('❌ Error fetching late tolls:', error);
-            return res.status(500).json({
-                success: false,
-                error: 'Failed to fetch late tolls'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: lateTolls || []
-        });
-
-    } catch (error) {
-        console.error('❌ Exception fetching late tolls:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error'
-        });
-    }
-});
-
-router.post('/late-tolls/:lateTollId/resolve', requireAuth, async (req, res) => {
-    const hostId = req.session.hostId;
-    const { lateTollId } = req.params;
-    const { status = 'acknowledged', notes } = req.body;
-
-    try {
-        console.log(`🔧 Resolving late toll ${lateTollId} with status: ${status}`);
-
-        // Verify ownership through trip relationship
-        const { data: lateToll, error: fetchError } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .select(`
-                *,
-                trips!inner(host_id)
-            `)
-            .eq('id', lateTollId)
-            .eq('trips.host_id', hostId)
-            .single();
-
-        if (fetchError) {
-            console.error('❌ Error fetching late toll:', fetchError);
-            if (fetchError.code === 'PGRST116') {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Late toll not found'
-                });
-            }
-            return res.status(500).json({
-                success: false,
-                error: 'Database error'
-            });
-        }
-
-        // Update the late toll status
-        const { error: updateError } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .update({
-                status: status,
-                resolution_notes: notes || null,
-                resolved_at: new Date().toISOString()
-            })
-            .eq('id', lateTollId);
-
-        if (updateError) {
-            console.error('❌ Failed to update late toll:', updateError);
-            return res.status(500).json({
-                success: false,
-                error: 'Failed to update late toll status'
-            });
-        }
-
-        console.log(`✅ Late toll ${lateTollId} resolved with status: ${status}`);
-
-        res.json({
-            success: true,
-            message: 'Late toll status updated successfully'
-        });
-
-    } catch (error) {
-        console.error('❌ Exception resolving late toll:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error'
-        });
-    }
-});
 
 // Generate supplemental invoice for late tolls
 router.post('/late-tolls/generate-invoice', requireAuth, async (req, res) => {
