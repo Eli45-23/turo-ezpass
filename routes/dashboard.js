@@ -2593,7 +2593,8 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         console.log('📊 Counting invoices...');
         const { count: invoicesCount, error: invoicesCountError } = await supabaseAdmin
             .from('invoices')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .eq('host_id', hostId);
             
         if (invoicesCountError) {
             console.log('❌ Error counting invoices:', invoicesCountError);
@@ -2603,7 +2604,10 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         console.log('📊 Counting invoice items...');
         const { count: invoiceItemsCount, error: invoiceItemsCountError } = await supabaseAdmin
             .from('invoice_items')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .in('invoice_id', 
+                supabaseAdmin.from('invoices').select('id').eq('host_id', hostId)
+            );
             
         if (invoiceItemsCountError) {
             console.log('❌ Error counting invoice items:', invoiceItemsCountError);
@@ -2629,11 +2633,12 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         
         console.log(`🛡️ PRESERVING: ${preservedCount.invoices} invoices, ${preservedCount.invoice_items} invoice items, ${preservedCount.transponder_mappings} transponder mappings`);
         
-        // Get toll charge IDs that are in invoices (to archive them)
+        // Get toll charge IDs that are in invoices (to archive them) - ONLY for this host
         console.log('📁 Getting toll charge IDs that are in invoices...');
         const { data: tollChargesInInvoices, error: invoiceItemsError } = await supabaseAdmin
             .from('invoice_items')
-            .select('toll_charge_id');
+            .select(`toll_charge_id, invoices!inner(host_id)`)
+            .eq('invoices.host_id', hostId);
             
         if (invoiceItemsError) {
             console.log('❌ Error querying invoice_items:', invoiceItemsError);
@@ -2643,13 +2648,14 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         const tollChargeIdsInInvoices = tollChargesInInvoices?.filter(item => item.toll_charge_id != null).map(item => item.toll_charge_id) || [];
         console.log(`📁 Found ${tollChargeIdsInInvoices.length} toll charges in invoices: ${tollChargeIdsInInvoices.join(', ')}`);
         
-        // Archive toll charges referenced in invoices
+        // Archive toll charges referenced in invoices - ONLY for this host
         if (tollChargeIdsInInvoices.length > 0) {
             console.log('📁 Archiving toll charges that are in invoices...');
             const { error: archiveError } = await supabaseAdmin
                 .from('toll_charges')
                 .update({ is_archived: true })
-                .in('id', tollChargeIdsInInvoices);
+                .in('id', tollChargeIdsInInvoices)
+                .eq('toll_accounts.host_id', hostId);
             
             if (archiveError) {
                 console.log('❌ Error archiving toll charges:', archiveError);
@@ -2661,48 +2667,66 @@ router.post('/clear-data', requireAuth, async (req, res) => {
             console.log('📁 No toll charges to archive - skipping archive step');
         }
         
-        // Delete toll charges NOT in invoices
-        console.log('🗑️ Deleting toll charges NOT in invoices...');
+        // Delete toll charges NOT in invoices - ONLY for this host
+        console.log('🗑️ Deleting toll charges NOT in invoices for current host only...');
         
-        // First check how many toll charges exist
+        // First check how many toll charges exist for this host
         const { count: totalTollCharges } = await supabaseAdmin
             .from('toll_charges')
-            .select('*', { count: 'exact', head: true });
+            .select('toll_charges.*, toll_accounts!inner(host_id)', { count: 'exact', head: true })
+            .eq('toll_accounts.host_id', hostId);
             
-        console.log(`📊 Found ${totalTollCharges} total toll charges in database`);
+        console.log(`📊 Found ${totalTollCharges} total toll charges for host ${hostId}`);
         
         let deletedTollCharges = 0;
         if (totalTollCharges > 0) {
+            // Build query to delete only THIS user's toll charges
             let deleteTollChargesQuery = supabaseAdmin
                 .from('toll_charges')
-                .delete({ count: 'exact' })
-                .gte('id', 0); // This ensures we have a WHERE clause - delete all records where id >= 0
+                .delete({ count: 'exact' });
                 
-            if (tollChargeIdsInInvoices.length > 0) {
-                console.log(`🗑️ Excluding ${tollChargeIdsInInvoices.length} toll charges that are in invoices`);
-                deleteTollChargesQuery = deleteTollChargesQuery.not('id', 'in', tollChargeIdsInInvoices);
-            } else {
-                console.log('🗑️ No toll charges to preserve - deleting all toll charges');
-            }
+            // Add filter to only affect this host's toll charges through toll_accounts relationship
+            // We need to get the toll_account_ids for this host first
+            const { data: hostTollAccounts } = await supabaseAdmin
+                .from('toll_accounts')
+                .select('id')
+                .eq('host_id', hostId);
+                
+            const hostTollAccountIds = hostTollAccounts?.map(acc => acc.id) || [];
             
-            const { count, error: deleteTollChargesError } = await deleteTollChargesQuery;
-            if (deleteTollChargesError) throw deleteTollChargesError;
-            deletedTollCharges = count || 0;
+            if (hostTollAccountIds.length > 0) {
+                deleteTollChargesQuery = deleteTollChargesQuery.in('toll_account_id', hostTollAccountIds);
+                
+                if (tollChargeIdsInInvoices.length > 0) {
+                    console.log(`🗑️ Excluding ${tollChargeIdsInInvoices.length} toll charges that are in invoices`);
+                    deleteTollChargesQuery = deleteTollChargesQuery.not('id', 'in', tollChargeIdsInInvoices);
+                } else {
+                    console.log('🗑️ No toll charges to preserve - deleting all toll charges for this host');
+                }
+                
+                const { count, error: deleteTollChargesError } = await deleteTollChargesQuery;
+                if (deleteTollChargesError) throw deleteTollChargesError;
+                deletedTollCharges = count || 0;
+            } else {
+                console.log('🗑️ No toll accounts found for this host - no toll charges to delete');
+            }
         } else {
-            console.log('🗑️ No toll charges found - skipping deletion');
+            console.log('🗑️ No toll charges found for this host - skipping deletion');
         }
         
         results.toll_charges_without_invoices_deleted = deletedTollCharges;
         console.log(`🗑️ Deleted ${results.toll_charges_without_invoices_deleted} toll charges not in invoices`);
         
-        // Get trip IDs that are in invoices or referenced by toll charges
+        // Get trip IDs that are in invoices or referenced by toll charges - ONLY for this host
         const { data: tripsInInvoices } = await supabaseAdmin
             .from('invoices')
-            .select('trip_id');
+            .select('trip_id')
+            .eq('host_id', hostId);
             
         const { data: tripsInTollCharges } = await supabaseAdmin
             .from('toll_charges')
-            .select('trip_id');
+            .select('trip_id, toll_accounts!inner(host_id)')
+            .eq('toll_accounts.host_id', hostId);
         
         const tripIdsToPreserve = [
             ...(tripsInInvoices?.filter(inv => inv.trip_id != null).map(inv => inv.trip_id) || []),
@@ -2727,11 +2751,12 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         results.trips_without_invoices_deleted = deletedTrips || 0;
         console.log(`🗑️ Deleted ${results.trips_without_invoices_deleted} trips without invoices or toll references`);
         
-        // Get toll account IDs referenced by archived toll charges
+        // Get toll account IDs referenced by archived toll charges - ONLY for this host
         const { data: referencedTollAccounts } = await supabaseAdmin
             .from('toll_charges')
-            .select('toll_account_id')
-            .eq('is_archived', true);
+            .select('toll_account_id, toll_accounts!inner(host_id)')
+            .eq('is_archived', true)
+            .eq('toll_accounts.host_id', hostId);
         
         const tollAccountIdsToPreserve = referencedTollAccounts?.filter(tc => tc.toll_account_id != null).map(tc => tc.toll_account_id) || [];
         
