@@ -1597,19 +1597,25 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 // Don't increment trips_updated since we're not modifying anything
             } else {
                 console.log(`✅ Proceeding to insert trip ${trip.turoTripId} - no existing invoices`);
+                
+                const tripData = {
+                    host_id: hostId,
+                    turo_trip_id: trip.turoTripId,
+                    renter_name: trip.guest,
+                    renter_email: trip.guest,
+                    vehicle_plate: normalizeVehiclePlate(trip.vehiclePlate),
+                    start_date: trip.startDate.toISOString(),
+                    end_date: trip.endDate.toISOString(),
+                    trip_status: trip.status
+                };
+                
+                console.log(`🔍 DEBUG: Inserting trip data:`, tripData);
+                
                 const { data: newTrip, error: tripError } = await supabaseAdmin
                     .from('trips')
-                    .upsert({
-                        host_id: hostId,
-                        turo_trip_id: trip.turoTripId,
-                        renter_name: trip.guest,
-                        renter_email: trip.guest,
-                        vehicle_plate: normalizeVehiclePlate(trip.vehiclePlate),
-                        start_date: trip.startDate.toISOString(),
-                        end_date: trip.endDate.toISOString(),
-                        trip_status: trip.status
-                    }, {
-                        onConflict: 'turo_trip_id'
+                    .upsert(tripData, {
+                        onConflict: 'turo_trip_id',
+                        ignoreDuplicates: false
                     })
                     .select()
                     .single();
@@ -1618,17 +1624,32 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                     console.error(`❌ Failed to insert trip ${i + 1}:`, {
                         error: tripError.message,
                         code: tripError.code,
-                        tripData: {
-                            hostId: hostId,
-                            turoTripId: trip.turoTripId,
-                            guest: trip.guest,
-                            vehiclePlate: normalizeVehiclePlate(trip.vehiclePlate)
-                        }
+                        hint: tripError.hint,
+                        details: tripError.details,
+                        tripData: tripData
                     });
                     throw tripError;
+                } else if (!newTrip) {
+                    console.error(`❌ Trip upsert returned no data for ${trip.turoTripId}`);
+                    throw new Error(`Trip upsert failed - no data returned for ${trip.turoTripId}`);
                 } else {
-                    console.log(`✅ Successfully inserted trip ${i + 1}: ${trip.turoTripId}`);
-                    dbUpdates.trips_updated++;
+                    console.log(`✅ Successfully inserted trip ${i + 1}: ${trip.turoTripId} with database ID: ${newTrip.id}`);
+                    
+                    // Verify the trip was actually saved by querying it back
+                    const { data: verifyTrip, error: verifyError } = await supabaseAdmin
+                        .from('trips')
+                        .select('id, turo_trip_id, vehicle_plate')
+                        .eq('turo_trip_id', trip.turoTripId)
+                        .eq('host_id', hostId)
+                        .single();
+                    
+                    if (verifyError || !verifyTrip) {
+                        console.error(`❌ CRITICAL: Trip ${trip.turoTripId} not found after insert!`, verifyError);
+                        throw new Error(`Trip verification failed for ${trip.turoTripId}`);
+                    } else {
+                        console.log(`🔍 VERIFIED: Trip ${trip.turoTripId} saved with ID ${verifyTrip.id}, plate: ${verifyTrip.vehicle_plate}`);
+                        dbUpdates.trips_updated++;
+                    }
                 }
             }
         }

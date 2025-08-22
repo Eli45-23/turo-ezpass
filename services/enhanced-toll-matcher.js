@@ -749,8 +749,13 @@ class EnhancedTollMatcher {
                 .from('trips')
                 .select('*')
                 .eq('host_id', hostId)
-                .not('trip_status', 'in', '(canceled,cancelled,declined)')
+                .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)')
                 .order('start_date', { ascending: false });
+            
+            console.log(`🔍 DEBUG: Found ${trips ? trips.length : 0} trips for host ${hostId}`);
+            if (trips && trips.length > 0) {
+                console.log(`🔍 DEBUG: First few trip IDs:`, trips.slice(0, 3).map(t => ({ id: t.id, turo_trip_id: t.turo_trip_id, plate: t.vehicle_plate })));
+            }
 
             if (tripsError) throw tripsError;
             data.trips = trips || [];
@@ -812,25 +817,38 @@ class EnhancedTollMatcher {
     async applyMatches(matchResults) {
         let appliedCount = 0;
         
+        console.log(`🔍 DEBUG: Applying ${matchResults.length} matches to database...`);
+        
         for (const result of matchResults) {
             if (result.confidence >= this.config.autoMatchThreshold) {
                 try {
-                    const { error } = await supabaseAdmin
+                    console.log(`🔍 DEBUG: Applying match - Toll ID ${result.toll.id} → Trip ID ${result.trip.id} (${result.trip.turo_trip_id})`);
+                    
+                    const { data, error } = await supabaseAdmin
                         .from('toll_charges')
                         .update({
                             trip_id: result.trip.id,
                             is_matched: true,
                             match_confidence: result.confidence
                         })
-                        .eq('id', result.toll.id);
+                        .eq('id', result.toll.id)
+                        .select();
 
-                    if (!error) appliedCount++;
+                    if (error) {
+                        console.error(`❌ Failed to apply match for toll ${result.toll.id}:`, error);
+                    } else {
+                        console.log(`✅ Successfully applied match for toll ${result.toll.id} to trip ${result.trip.turo_trip_id}`);
+                        appliedCount++;
+                    }
                 } catch (error) {
-                    console.error('❌ Error applying match:', error);
+                    console.error(`❌ Exception applying match for toll ${result.toll.id}:`, error);
                 }
+            } else {
+                console.log(`⚠️ Skipping match below threshold: toll ${result.toll.id}, confidence: ${result.confidence}`);
             }
         }
         
+        console.log(`🎯 Applied ${appliedCount}/${matchResults.length} matches to database`);
         return appliedCount;
     }
     
