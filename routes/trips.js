@@ -217,15 +217,16 @@ router.get('/', requireAuth, async (req, res) => {
                 invoicesByTripId[invoice.trip_id] = invoice;
             });
             
-            // Update submission status for all trips
+            // Update submission status and filter out submitted trips from trips page
             [transformedTrips.completed, transformedTrips.inProgress, transformedTrips.upcoming].forEach(tripList => {
-                tripList.forEach(trip => {
+                for (let i = tripList.length - 1; i >= 0; i--) {
+                    const trip = tripList[i];
                     const invoice = invoicesByTripId[trip.internalId];
                     if (invoice) {
-                        trip.submittedToTuro = true;
-                        trip.submittedDate = invoice.created_at;
+                        // Trip has been submitted - remove from trips page (it belongs in invoices page)
+                        tripList.splice(i, 1);
                     }
-                });
+                }
             });
         }
         

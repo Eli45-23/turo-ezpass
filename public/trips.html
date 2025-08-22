@@ -1366,13 +1366,6 @@
                                 <span>📅</span>
                                 ${new Date(trip.startDate).toLocaleDateString()} ${new Date(trip.startDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${new Date(trip.endDate).toLocaleDateString()} ${new Date(trip.endDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                             </div>
-                            ${trip.submittedToTuro ? `
-                                <div class="submitted-badge">
-                                    <span>✅</span>
-                                    Submitted to Turo
-                                    ${trip.submittedDate ? `<small>(${new Date(trip.submittedDate).toLocaleDateString()})</small>` : ''}
-                                </div>
-                            ` : ''}
                         </div>
                         <div class="trip-status">
                             <div class="status-badge ${statusClass}">
@@ -1426,17 +1419,10 @@
                             Invoice
                         </button>
                         ${trip.status === 'completed' ? `
-                            ${trip.submittedToTuro ? `
-                                <button class="btn btn-success btn-sm" onclick="window.location.href='invoices.html'">
-                                    <span>📄</span>
-                                    View Invoice
-                                </button>
-                            ` : `
-                                <button class="btn btn-primary btn-sm" onclick="submitTrip('${trip.internalId}')">
-                                    <span>✅</span>
-                                    Submit
-                                </button>
-                            `}
+                            <button class="btn btn-primary btn-sm" onclick="submitTrip('${trip.internalId}')">
+                                <span>✅</span>
+                                Submit
+                            </button>
                             <button class="btn btn-secondary btn-sm" onclick="sendToGuest('${trip.internalId}')">
                                 <span>📧</span>
                                 Send to Guest
