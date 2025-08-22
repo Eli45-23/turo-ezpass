@@ -2853,13 +2853,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
             }
         }
         
-        // Clear late tolls detected table - get trip IDs first
-        const { data: hostTrips } = await supabaseAdmin
-            .from('trips')
-            .select('id')
-            .eq('host_id', hostId);
-            
-        const hostTripIds = hostTrips?.map(trip => trip.id) || [];
+        // Clear late tolls detected table - reuse hostTripIds from above
         
         let deletedLateTolls = 0;
         if (hostTripIds.length > 0) {
