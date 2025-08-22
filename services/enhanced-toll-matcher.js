@@ -1,4 +1,4 @@
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
 /**
  * Enhanced Toll Matcher with Multi-Stage Matching
@@ -630,32 +630,35 @@ class EnhancedTollMatcher {
      * ONLY uses user-defined mappings (not auto-discovered)
      */
     async resolveTransponderToPlate(transponderId, hostId) {
-        return new Promise((resolve) => {
-            db.get(
-                `SELECT vehicle_plate, vehicle_description 
-                 FROM transponder_mappings 
-                 WHERE host_id = ? AND transponder_number = ? AND is_active = 1
-                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
-                [hostId, transponderId],
-                (err, mapping) => {
-                    if (!err && mapping) {
-                        // Additional safety check: skip any auto-discovered mappings
-                        if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
-                            console.log(`🔗 Transponder resolved: ${transponderId} → ${mapping.vehicle_plate} (${mapping.vehicle_description})`);
-                            resolve({
-                                plate: mapping.vehicle_plate,
-                                description: mapping.vehicle_description
-                            });
-                        } else {
-                            console.log(`🚫 Skipping auto-discovered transponder: ${transponderId}`);
-                            resolve(null);
-                        }
-                    } else {
-                        resolve(null);
-                    }
-                }
-            );
-        });
+        try {
+            const { data: mapping, error } = await supabaseAdmin
+                .from('transponder_mappings')
+                .select('vehicle_plate, vehicle_description')
+                .eq('host_id', hostId)
+                .eq('transponder_number', transponderId)
+                .eq('is_active', true)
+                .or('vehicle_description.is.null,not.vehicle_description.like.Auto-discovered%')
+                .single();
+
+            if (error || !mapping) {
+                return null;
+            }
+
+            // Additional safety check: skip any auto-discovered mappings
+            if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
+                console.log(`🔗 Transponder resolved: ${transponderId} → ${mapping.vehicle_plate} (${mapping.vehicle_description})`);
+                return {
+                    plate: mapping.vehicle_plate,
+                    description: mapping.vehicle_description
+                };
+            } else {
+                console.log(`🚫 Skipping auto-discovered transponder: ${transponderId}`);
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Error resolving transponder:', error);
+            return null;
+        }
     }
 
     /**
@@ -663,138 +666,144 @@ class EnhancedTollMatcher {
      * ONLY returns user-defined mappings (not auto-discovered)
      */
     async getTranspondersForPlate(plateNumber, hostId) {
-        return new Promise((resolve) => {
+        try {
             const normalizedPlate = this.normalizePlate(plateNumber);
-            db.all(
-                `SELECT transponder_number, vehicle_description 
-                 FROM transponder_mappings 
-                 WHERE host_id = ? AND vehicle_plate = ? AND is_active = 1
-                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
-                [hostId, normalizedPlate],
-                (err, mappings) => {
-                    if (!err && mappings) {
-                        // Filter out any auto-discovered mappings as additional safety
-                        const userDefinedTransponders = mappings
-                            .filter(m => !m.vehicle_description || !m.vehicle_description.startsWith('Auto-discovered'))
-                            .map(m => m.transponder_number);
-                            
-                        if (userDefinedTransponders.length > 0) {
-                            console.log(`🔗 Found user-defined transponders for ${plateNumber}: ${userDefinedTransponders.join(', ')}`);
-                        }
-                        resolve(userDefinedTransponders);
-                    } else {
-                        resolve([]);
-                    }
-                }
-            );
-        });
+            const { data: mappings, error } = await supabaseAdmin
+                .from('transponder_mappings')
+                .select('transponder_number, vehicle_description')
+                .eq('host_id', hostId)
+                .eq('vehicle_plate', normalizedPlate)
+                .eq('is_active', true)
+                .or('vehicle_description.is.null,not.vehicle_description.like.Auto-discovered%');
+
+            if (error || !mappings) {
+                return [];
+            }
+
+            // Filter out any auto-discovered mappings as additional safety
+            const userDefinedTransponders = mappings
+                .filter(m => !m.vehicle_description || !m.vehicle_description.startsWith('Auto-discovered'))
+                .map(m => m.transponder_number);
+                
+            if (userDefinedTransponders.length > 0) {
+                console.log(`🔗 Found user-defined transponders for ${plateNumber}: ${userDefinedTransponders.join(', ')}`);
+            }
+            return userDefinedTransponders;
+        } catch (error) {
+            console.error('❌ Error getting transponders for plate:', error);
+            return [];
+        }
     }
 
     /**
      * Load matching data from database
      */
     async loadMatchingData(hostId, processAllTolls = false, dateFilter = null) {
-        return new Promise((resolve, reject) => {
+        try {
             const data = {
                 unmatchedTolls: [],
                 trips: [],
                 transponderMappings: []
             };
             
-            // Build date condition for tolls
-            let dateCondition = "";
-            let params = [hostId];
+            // Build date filter for Supabase query
+            let tollsQuery = supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId);
+
+            // Apply is_matched filter if not processing all tolls
+            if (!processAllTolls) {
+                tollsQuery = tollsQuery.eq('is_matched', false);
+            }
             
+            // Apply date filters
             if (dateFilter) {
                 if (dateFilter.filterType === 'custom' && dateFilter.fromDate && dateFilter.toDate) {
                     // Custom date range
-                    dateCondition = " AND date(tc.toll_date/1000, 'unixepoch') BETWEEN ? AND ?";
-                    params.push(dateFilter.fromDate, dateFilter.toDate);
+                    tollsQuery = tollsQuery
+                        .gte('toll_date', dateFilter.fromDate)
+                        .lte('toll_date', dateFilter.toDate);
                     console.log(`📅 Enhanced Matcher: Using custom date range ${dateFilter.fromDate} to ${dateFilter.toDate}`);
                 } else if (dateFilter.filterType === 'days' && dateFilter.days) {
                     // Days back from now
-                    dateCondition = ` AND tc.toll_date > datetime('now', '-${dateFilter.days} days')`;
+                    const daysAgo = new Date();
+                    daysAgo.setDate(daysAgo.getDate() - dateFilter.days);
+                    tollsQuery = tollsQuery.gte('toll_date', daysAgo.toISOString());
                     console.log(`📅 Enhanced Matcher: Looking back ${dateFilter.days} days`);
                 }
             } else {
                 console.log('📅 Enhanced Matcher: No date filter applied - processing all data');
             }
+
+            // Get tolls
+            const { data: tolls, error: tollsError } = await tollsQuery;
+            if (tollsError) throw tollsError;
+            data.unmatchedTolls = tolls || [];
             
-            // Get all tolls or just unmatched tolls based on parameter
-            const tollQuery = processAllTolls ? 
-                `SELECT tc.*, ta.host_id
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ?${dateCondition}` :
-                `SELECT tc.*, ta.host_id
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ? AND tc.is_matched = 0${dateCondition}`;
+            // Get trips
+            const { data: trips, error: tripsError } = await supabaseAdmin
+                .from('trips')
+                .select('*')
+                .eq('host_id', hostId)
+                .not('trip_status', 'in', ['canceled', 'cancelled', 'declined'].join(','))
+                .order('start_date', { ascending: false });
+
+            if (tripsError) throw tripsError;
+            data.trips = trips || [];
             
-            db.all(tollQuery, params, (err, tolls) => {
-                    if (err) return reject(err);
-                    data.unmatchedTolls = tolls;
-                    
-                    // Get trips
-                    db.all(
-                        `SELECT * FROM trips 
-                         WHERE host_id = ? 
-                         AND (trip_status IS NULL OR trip_status NOT IN ('canceled', 'cancelled', 'declined'))
-                         ORDER BY start_date DESC`,
-                        [hostId],
-                        (err, trips) => {
-                            if (err) return reject(err);
-                            data.trips = trips;
-                            
-                            // Get transponder mappings (user-defined only)
-                            db.all(
-                                `SELECT * FROM transponder_mappings 
-                                 WHERE host_id = ? AND is_active = 1
-                                 AND (vehicle_description IS NULL OR vehicle_description NOT LIKE 'Auto-discovered%')`,
-                                [hostId],
-                                (err, mappings) => {
-                                    if (err) return reject(err);
-                                    // Additional safety filter
-                                    data.transponderMappings = mappings.filter(m => 
-                                        !m.vehicle_description || !m.vehicle_description.startsWith('Auto-discovered')
-                                    );
-                                    console.log(`🔗 Loaded ${data.transponderMappings.length} user-defined transponder mappings for enhanced matching`);
-                                    resolve(data);
-                                }
-                            );
-                        }
-                    );
-                }
+            // Get transponder mappings (user-defined only)
+            const { data: mappings, error: mappingsError } = await supabaseAdmin
+                .from('transponder_mappings')
+                .select('*')
+                .eq('host_id', hostId)
+                .eq('is_active', true)
+                .or('vehicle_description.is.null,not.vehicle_description.like.Auto-discovered%');
+
+            if (mappingsError) throw mappingsError;
+            
+            // Additional safety filter
+            data.transponderMappings = (mappings || []).filter(m => 
+                !m.vehicle_description || !m.vehicle_description.startsWith('Auto-discovered')
             );
-        });
+            
+            console.log(`🔗 Loaded ${data.transponderMappings.length} user-defined transponder mappings for enhanced matching`);
+            return data;
+        } catch (error) {
+            console.error('❌ Error loading matching data:', error);
+            throw error;
+        }
     }
     
     /**
      * Load learned patterns from previous matches
      */
     async loadLearnedPatterns(hostId) {
-        return new Promise((resolve) => {
-            // Load successful transponder matches
-            db.all(
-                `SELECT DISTINCT tc.plate_number as transponder, t.vehicle_plate
-                 FROM toll_charges tc
-                 JOIN trips t ON tc.trip_id = t.id
-                 WHERE t.host_id = ? 
-                 AND tc.plate_number LIKE '%[0-9]%'
-                 AND LENGTH(tc.plate_number) >= 10`,
-                [hostId],
-                (err, patterns) => {
-                    if (!err && patterns) {
-                        patterns.forEach(p => {
-                            if (/^\d{10,11}$/.test(p.transponder)) {
-                                this.patternCache.transponderMappings.set(p.transponder, p.vehicle_plate);
-                            }
-                        });
+        try {
+            // Load successful transponder matches using Supabase
+            const { data: patterns, error } = await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    plate_number,
+                    trips!inner(vehicle_plate, host_id)
+                `)
+                .eq('trips.host_id', hostId)
+                .like('plate_number', '%[0-9]%')
+                .gte('plate_number.length', 10);
+
+            if (!error && patterns) {
+                patterns.forEach(p => {
+                    if (/^\d{10,11}$/.test(p.plate_number)) {
+                        this.patternCache.transponderMappings.set(p.plate_number, p.trips.vehicle_plate);
                     }
-                    resolve();
-                }
-            );
-        });
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error loading learned patterns:', error);
+        }
     }
     
     /**
@@ -805,18 +814,20 @@ class EnhancedTollMatcher {
         
         for (const result of matchResults) {
             if (result.confidence >= this.config.autoMatchThreshold) {
-                await new Promise((resolve) => {
-                    db.run(
-                        `UPDATE toll_charges 
-                         SET trip_id = ?, is_matched = 1, match_confidence = ?
-                         WHERE id = ?`,
-                        [result.trip.id, result.confidence, result.toll.id],
-                        (err) => {
-                            if (!err) appliedCount++;
-                            resolve();
-                        }
-                    );
-                });
+                try {
+                    const { error } = await supabaseAdmin
+                        .from('toll_charges')
+                        .update({
+                            trip_id: result.trip.id,
+                            is_matched: true,
+                            match_confidence: result.confidence
+                        })
+                        .eq('id', result.toll.id);
+
+                    if (!error) appliedCount++;
+                } catch (error) {
+                    console.error('❌ Error applying match:', error);
+                }
             }
         }
         
