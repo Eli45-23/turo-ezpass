@@ -273,147 +273,171 @@ router.get('/avg-cost-per-trip', requireAuth, async (req, res) => {
 async function getTollAnalytics(hostId, startDate, endDate) {
     console.log('🔍 getTollAnalytics called:', { hostId, startDate, endDate });
     
-    return new Promise((resolve, reject) => {
-        // Build safe parameterized query
-        let dateCondition = '';
-        const params = [hostId];
+    try {
+        // Build query with date filtering
+        let query = supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                toll_amount,
+                toll_location,
+                charge_date,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false');
         
+        // Add date filtering if provided
         if (startDate && endDate) {
-            // Try both second and millisecond timestamp formats
-            dateCondition = ` AND (
-                datetime(tc.toll_date, 'unixepoch') BETWEEN ? AND ? OR
-                datetime(tc.toll_date/1000, 'unixepoch') BETWEEN ? AND ?
-            )`;
-            params.push(startDate, endDate, startDate, endDate);
+            query = query
+                .gte('charge_date', startDate)
+                .lte('charge_date', endDate);
         }
         
-        // Simplified query focusing on core metrics first
-        const query = `
-            SELECT 
-                COUNT(tc.id) as total_toll_charges,
-                COALESCE(SUM(tc.toll_amount), 0) as total_toll_costs,
-                COUNT(DISTINCT tc.toll_location) as unique_locations,
-                COALESCE(AVG(tc.toll_amount), 0) as avg_toll_amount,
-                COALESCE(MAX(tc.toll_amount), 0) as highest_toll_amount
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL) ${dateCondition}
-        `;
+        const { data: tollCharges, error } = await query;
         
-        console.log('🔍 Executing simplified query with params:', params);
+        if (error) {
+            console.error('❌ Supabase Error in main query:', error);
+            throw error;
+        }
         
-        db.get(query, params, async (err, result) => {
-            if (err) {
-                console.error('❌ SQL Error in main query:', err);
-                reject(err);
-                return;
-            }
+        console.log(`✅ Found ${tollCharges?.length || 0} toll charges`);
+        
+        // Calculate metrics
+        const totalCharges = tollCharges?.length || 0;
+        const totalCosts = tollCharges?.reduce((sum, toll) => sum + (toll.toll_amount || 0), 0) || 0;
+        const uniqueLocations = new Set(tollCharges?.map(toll => toll.toll_location)).size;
+        const avgAmount = totalCharges > 0 ? totalCosts / totalCharges : 0;
+        const maxAmount = Math.max(...(tollCharges?.map(toll => toll.toll_amount || 0) || [0]));
+        
+        const result = {
+            total_toll_charges: totalCharges,
+            total_toll_costs: totalCosts,
+            unique_locations: uniqueLocations,
+            avg_toll_amount: avgAmount,
+            highest_toll_amount: maxAmount
+        };
+        
+        console.log('✅ Main query result:', result);
+        
+        try {
+            // Get additional data with separate queries
+            const additionalData = await getAdditionalTollData(hostId, startDate, endDate);
             
-            console.log('✅ Main query result:', result);
+            // Transform and combine results into expected format
+            const analyticsData = transformAnalyticsData(result, additionalData);
             
-            try {
-                // Get additional data with separate, simple queries
-                const additionalData = await getAdditionalTollData(hostId, startDate, endDate);
-                
-                // Transform and combine results into expected format
-                const analyticsData = transformAnalyticsData(result, additionalData);
-                
-                console.log('✅ Final analytics data:', analyticsData);
-                resolve(analyticsData);
-                
-            } catch (additionalError) {
-                console.error('❌ Error getting additional data:', additionalError);
-                // Return partial data rather than failing completely
-                const partialData = transformAnalyticsData(result, {});
-                resolve(partialData);
-            }
-        });
-    });
+            console.log('✅ Final analytics data:', analyticsData);
+            return analyticsData;
+            
+        } catch (additionalError) {
+            console.error('❌ Error getting additional data:', additionalError);
+            // Return partial data rather than failing completely
+            const partialData = transformAnalyticsData(result, {});
+            return partialData;
+        }
+    } catch (error) {
+        console.error('❌ Error in getTollAnalytics:', error);
+        throw error;
+    }
 }
 
 // Helper function to get additional toll data with separate queries
 async function getAdditionalTollData(hostId, startDate, endDate) {
-    return new Promise((resolve, reject) => {
-        const dateCondition = startDate && endDate ? 
-            ` AND (datetime(tc.toll_date, 'unixepoch') BETWEEN ? AND ? OR datetime(tc.toll_date/1000, 'unixepoch') BETWEEN ? AND ?)` : '';
-        const params = startDate && endDate ? [hostId, startDate, endDate, startDate, endDate] : [hostId];
-        
-        // Get highest toll location
-        const highestTollQuery = `
-            SELECT tc.toll_location, tc.toll_amount
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL) ${dateCondition}
-            ORDER BY tc.toll_amount DESC
-            LIMIT 1
-        `;
-        
-        db.get(highestTollQuery, params, (err, highestToll) => {
-            if (err) {
-                console.error('❌ Error getting highest toll:', err);
-                reject(err);
-                return;
+    try {
+        // Base query builder
+        const buildBaseQuery = () => {
+            let query = supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    toll_location,
+                    toll_amount,
+                    charge_date,
+                    toll_accounts!inner(host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId)
+                .or('is_archived.is.null,is_archived.eq.false');
+            
+            if (startDate && endDate) {
+                query = query
+                    .gte('charge_date', startDate)
+                    .lte('charge_date', endDate);
             }
             
-            console.log('✅ Highest toll result:', highestToll);
-            
-            // Get most used route
-            const mostUsedRouteQuery = `
-                SELECT tc.toll_location, COUNT(*) as count
-                FROM toll_charges tc
-                JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL) ${dateCondition}
-                GROUP BY tc.toll_location
-                ORDER BY COUNT(*) DESC
-                LIMIT 1
-            `;
-            
-            db.get(mostUsedRouteQuery, params, (err2, mostUsedRoute) => {
-                if (err2) {
-                    console.error('❌ Error getting most used route:', err2);
-                    reject(err2);
-                    return;
-                }
-                
-                console.log('✅ Most used route result:', mostUsedRoute);
-                
-                // Get peak hour
-                const peakHourQuery = `
-                    SELECT strftime('%H:00', datetime(tc.toll_date/1000, 'unixepoch')) as hour, COUNT(*) as count
-                    FROM toll_charges tc
-                    JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                    WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL) ${dateCondition}
-                    GROUP BY hour
-                    ORDER BY COUNT(*) DESC
-                    LIMIT 1
-                `;
-                
-                db.get(peakHourQuery, params, (err3, peakHour) => {
-                    if (err3) {
-                        console.error('❌ Error getting peak hour:', err3);
-                        // Don't fail for peak hour error
-                    }
-                    
-                    console.log('✅ Peak hour result:', peakHour);
-                    
-                    resolve({
-                        highestToll: {
-                            amount: highestToll?.toll_amount || 0,
-                            location: highestToll?.toll_location || 'Unknown'
-                        },
-                        mostUsedRoute: {
-                            location: mostUsedRoute?.toll_location || 'No data',
-                            count: mostUsedRoute?.count || 0
-                        },
-                        peakTime: {
-                            hour: peakHour?.hour || '--',
-                            percentage: peakHour?.count || '0'
-                        }
-                    });
-                });
+            return query;
+        };
+        
+        // Get highest toll
+        const { data: highestTolls, error: highestError } = await buildBaseQuery()
+            .order('toll_amount', { ascending: false })
+            .limit(1);
+        
+        const highestToll = highestTolls?.[0];
+        console.log('✅ Highest toll result:', highestToll);
+        
+        // Get most used route (group by location and count)
+        const { data: allTolls, error: allError } = await buildBaseQuery();
+        
+        let mostUsedRoute = { location: 'No data', count: 0 };
+        if (allTolls && !allError) {
+            const locationCounts = {};
+            allTolls.forEach(toll => {
+                const location = toll.toll_location || 'Unknown';
+                locationCounts[location] = (locationCounts[location] || 0) + 1;
             });
-        });
-    });
+            
+            if (Object.keys(locationCounts).length > 0) {
+                const sortedLocations = Object.entries(locationCounts)
+                    .sort(([,a], [,b]) => b - a);
+                mostUsedRoute = {
+                    location: sortedLocations[0][0],
+                    count: sortedLocations[0][1]
+                };
+            }
+        }
+        console.log('✅ Most used route result:', mostUsedRoute);
+        
+        // Get peak hour (extract hour from charge_date)
+        let peakTime = { hour: '--', percentage: '0' };
+        if (allTolls && allTolls.length > 0) {
+            const hourCounts = {};
+            allTolls.forEach(toll => {
+                if (toll.charge_date) {
+                    const date = new Date(toll.charge_date);
+                    const hour = `${date.getHours().toString().padStart(2, '0')}:00`;
+                    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+                }
+            });
+            
+            if (Object.keys(hourCounts).length > 0) {
+                const sortedHours = Object.entries(hourCounts)
+                    .sort(([,a], [,b]) => b - a);
+                peakTime = {
+                    hour: sortedHours[0][0],
+                    percentage: sortedHours[0][1].toString()
+                };
+            }
+        }
+        console.log('✅ Peak hour result:', peakTime);
+        
+        return {
+            highestToll: {
+                amount: highestToll?.toll_amount || 0,
+                location: highestToll?.toll_location || 'Unknown'
+            },
+            mostUsedRoute,
+            peakTime
+        };
+        
+    } catch (error) {
+        console.error('❌ Error getting additional toll data:', error);
+        // Return default values on error
+        return {
+            highestToll: { amount: 0, location: 'Unknown' },
+            mostUsedRoute: { location: 'No data', count: 0 },
+            peakTime: { hour: '--', percentage: '0' }
+        };
+    }
 }
 
 // Transform raw database results into frontend format
@@ -444,48 +468,81 @@ function transformAnalyticsData(mainResult, additionalData) {
 
 // Get toll trends over time
 async function getTollTrends(hostId, period, months) {
-    return new Promise((resolve, reject) => {
-        let groupBy, dateFormat;
+    try {
+        // Calculate the date cutoff (months ago)
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - months);
         
-        switch(period) {
-            case 'daily':
-                groupBy = "date(datetime(tc.toll_date/1000, 'unixepoch'))";
-                dateFormat = "%Y-%m-%d";
-                break;
-            case 'weekly':
-                groupBy = "strftime('%Y-%W', datetime(tc.toll_date/1000, 'unixepoch'))";
-                dateFormat = "%Y-W%W";
-                break;
-            case 'monthly':
-            default:
-                groupBy = "strftime('%Y-%m', datetime(tc.toll_date/1000, 'unixepoch'))";
-                dateFormat = "%Y-%m";
-                break;
+        // Get all toll charges for the host within the date range
+        const { data: tollCharges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                toll_amount,
+                charge_date,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false')
+            .gte('charge_date', cutoffDate.toISOString());
+        
+        if (error) {
+            throw error;
         }
         
-        const query = `
-            SELECT 
-                strftime('${dateFormat}', datetime(tc.toll_date/1000, 'unixepoch')) as period,
-                COUNT(*) as charge_count,
-                COALESCE(SUM(tc.toll_amount), 0) as total_amount,
-                COALESCE(AVG(tc.toll_amount), 0) as avg_amount
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-            AND datetime(tc.toll_date/1000, 'unixepoch') >= datetime('now', '-${months} months')
-            GROUP BY ${groupBy}
-            ORDER BY period ASC
-        `;
+        // Group the data by period
+        const periodMap = new Map();
         
-        db.all(query, [hostId], (err, results) => {
-            if (err) {
-                reject(err);
-                return;
+        (tollCharges || []).forEach(toll => {
+            if (!toll.charge_date) return;
+            
+            const date = new Date(toll.charge_date);
+            let periodKey;
+            
+            switch(period) {
+                case 'daily':
+                    periodKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                    break;
+                case 'weekly':
+                    const year = date.getFullYear();
+                    const week = Math.ceil((date - new Date(year, 0, 1)) / (7 * 24 * 60 * 60 * 1000));
+                    periodKey = `${year}-W${week.toString().padStart(2, '0')}`;
+                    break;
+                case 'monthly':
+                default:
+                    periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                    break;
             }
             
-            resolve(results);
+            if (!periodMap.has(periodKey)) {
+                periodMap.set(periodKey, {
+                    period: periodKey,
+                    charge_count: 0,
+                    total_amount: 0,
+                    amounts: []
+                });
+            }
+            
+            const periodData = periodMap.get(periodKey);
+            periodData.charge_count++;
+            periodData.total_amount += toll.toll_amount || 0;
+            periodData.amounts.push(toll.toll_amount || 0);
         });
-    });
+        
+        // Calculate averages and sort results
+        const results = Array.from(periodMap.values())
+            .map(period => ({
+                period: period.period,
+                charge_count: period.charge_count,
+                total_amount: period.total_amount,
+                avg_amount: period.charge_count > 0 ? period.total_amount / period.charge_count : 0
+            }))
+            .sort((a, b) => a.period.localeCompare(b.period));
+        
+        return results;
+        
+    } catch (error) {
+        throw error;
+    }
 }
 
 // Get top toll locations
@@ -680,74 +737,125 @@ router.get('/zero-toll-trips', requireAuth, async (req, res) => {
 
 // Get average toll cost per trip for each vehicle
 async function getAvgCostPerTrip(hostId, limit) {
-    return new Promise((resolve, reject) => {
+    try {
         console.log('🔧 Getting average cost per trip for hostId:', hostId);
         
-        // Get vehicles with their average toll costs per trip (exclude archived toll charges)
-        const avgCostQuery = `
-            SELECT 
-                t.vehicle_plate,
-                COUNT(DISTINCT t.id) as total_trips,
-                COUNT(DISTINCT tc.id) as toll_charges_count,
-                COALESCE(SUM(tc.toll_amount), 0) as total_toll_costs,
-                CASE 
-                    WHEN COUNT(DISTINCT t.id) > 0 
-                    THEN COALESCE(SUM(tc.toll_amount), 0) / COUNT(DISTINCT t.id)
-                    ELSE 0 
-                END as avg_cost_per_trip
-            FROM trips t
-            LEFT JOIN toll_charges tc ON (
-                tc.trip_id = t.turo_trip_id 
-                OR tc.trip_id = t.id
-                OR (tc.plate_number = t.vehicle_plate AND 
-                    DATE(tc.toll_date, 'unixepoch') BETWEEN DATE(t.start_date) AND DATE(t.end_date))
-            ) AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-            LEFT JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE t.host_id = ? 
-              AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-              AND (ta.host_id = ? OR ta.host_id IS NULL)
-            GROUP BY t.vehicle_plate
-            HAVING total_trips > 0
-            ORDER BY avg_cost_per_trip DESC, total_trips DESC
-            LIMIT ?
-        `;
+        // Get all trips for the host (excluding cancelled ones)
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('id, turo_trip_id, vehicle_plate, start_date, end_date')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
         
-        db.all(avgCostQuery, [hostId, hostId, limit], (err, vehicles) => {
-            if (err) {
-                console.error('❌ Error getting average cost per trip data:', err);
-                reject(err);
-                return;
+        if (tripsError) {
+            throw tripsError;
+        }
+        
+        // Get all toll charges for the host (excluding archived ones)
+        const { data: tollCharges, error: tollError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                trip_id,
+                plate_number,
+                toll_amount,
+                charge_date,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false');
+        
+        if (tollError) {
+            throw tollError;
+        }
+        
+        // Group trips by vehicle plate and calculate metrics
+        const vehicleMap = new Map();
+        
+        // First, count all trips per vehicle
+        (trips || []).forEach(trip => {
+            const plate = trip.vehicle_plate;
+            if (!vehicleMap.has(plate)) {
+                vehicleMap.set(plate, {
+                    vehicle_plate: plate,
+                    total_trips: 0,
+                    toll_charges_count: 0,
+                    total_toll_costs: 0,
+                    tripIds: new Set()
+                });
             }
             
-            console.log('✅ Found vehicles with avg cost data:', vehicles.length);
-            
-            const vehiclesWithAvgCosts = vehicles.map((vehicle) => {
-                const totalTrips = parseInt(vehicle.total_trips) || 0;
-                const totalTollCosts = parseFloat(vehicle.total_toll_costs) || 0;
-                const avgCostPerTrip = parseFloat(vehicle.avg_cost_per_trip) || 0;
-                const tollCharges = parseInt(vehicle.toll_charges_count) || 0;
+            const vehicleData = vehicleMap.get(plate);
+            vehicleData.total_trips++;
+            vehicleData.tripIds.add(trip.id);
+            vehicleData.tripIds.add(trip.turo_trip_id);
+        });
+        
+        // Then, match toll charges to vehicles
+        (tollCharges || []).forEach(toll => {
+            // Find matching vehicle by trip_id or plate number with date overlap
+            for (const [plate, vehicleData] of vehicleMap.entries()) {
+                let shouldInclude = false;
+                
+                // Check if toll is linked by trip_id
+                if (toll.trip_id && vehicleData.tripIds.has(toll.trip_id)) {
+                    shouldInclude = true;
+                } else if (toll.plate_number === plate) {
+                    // Check if toll date overlaps with any trip for this vehicle
+                    const tollDate = new Date(toll.charge_date);
+                    const matchingTrips = (trips || []).filter(trip => 
+                        trip.vehicle_plate === plate &&
+                        new Date(trip.start_date) <= tollDate &&
+                        tollDate <= new Date(trip.end_date)
+                    );
+                    
+                    if (matchingTrips.length > 0) {
+                        shouldInclude = true;
+                    }
+                }
+                
+                if (shouldInclude) {
+                    vehicleData.toll_charges_count++;
+                    vehicleData.total_toll_costs += toll.toll_amount || 0;
+                    break; // Don't double-count the same toll
+                }
+            }
+        });
+        
+        // Calculate averages and filter/sort results
+        const vehiclesWithAvgCosts = Array.from(vehicleMap.values())
+            .filter(vehicle => vehicle.total_trips > 0)
+            .map(vehicle => {
+                const avgCostPerTrip = vehicle.total_trips > 0 ? 
+                    vehicle.total_toll_costs / vehicle.total_trips : 0;
                 
                 return {
                     vehicle_plate: vehicle.vehicle_plate,
-                    total_trips: totalTrips,
-                    toll_charges_count: tollCharges,
-                    total_toll_costs: totalTollCosts,
+                    total_trips: vehicle.total_trips,
+                    toll_charges_count: vehicle.toll_charges_count,
+                    total_toll_costs: vehicle.total_toll_costs,
                     avg_cost_per_trip: avgCostPerTrip,
                     efficiency_rating: avgCostPerTrip < 2 ? 'Excellent' : 
                                      avgCostPerTrip < 5 ? 'Good' : 
                                      avgCostPerTrip < 8 ? 'Fair' : 'Poor'
                 };
-            });
-            
-            console.log('✅ Average cost per trip data calculated:', vehiclesWithAvgCosts.map(v => ({
-                plate: v.vehicle_plate,
-                trips: v.total_trips,
-                avgCost: v.avg_cost_per_trip
-            })));
-            
-            resolve(vehiclesWithAvgCosts);
-        });
-    });
+            })
+            .sort((a, b) => b.avg_cost_per_trip - a.avg_cost_per_trip || b.total_trips - a.total_trips)
+            .slice(0, limit);
+        
+        console.log('✅ Found vehicles with avg cost data:', vehiclesWithAvgCosts.length);
+        console.log('✅ Average cost per trip data calculated:', vehiclesWithAvgCosts.map(v => ({
+            plate: v.vehicle_plate,
+            trips: v.total_trips,
+            avgCost: v.avg_cost_per_trip
+        })));
+        
+        return vehiclesWithAvgCosts;
+        
+    } catch (error) {
+        console.error('❌ Error getting average cost per trip data:', error);
+        throw error;
+    }
 }
 
 // Enhanced profit analysis endpoint
@@ -812,42 +920,81 @@ router.get('/risk-assessment', requireAuth, async (req, res) => {
 });
 
 // Route export endpoint
-router.get('/routes/export', (req, res) => {
+router.get('/routes/export', async (req, res) => {
     try {
-        const query = `
-            SELECT 
-                tc.toll_location as location,
-                COUNT(*) as usage_count,
-                ROUND(SUM(tc.toll_amount), 2) as total_cost,
-                ROUND(AVG(tc.toll_amount), 2) as avg_cost,
-                COUNT(DISTINCT COALESCE(tr_turo.vehicle_id, tr_id.vehicle_id)) as vehicles_used,
-                GROUP_CONCAT(DISTINCT date(datetime(tc.toll_date/1000, 'unixepoch'))) as usage_dates
-            FROM toll_charges tc
-            LEFT JOIN trips tr_turo ON tc.trip_id = tr_turo.turo_trip_id
-            LEFT JOIN trips tr_id ON tc.trip_id = tr_id.id
-            WHERE tc.toll_location IS NOT NULL AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-            GROUP BY tc.toll_location
-            ORDER BY usage_count DESC
-        `;
+        // Get all toll charges with locations
+        const { data: tollCharges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                toll_location,
+                toll_amount,
+                charge_date,
+                trip_id,
+                trips(id, turo_trip_id, vehicle_plate)
+            `)
+            .not('toll_location', 'is', null)
+            .or('is_archived.is.null,is_archived.eq.false');
         
-        db.all(query, [], (err, rows) => {
-            if (err) {
-                console.error('Error fetching route export data:', err);
-                return res.status(500).json({ success: false, error: 'Database error' });
+        if (error) {
+            throw error;
+        }
+        
+        // Group by location and calculate metrics
+        const locationMap = new Map();
+        
+        (tollCharges || []).forEach(toll => {
+            const location = toll.toll_location;
+            if (!locationMap.has(location)) {
+                locationMap.set(location, {
+                    location,
+                    usage_count: 0,
+                    total_cost: 0,
+                    amounts: [],
+                    vehicles: new Set(),
+                    dates: new Set()
+                });
             }
             
-            // Convert to CSV format
-            const csvHeader = 'Route,Usage Count,Total Cost,Average Cost,Vehicles Used,Usage Dates\n';
-            const csvRows = rows.map(row => 
-                `"${row.location}",${row.usage_count},$${row.total_cost},$${row.avg_cost},${row.vehicles_used},"${row.usage_dates || ''}"`
-            ).join('\n');
+            const locationData = locationMap.get(location);
+            locationData.usage_count++;
+            locationData.total_cost += toll.toll_amount || 0;
+            locationData.amounts.push(toll.toll_amount || 0);
             
-            const csv = csvHeader + csvRows;
+            if (toll.trips?.vehicle_plate) {
+                locationData.vehicles.add(toll.trips.vehicle_plate);
+            }
             
-            res.setHeader('Content-Type', 'text/csv');
-            res.setHeader('Content-Disposition', `attachment; filename="route-analysis-${new Date().toISOString().split('T')[0]}.csv"`);
-            res.send(csv);
+            if (toll.charge_date) {
+                const date = toll.charge_date.split('T')[0];
+                locationData.dates.add(date);
+            }
         });
+        
+        // Convert to CSV rows
+        const rows = Array.from(locationMap.values())
+            .map(location => ({
+                location: location.location,
+                usage_count: location.usage_count,
+                total_cost: Math.round(location.total_cost * 100) / 100,
+                avg_cost: location.amounts.length > 0 ? 
+                    Math.round((location.total_cost / location.amounts.length) * 100) / 100 : 0,
+                vehicles_used: location.vehicles.size,
+                usage_dates: Array.from(location.dates).sort().join(', ')
+            }))
+            .sort((a, b) => b.usage_count - a.usage_count);
+        
+        // Convert to CSV format
+        const csvHeader = 'Route,Usage Count,Total Cost,Average Cost,Vehicles Used,Usage Dates\n';
+        const csvRows = rows.map(row => 
+            `"${row.location}",${row.usage_count},$${row.total_cost},$${row.avg_cost},${row.vehicles_used},"${row.usage_dates || ''}"`
+        ).join('\n');
+        
+        const csv = csvHeader + csvRows;
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="route-analysis-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csv);
+        
     } catch (error) {
         console.error('Error in route export:', error);
         res.status(500).json({ success: false, error: 'Export failed' });
@@ -855,71 +1002,91 @@ router.get('/routes/export', (req, res) => {
 });
 
 // Time analysis endpoint
-router.get('/time-analysis', (req, res) => {
+router.get('/time-analysis', async (req, res) => {
     try {
-        // Query for hourly patterns
-        const hourlyQuery = `
-            SELECT 
-                CAST(strftime('%H', datetime(toll_date/1000, 'unixepoch')) as INTEGER) as hour,
-                COUNT(*) as count,
-                ROUND(SUM(toll_amount), 2) as amount,
-                ROUND(AVG(toll_amount), 2) as avg_amount
-            FROM toll_charges 
-            WHERE toll_date IS NOT NULL
-            GROUP BY hour
-            ORDER BY hour
-        `;
+        // Get all toll charges with charge dates
+        const { data: tollCharges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select('toll_amount, charge_date')
+            .not('charge_date', 'is', null);
         
-        // Query for daily patterns
-        const dailyQuery = `
-            SELECT 
-                CASE 
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 0 THEN 'Sunday'
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 1 THEN 'Monday'
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 2 THEN 'Tuesday'
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 3 THEN 'Wednesday'
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 4 THEN 'Thursday'
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 5 THEN 'Friday'
-                    WHEN CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) = 6 THEN 'Saturday'
-                END as day_name,
-                CAST(strftime('%w', datetime(toll_date/1000, 'unixepoch')) as INTEGER) as day_of_week,
-                COUNT(*) as count,
-                ROUND(SUM(toll_amount), 2) as total_amount,
-                ROUND(AVG(toll_amount), 2) as avg_amount
-            FROM toll_charges 
-            WHERE toll_date IS NOT NULL
-            GROUP BY day_of_week, day_name
-            ORDER BY day_of_week
-        `;
+        if (error) {
+            throw error;
+        }
         
-        db.all(hourlyQuery, [], (err, hourlyResults) => {
-            if (err) {
-                console.error('Error fetching hourly data:', err);
-                return res.status(500).json({ success: false, error: 'Database error' });
-            }
+        // Process hourly patterns
+        const hourlyMap = new Map();
+        const dailyMap = new Map();
+        
+        (tollCharges || []).forEach(toll => {
+            const date = new Date(toll.charge_date);
+            const hour = date.getHours();
+            const dayOfWeek = date.getDay();
+            const amount = toll.toll_amount || 0;
             
-            // Fill in missing hours with 0 values
-            const completeHourly = [];
-            for (let hour = 0; hour < 24; hour++) {
-                const existing = hourlyResults.find(h => h.hour === hour);
-                completeHourly.push(existing || { hour, count: 0, amount: 0, avg_amount: 0 });
+            // Hourly aggregation
+            if (!hourlyMap.has(hour)) {
+                hourlyMap.set(hour, { hour, count: 0, amount: 0, amounts: [] });
             }
+            const hourlyData = hourlyMap.get(hour);
+            hourlyData.count++;
+            hourlyData.amount += amount;
+            hourlyData.amounts.push(amount);
             
-            db.all(dailyQuery, [], (err, dailyResults) => {
-                if (err) {
-                    console.error('Error fetching daily data:', err);
-                    return res.status(500).json({ success: false, error: 'Database error' });
-                }
-                
-                res.json({
-                    success: true,
-                    data: {
-                        hourly: completeHourly,
-                        daily: dailyResults
-                    }
+            // Daily aggregation
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = dayNames[dayOfWeek];
+            
+            if (!dailyMap.has(dayOfWeek)) {
+                dailyMap.set(dayOfWeek, { 
+                    day_name: dayName, 
+                    day_of_week: dayOfWeek, 
+                    count: 0, 
+                    total_amount: 0, 
+                    amounts: [] 
                 });
-            });
+            }
+            const dailyData = dailyMap.get(dayOfWeek);
+            dailyData.count++;
+            dailyData.total_amount += amount;
+            dailyData.amounts.push(amount);
         });
+        
+        // Fill in missing hours with 0 values and calculate averages
+        const completeHourly = [];
+        for (let hour = 0; hour < 24; hour++) {
+            const existing = hourlyMap.get(hour);
+            if (existing) {
+                completeHourly.push({
+                    hour,
+                    count: existing.count,
+                    amount: Math.round(existing.amount * 100) / 100,
+                    avg_amount: existing.count > 0 ? Math.round((existing.amount / existing.count) * 100) / 100 : 0
+                });
+            } else {
+                completeHourly.push({ hour, count: 0, amount: 0, avg_amount: 0 });
+            }
+        }
+        
+        // Process daily results and calculate averages
+        const dailyResults = Array.from(dailyMap.values())
+            .map(day => ({
+                day_name: day.day_name,
+                day_of_week: day.day_of_week,
+                count: day.count,
+                total_amount: Math.round(day.total_amount * 100) / 100,
+                avg_amount: day.count > 0 ? Math.round((day.total_amount / day.count) * 100) / 100 : 0
+            }))
+            .sort((a, b) => a.day_of_week - b.day_of_week);
+        
+        res.json({
+            success: true,
+            data: {
+                hourly: completeHourly,
+                daily: dailyResults
+            }
+        });
+        
     } catch (error) {
         console.error('Error in time analysis:', error);
         res.status(500).json({ success: false, error: 'Analysis failed' });
@@ -928,47 +1095,67 @@ router.get('/time-analysis', (req, res) => {
 
 // Enhanced profit analysis calculation
 async function calculateProfitAnalysis(hostId, startDate, endDate) {
-    return new Promise((resolve, reject) => {
-        // Build date condition
-        let dateCondition = '';
-        const params = [hostId];
+    try {
+        // Build query with date filtering
+        let query = supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                toll_amount,
+                toll_location,
+                charge_date,
+                trip_id,
+                toll_accounts!inner(host_id),
+                trips(id, turo_trip_id, trip_revenue)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false');
         
+        // Add date filtering if provided
         if (startDate && endDate) {
-            dateCondition = ` AND (
-                datetime(tc.toll_date, 'unixepoch') BETWEEN ? AND ? OR
-                datetime(tc.toll_date/1000, 'unixepoch') BETWEEN ? AND ?
-            )`;
-            params.push(startDate, endDate, startDate, endDate);
+            query = query
+                .gte('charge_date', startDate)
+                .lte('charge_date', endDate);
         }
         
-        const query = `
-            SELECT 
-                COUNT(DISTINCT t.id) as total_trips,
-                COUNT(tc.id) as toll_charges,
-                COALESCE(SUM(tc.toll_amount), 0) as total_toll_costs,
-                COALESCE(AVG(tc.toll_amount), 0) as avg_toll_cost,
-                COUNT(DISTINCT tc.toll_location) as locations_used,
-                COALESCE(SUM(t.trip_revenue), 0) as estimated_revenue
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            LEFT JOIN trips t ON tc.trip_id = t.turo_trip_id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL) ${dateCondition}
-        `;
+        const { data: tollCharges, error } = await query;
         
-        db.get(query, params, (err, result) => {
-            if (err) {
-                reject(err);
-                return;
+        if (error) {
+            throw error;
+        }
+        
+        // Calculate metrics
+        const uniqueTrips = new Set();
+        const uniqueLocations = new Set();
+        let totalTollCosts = 0;
+        let totalRevenue = 0;
+        let tollAmounts = [];
+        
+        (tollCharges || []).forEach(toll => {
+            totalTollCosts += toll.toll_amount || 0;
+            tollAmounts.push(toll.toll_amount || 0);
+            
+            if (toll.toll_location) {
+                uniqueLocations.add(toll.toll_location);
             }
             
-            const profitData = {
-                totalTrips: result.total_trips || 0,
-                tollCharges: result.toll_charges || 0,
-                totalTollCosts: result.total_toll_costs || 0,
-                avgTollCost: result.avg_toll_cost || 0,
-                locationsUsed: result.locations_used || 0,
-                estimatedRevenue: result.estimated_revenue || (result.toll_charges * 85), // $85 avg if no revenue data
-                profitMargin: 0,
+            if (toll.trips) {
+                uniqueTrips.add(toll.trips.id);
+                totalRevenue += toll.trips.trip_revenue || 0;
+            }
+        });
+        
+        const avgTollCost = tollAmounts.length > 0 ? totalTollCosts / tollAmounts.length : 0;
+        const estimatedRevenue = totalRevenue || (tollCharges?.length * 85); // $85 avg if no revenue data
+        
+        const profitData = {
+            totalTrips: uniqueTrips.size,
+            tollCharges: tollCharges?.length || 0,
+            totalTollCosts,
+            avgTollCost,
+            locationsUsed: uniqueLocations.size,
+            estimatedRevenue,
+            profitMargin: 0,
                 tollImpact: 0,
                 revenuePerTrip: 0,
                 tollCostPerTrip: 0
@@ -985,114 +1172,179 @@ async function calculateProfitAnalysis(hostId, startDate, endDate) {
                 profitData.tollCostPerTrip = profitData.totalTollCosts / profitData.totalTrips;
             }
             
-            resolve(profitData);
-        });
-    });
+            return profitData;
+            
+    } catch (error) {
+        throw error;
+    }
 }
 
 // Recovery metrics calculation
 async function calculateRecoveryMetrics(hostId) {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                COUNT(tc.id) as total_charges,
-                COALESCE(SUM(tc.toll_amount), 0) as total_recoverable,
-                COUNT(CASE WHEN tc.status = 'recovered' THEN 1 END) as recovered_count,
-                COALESCE(SUM(CASE WHEN tc.status = 'recovered' THEN tc.toll_amount ELSE 0 END), 0) as recovered_amount,
-                COUNT(CASE WHEN tc.status = 'disputed' THEN 1 END) as disputed_count,
-                COALESCE(SUM(CASE WHEN tc.status = 'disputed' THEN tc.toll_amount ELSE 0 END), 0) as disputed_amount,
-                COALESCE(AVG(CASE WHEN tc.status = 'recovered' THEN julianday('now') - julianday(datetime(tc.toll_date/1000, 'unixepoch')) END), 3.2) as avg_recovery_days
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-        `;
+    try {
+        // Get all toll charges for the host
+        const { data: tollCharges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                toll_amount,
+                status,
+                charge_date,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false');
         
-        db.get(query, [hostId], (err, result) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            
-            const recoveryData = {
-                totalCharges: result.total_charges || 0,
-                totalRecoverable: result.total_recoverable || 0,
-                recoveredCount: result.recovered_count || Math.floor((result.total_charges || 0) * 0.87),
-                recoveredAmount: result.recovered_amount || ((result.total_recoverable || 0) * 0.87),
-                disputedCount: result.disputed_count || Math.floor((result.total_charges || 0) * 0.05),
-                disputedAmount: result.disputed_amount || ((result.total_recoverable || 0) * 0.05),
-                avgRecoveryDays: result.avg_recovery_days || 3.2,
-                recoveryRate: 0
-            };
-            
-            if (recoveryData.totalCharges > 0) {
-                recoveryData.recoveryRate = (recoveryData.recoveredCount / recoveryData.totalCharges * 100);
-            }
-            
-            resolve(recoveryData);
-        });
-    });
+        if (error) {
+            throw error;
+        }
+        
+        // Calculate metrics
+        const totalCharges = tollCharges?.length || 0;
+        const totalRecoverable = tollCharges?.reduce((sum, toll) => sum + (toll.toll_amount || 0), 0) || 0;
+        
+        const recoveredCharges = tollCharges?.filter(toll => toll.status === 'recovered') || [];
+        const recoveredCount = recoveredCharges.length;
+        const recoveredAmount = recoveredCharges.reduce((sum, toll) => sum + (toll.toll_amount || 0), 0);
+        
+        const disputedCharges = tollCharges?.filter(toll => toll.status === 'disputed') || [];
+        const disputedCount = disputedCharges.length;
+        const disputedAmount = disputedCharges.reduce((sum, toll) => sum + (toll.toll_amount || 0), 0);
+        
+        // Calculate average recovery days for recovered charges
+        let avgRecoveryDays = 3.2; // Default
+        if (recoveredCharges.length > 0) {
+            const now = new Date();
+            const recoveryDays = recoveredCharges.map(toll => {
+                const tollDate = new Date(toll.charge_date);
+                return (now - tollDate) / (1000 * 60 * 60 * 24); // Days
+            });
+            avgRecoveryDays = recoveryDays.reduce((sum, days) => sum + days, 0) / recoveryDays.length;
+        }
+        
+        const recoveryData = {
+            totalCharges,
+            totalRecoverable,
+            recoveredCount: recoveredCount || Math.floor(totalCharges * 0.87), // Use actual or estimate
+            recoveredAmount: recoveredAmount || (totalRecoverable * 0.87),
+            disputedCount: disputedCount || Math.floor(totalCharges * 0.05),
+            disputedAmount: disputedAmount || (totalRecoverable * 0.05),
+            avgRecoveryDays,
+            recoveryRate: 0
+        };
+        
+        if (recoveryData.totalCharges > 0) {
+            recoveryData.recoveryRate = (recoveryData.recoveredCount / recoveryData.totalCharges * 100);
+        }
+        
+        return recoveryData;
+        
+    } catch (error) {
+        throw error;
+    }
 }
 
 // Get vehicles with zero toll trips analysis
 async function getZeroTollTrips(hostId, limit) {
-    return new Promise((resolve, reject) => {
+    try {
         console.log('🔧 Getting zero toll trips for hostId:', hostId);
         
-        // Query to find trips with no toll charges per vehicle
-        const zeroTollQuery = `
-            SELECT 
-                t.vehicle_plate,
-                COUNT(t.id) as total_trips,
-                COUNT(CASE WHEN tc.id IS NULL OR tc.toll_amount = 0 THEN t.id END) as zero_toll_trips,
-                COUNT(CASE WHEN tc.toll_amount > 0 THEN t.id END) as trips_with_tolls,
-                CASE 
-                    WHEN COUNT(t.id) > 0 
-                    THEN ROUND((COUNT(CASE WHEN tc.id IS NULL OR tc.toll_amount = 0 THEN t.id END) * 100.0) / COUNT(t.id), 1)
-                    ELSE 0 
-                END as zero_toll_percentage,
-                COALESCE(SUM(CASE WHEN tc.toll_amount > 0 THEN tc.toll_amount END), 0) as total_toll_costs_saved,
-                COALESCE(AVG(CASE WHEN tc.toll_amount > 0 THEN tc.toll_amount END), 5.50) as avg_toll_when_charged
-            FROM trips t
-            LEFT JOIN toll_charges tc ON (
-                tc.trip_id = t.turo_trip_id 
-                OR tc.trip_id = t.id
-                OR (tc.plate_number = t.vehicle_plate AND 
-                    DATE(tc.toll_date, 'unixepoch') BETWEEN DATE(t.start_date) AND DATE(t.end_date))
-            )
-            LEFT JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE t.host_id = ? 
-              AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-              AND (ta.host_id = ? OR ta.host_id IS NULL)
-            GROUP BY t.vehicle_plate
-            HAVING zero_toll_trips > 0
-            ORDER BY zero_toll_trips DESC, zero_toll_percentage DESC
-            LIMIT ?
-        `;
+        // Get all trips for the host (excluding cancelled ones)
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('id, turo_trip_id, vehicle_plate, start_date, end_date')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
         
-        db.all(zeroTollQuery, [hostId, hostId, limit], (err, vehicles) => {
-            if (err) {
-                console.error('❌ Error getting zero toll trips data:', err);
-                reject(err);
-                return;
+        if (tripsError) {
+            throw tripsError;
+        }
+        
+        // Get all toll charges for the host
+        const { data: tollCharges, error: tollError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                trip_id,
+                plate_number,
+                toll_amount,
+                charge_date,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId);
+        
+        if (tollError) {
+            throw tollError;
+        }
+        
+        // Group trips by vehicle and calculate zero toll metrics
+        const vehicleMap = new Map();
+        
+        // Initialize vehicles with trip counts
+        (trips || []).forEach(trip => {
+            const plate = trip.vehicle_plate;
+            if (!vehicleMap.has(plate)) {
+                vehicleMap.set(plate, {
+                    vehicle_plate: plate,
+                    total_trips: 0,
+                    zero_toll_trips: 0,
+                    trips_with_tolls: 0,
+                    toll_amounts: []
+                });
             }
+            vehicleMap.get(plate).total_trips++;
+        });
+        
+        // Check each trip for toll charges
+        (trips || []).forEach(trip => {
+            const plate = trip.vehicle_plate;
+            const vehicleData = vehicleMap.get(plate);
             
-            console.log('✅ Found vehicles with zero toll trips:', vehicles.length);
+            // Find matching toll charges for this trip
+            const matchingTolls = (tollCharges || []).filter(toll => {
+                // Check if toll is linked by trip_id
+                if (toll.trip_id === trip.id || toll.trip_id === trip.turo_trip_id) {
+                    return true;
+                }
+                // Check if toll matches by plate and date overlap
+                if (toll.plate_number === plate) {
+                    const tollDate = new Date(toll.charge_date);
+                    const tripStart = new Date(trip.start_date);
+                    const tripEnd = new Date(trip.end_date);
+                    return tollDate >= tripStart && tollDate <= tripEnd;
+                }
+                return false;
+            });
             
-            const vehiclesWithZeroTolls = vehicles.map((vehicle) => {
-                const totalTrips = parseInt(vehicle.total_trips) || 0;
-                const zeroTollTrips = parseInt(vehicle.zero_toll_trips) || 0;
-                const tripsWithTolls = parseInt(vehicle.trips_with_tolls) || 0;
-                const zeroTollPercentage = parseFloat(vehicle.zero_toll_percentage) || 0;
-                const avgTollWhenCharged = parseFloat(vehicle.avg_toll_when_charged) || 5.50;
+            const tollsWithCharges = matchingTolls.filter(toll => toll.toll_amount > 0);
+            
+            if (tollsWithCharges.length > 0) {
+                vehicleData.trips_with_tolls++;
+                tollsWithCharges.forEach(toll => {
+                    vehicleData.toll_amounts.push(toll.toll_amount);
+                });
+            } else {
+                vehicleData.zero_toll_trips++;
+            }
+        });
+        
+        // Calculate final metrics and filter vehicles with zero toll trips
+        const vehiclesWithZeroTolls = Array.from(vehicleMap.values())
+            .filter(vehicle => vehicle.zero_toll_trips > 0)
+            .map(vehicle => {
+                const zeroTollPercentage = vehicle.total_trips > 0 ? 
+                    Math.round((vehicle.zero_toll_trips / vehicle.total_trips) * 1000) / 10 : 0;
                 
-                // Calculate estimated savings (zero toll trips * average toll cost)
-                const estimatedSavings = zeroTollTrips * avgTollWhenCharged;
+                const avgTollWhenCharged = vehicle.toll_amounts.length > 0 ?
+                    vehicle.toll_amounts.reduce((sum, amount) => sum + amount, 0) / vehicle.toll_amounts.length : 5.50;
+                
+                const estimatedSavings = vehicle.zero_toll_trips * avgTollWhenCharged;
                 
                 return {
                     vehicle_plate: vehicle.vehicle_plate,
-                    total_trips: totalTrips,
-                    zero_toll_trips: zeroTollTrips,
-                    trips_with_tolls: tripsWithTolls,
+                    total_trips: vehicle.total_trips,
+                    zero_toll_trips: vehicle.zero_toll_trips,
+                    trips_with_tolls: vehicle.trips_with_tolls,
                     zero_toll_percentage: zeroTollPercentage,
                     estimated_savings: estimatedSavings,
                     avg_toll_when_charged: avgTollWhenCharged,
@@ -1100,77 +1352,99 @@ async function getZeroTollTrips(hostId, limit) {
                                     zeroTollPercentage >= 60 ? 'Good' : 
                                     zeroTollPercentage >= 40 ? 'Fair' : 'Poor'
                 };
-            });
-            
-            console.log('✅ Zero toll trips data calculated:', vehiclesWithZeroTolls.map(v => ({
-                plate: v.vehicle_plate,
-                totalTrips: v.total_trips,
-                zeroTollTrips: v.zero_toll_trips,
-                percentage: v.zero_toll_percentage
-            })));
-            
-            resolve(vehiclesWithZeroTolls);
-        });
-    });
+            })
+            .sort((a, b) => b.zero_toll_trips - a.zero_toll_trips || b.zero_toll_percentage - a.zero_toll_percentage)
+            .slice(0, limit);
+        
+        console.log('✅ Found vehicles with zero toll trips:', vehiclesWithZeroTolls.length);
+        console.log('✅ Zero toll trips data calculated:', vehiclesWithZeroTolls.map(v => ({
+            plate: v.vehicle_plate,
+            totalTrips: v.total_trips,
+            zeroTollTrips: v.zero_toll_trips,
+            percentage: v.zero_toll_percentage
+        })));
+        
+        return vehiclesWithZeroTolls;
+        
+    } catch (error) {
+        console.error('❌ Error getting zero toll trips data:', error);
+        throw error;
+    }
 }
 
 // Risk assessment calculation
 async function calculateRiskAssessment(hostId) {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                COUNT(tc.id) as total_charges,
-                COALESCE(SUM(tc.toll_amount), 0) as total_costs,
-                COALESCE(AVG(tc.toll_amount), 0) as avg_cost,
-                COALESCE(MAX(tc.toll_amount), 0) as max_cost,
-                COUNT(DISTINCT tc.toll_location) as unique_locations,
-                COUNT(DISTINCT date(datetime(tc.toll_date/1000, 'unixepoch'))) as days_with_tolls
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-              AND datetime(tc.toll_date/1000, 'unixepoch') >= datetime('now', '-30 days')
-        `;
+    try {
+        // Get toll charges from the last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        db.get(query, [hostId], (err, result) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            
-            const riskData = {
-                totalCharges: result.total_charges || 0,
-                totalCosts: result.total_costs || 0,
-                avgCost: result.avg_cost || 0,
-                maxCost: result.max_cost || 0,
-                uniqueLocations: result.unique_locations || 0,
-                daysWithTolls: result.days_with_tolls || 0,
-                overallRisk: 'LOW',
-                costVolatility: 'LOW',
-                fraudRisk: 'LOW',
-                riskFactors: []
-            };
-            
-            // Calculate risk levels
-            if (riskData.totalCosts > 500) {
-                riskData.overallRisk = 'MEDIUM';
-                riskData.riskFactors.push('High total toll costs');
-            }
-            
-            if (riskData.avgCost > 8) {
-                riskData.costVolatility = 'HIGH';
-                riskData.riskFactors.push('High average toll costs');
-            } else if (riskData.avgCost > 5) {
-                riskData.costVolatility = 'MEDIUM';
-            }
-            
-            if (riskData.maxCost > 25) {
-                riskData.fraudRisk = 'MEDIUM';
-                riskData.riskFactors.push('Unusually high single toll charge');
-            }
-            
-            resolve(riskData);
-        });
-    });
+        const { data: tollCharges, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                toll_amount,
+                toll_location,
+                charge_date,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false')
+            .gte('charge_date', thirtyDaysAgo.toISOString());
+        
+        if (error) {
+            throw error;
+        }
+        
+        // Calculate metrics
+        const totalCharges = tollCharges?.length || 0;
+        const totalCosts = tollCharges?.reduce((sum, toll) => sum + (toll.toll_amount || 0), 0) || 0;
+        const avgCost = totalCharges > 0 ? totalCosts / totalCharges : 0;
+        const maxCost = Math.max(...(tollCharges?.map(toll => toll.toll_amount || 0) || [0]));
+        const uniqueLocations = new Set(tollCharges?.map(toll => toll.toll_location)).size;
+        
+        // Calculate unique days with tolls
+        const uniqueDays = new Set(
+            tollCharges?.map(toll => toll.charge_date?.split('T')[0])
+                .filter(date => date)
+        ).size;
+        
+        const riskData = {
+            totalCharges,
+            totalCosts,
+            avgCost,
+            maxCost,
+            uniqueLocations,
+            daysWithTolls: uniqueDays,
+            overallRisk: 'LOW',
+            costVolatility: 'LOW',
+            fraudRisk: 'LOW',
+            riskFactors: []
+        };
+        
+        // Calculate risk levels
+        if (riskData.totalCosts > 500) {
+            riskData.overallRisk = 'MEDIUM';
+            riskData.riskFactors.push('High total toll costs');
+        }
+        
+        if (riskData.avgCost > 8) {
+            riskData.costVolatility = 'HIGH';
+            riskData.riskFactors.push('High average toll costs');
+        } else if (riskData.avgCost > 5) {
+            riskData.costVolatility = 'MEDIUM';
+        }
+        
+        if (riskData.maxCost > 25) {
+            riskData.fraudRisk = 'MEDIUM';
+            riskData.riskFactors.push('Unusually high single toll charge');
+        }
+        
+        return riskData;
+        
+    } catch (error) {
+        throw error;
+    }
 }
 
 module.exports = router;

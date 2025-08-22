@@ -662,18 +662,40 @@ class SimpleTollMatcher {
      */
     async findTripDatabaseId(trip) {
         try {
+            console.log(`🔍 DEBUG: Looking for trip ${trip.reservationId} in database...`);
+            
+            // First try to find by turo_trip_id (most common case)
             const { data: result, error } = await supabaseAdmin
                 .from('trips')
-                .select('id')
-                .or(`turo_trip_id.eq.${trip.reservationId},id.eq.${trip.originalTrip.id}`)
+                .select('id, turo_trip_id, vehicle_plate')
+                .eq('turo_trip_id', trip.reservationId)
                 .single();
             
-            if (error || !result) {
-                console.error(`❌ Could not find trip in database:`, trip.reservationId);
-                return null;
+            if (result) {
+                console.log(`✅ Found trip by turo_trip_id: ${result.id} (${result.turo_trip_id}, plate: ${result.vehicle_plate})`);
+                return result.id;
             }
             
-            return result.id;
+            // If not found and we have originalTrip.id, try that
+            if (trip.originalTrip && trip.originalTrip.id) {
+                const { data: result2, error: error2 } = await supabaseAdmin
+                    .from('trips')
+                    .select('id, turo_trip_id, vehicle_plate')
+                    .eq('id', trip.originalTrip.id)
+                    .single();
+                
+                if (result2) {
+                    console.log(`✅ Found trip by database ID: ${result2.id} (${result2.turo_trip_id}, plate: ${result2.vehicle_plate})`);
+                    return result2.id;
+                }
+            }
+            
+            console.error(`❌ Could not find trip in database:`, {
+                reservationId: trip.reservationId,
+                originalTripId: trip.originalTrip?.id,
+                error: error?.message
+            });
+            return null;
         } catch (error) {
             console.error(`❌ Error finding trip in database:`, error);
             return null;
@@ -685,18 +707,40 @@ class SimpleTollMatcher {
      */
     async findTollDatabaseId(toll) {
         try {
+            console.log(`🔍 DEBUG: Looking for toll ${toll.laneTransactionId} in database...`);
+            
+            // First try to find by transaction_id
             const { data: result, error } = await supabaseAdmin
                 .from('toll_charges')
-                .select('id')
-                .or(`transaction_id.eq.${toll.laneTransactionId},id.eq.${toll.originalToll.id}`)
+                .select('id, transaction_id, amount, charge_date')
+                .eq('transaction_id', toll.laneTransactionId)
                 .single();
             
-            if (error || !result) {
-                console.error(`❌ Could not find toll in database:`, toll.laneTransactionId);
-                return null;
+            if (result) {
+                console.log(`✅ Found toll by transaction_id: ${result.id} (${result.transaction_id}, $${result.amount})`);
+                return result.id;
             }
             
-            return result.id;
+            // If not found and we have originalToll.id, try that
+            if (toll.originalToll && toll.originalToll.id) {
+                const { data: result2, error: error2 } = await supabaseAdmin
+                    .from('toll_charges')
+                    .select('id, transaction_id, amount, charge_date')
+                    .eq('id', toll.originalToll.id)
+                    .single();
+                
+                if (result2) {
+                    console.log(`✅ Found toll by database ID: ${result2.id} (${result2.transaction_id}, $${result2.amount})`);
+                    return result2.id;
+                }
+            }
+            
+            console.error(`❌ Could not find toll in database:`, {
+                laneTransactionId: toll.laneTransactionId,
+                originalTollId: toll.originalToll?.id,
+                error: error?.message
+            });
+            return null;
         } catch (error) {
             console.error(`❌ Error finding toll in database:`, error);
             return null;
