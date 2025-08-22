@@ -682,22 +682,8 @@ router.delete('/:invoiceId/unsubmit', requireAuth, async (req, res) => {
             });
         }
         
-        // Update trip to unsubmit it
-        const { error: updateError } = await supabaseAdmin
-            .from('trips')
-            .update({
-                submitted_to_turo: false,
-                submitted_date: null
-            })
-            .eq('id', tripId);
-
-        if (updateError) {
-            console.error('❌ Error unsubmitting trip:', updateError);
-            return res.status(500).json({ 
-                success: false, 
-                error: 'Failed to unsubmit trip' 
-            });
-        }
+        // Note: Skip trip table update since submitted_to_turo/submitted_date fields don't exist
+        // We track submission status through the existence of invoices instead
         
         res.json({
             success: true,

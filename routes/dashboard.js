@@ -26,6 +26,105 @@ const performanceMiddleware = global.performanceMonitor ?
     createPerformanceMiddleware(global.performanceMonitor) : 
     (req, res, next) => next();
 
+/**
+ * Check if a newly inserted toll charge is a late toll for an already submitted trip
+ */
+async function checkForLateToll(tollCharge, hostId) {
+    if (!tollCharge || !tollCharge.plate_number) {
+        return; // Can't match without plate number
+    }
+
+    try {
+        // Find trips that:
+        // 1. Have matching plate number
+        // 2. Have been submitted (have invoices)
+        // 3. Have toll date within trip period
+        const tollDate = new Date(tollCharge.toll_date);
+        
+        // Look for submitted trips with matching plates within a reasonable time window
+        const { data: possibleTrips, error: tripsError } = await supabaseAdmin
+            .from('invoices')
+            .select(`
+                trip_id,
+                created_at as submission_date,
+                trips!inner(
+                    id,
+                    turo_trip_id,
+                    vehicle_plate,
+                    start_date,
+                    end_date,
+                    host_id
+                )
+            `)
+            .eq('trips.host_id', hostId)
+            .eq('trips.vehicle_plate', tollCharge.plate_number);
+
+        if (tripsError) {
+            console.error('❌ Error finding submitted trips for late toll check:', tripsError);
+            return;
+        }
+
+        if (!possibleTrips || possibleTrips.length === 0) {
+            return; // No submitted trips for this plate
+        }
+
+        // Check each possible trip to see if the toll date falls within the trip period
+        for (const invoice of possibleTrips) {
+            const trip = invoice.trips;
+            const tripStart = new Date(trip.start_date);
+            const tripEnd = new Date(trip.end_date);
+            const submissionDate = new Date(invoice.submission_date);
+
+            // Allow tolls within trip period or up to 7 days after trip end (late processing)
+            const graceEndDate = new Date(tripEnd);
+            graceEndDate.setDate(graceEndDate.getDate() + 7);
+
+            if (tollDate >= tripStart && tollDate <= graceEndDate) {
+                // This is a late toll! Check if we already detected it
+                const { data: existing, error: existingError } = await supabaseAdmin
+                    .from('late_tolls_detected')
+                    .select('id')
+                    .eq('trip_id', trip.id)
+                    .eq('toll_charge_id', tollCharge.id)
+                    .single();
+
+                if (existingError && existingError.code !== 'PGRST116') {
+                    console.error('❌ Error checking existing late toll:', existingError);
+                    continue;
+                }
+
+                if (!existing) {
+                    // Record this late toll detection
+                    const { error: insertError } = await supabaseAdmin
+                        .from('late_tolls_detected')
+                        .insert({
+                            trip_id: trip.id,
+                            toll_charge_id: tollCharge.id,
+                            original_submission_date: submissionDate.toISOString(),
+                            detection_date: new Date().toISOString(),
+                            toll_amount: tollCharge.toll_amount,
+                            toll_location: tollCharge.toll_location,
+                            toll_date: tollCharge.toll_date,
+                            status: 'detected',
+                            host_id: hostId
+                        });
+
+                    if (insertError) {
+                        console.error('❌ Error recording late toll detection:', insertError);
+                    } else {
+                        console.log(`🚨 LATE TOLL DETECTED: $${tollCharge.toll_amount} at ${tollCharge.toll_location} for trip ${trip.turo_trip_id}`);
+                    }
+                }
+                break; // Found the matching trip, no need to check others
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Error in late toll detection:', error);
+        throw error;
+    }
+}
+
 // Middleware to check authentication
 const requireAuth = async (req, res, next) => {
     console.log('🔐 Auth check - Session:', {
@@ -1786,6 +1885,14 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
 
                     console.log(`✅ Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId || 'unknown'}`);
                     dbUpdates.tolls_inserted++;
+
+                    // Check for late toll detection - see if this toll matches an already submitted trip
+                    try {
+                        await checkForLateToll(newTollCharge, hostId);
+                    } catch (lateTollError) {
+                        console.warn('⚠️ Late toll detection failed:', lateTollError.message);
+                        // Don't throw - this is not critical to the CSV upload process
+                    }
 
                 } catch (error) {
                     console.error(`❌ Error inserting toll ${toll.laneId}:`, error.message);

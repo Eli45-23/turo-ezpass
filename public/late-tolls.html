@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Late Toll Management - Turo Toll Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .late-tolls-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .late-toll-card {
+            background: var(--surface-background);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-xs);
+        }
+
+        .late-toll-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .late-toll-info {
+            flex: 1;
+        }
+
+        .late-toll-status {
+            padding: 0.375rem 0.75rem;
+            border-radius: var(--radius-md);
+            font-size: var(--text-sm);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .status-detected {
+            background: #fbbf24;
+            color: #92400e;
+        }
+
+        .status-acknowledged {
+            background: #10b981;
+            color: #065f46;
+        }
+
+        .status-resolved {
+            background: #6b7280;
+            color: #374151;
+        }
+
+        .late-toll-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .late-toll-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .late-toll-label {
+            font-size: var(--text-xs);
+            color: var(--ink-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 0.25rem;
+        }
+
+        .late-toll-value {
+            font-size: var(--text-sm);
+            color: var(--ink-primary);
+            font-weight: 500;
+        }
+
+        .late-toll-amount {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .late-toll-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-background);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: var(--text-sm);
+            color: var(--ink-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .filter-label {
+            font-size: var(--text-xs);
+            color: var(--ink-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--ink-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🚨 Late Toll Management</h1>
+            <nav class="nav">
+                <a href="dashboard.html" class="nav-item">Dashboard</a>
+                <a href="trips.html" class="nav-item">Trips</a>
+                <a href="invoices.html" class="nav-item">Invoices</a>
+                <a href="late-tolls.html" class="nav-item active">Late Tolls</a>
+                <a href="transponders.html" class="nav-item">Transponders</a>
+                <a href="/" class="nav-item">Logout</a>
+            </nav>
+        </div>
+    </div>
+
+    <main class="late-tolls-container">
+        <!-- Statistics Section -->
+        <div class="stats-grid" id="stats-grid">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters">
+            <div class="filter-group">
+                <label class="filter-label">Status</label>
+                <select id="status-filter" class="form-control" onchange="applyFilters()">
+                    <option value="">All Statuses</option>
+                    <option value="detected">Detected</option>
+                    <option value="acknowledged">Acknowledged</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">Sort By</label>
+                <select id="sort-filter" class="form-control" onchange="applyFilters()">
+                    <option value="detection_date_desc">Latest First</option>
+                    <option value="detection_date_asc">Oldest First</option>
+                    <option value="amount_desc">Highest Amount</option>
+                    <option value="amount_asc">Lowest Amount</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    🔄 Refresh
+                </button>
+            </div>
+
+            <div class="filter-group" style="margin-left: auto;">
+                <button class="btn btn-primary" onclick="acknowledgeAllVisible()" id="acknowledge-all-btn" style="display: none;">
+                    ✅ Acknowledge All Visible
+                </button>
+                <button class="btn btn-primary" onclick="generateBulkInvoice()" id="bulk-invoice-btn" style="display: none; margin-left: 0.5rem;">
+                    📄 Invoice Selected
+                </button>
+            </div>
+        </div>
+
+        <!-- Late Tolls List -->
+        <div id="late-tolls-list">
+            <!-- Late tolls will be populated by JavaScript -->
+        </div>
+    </main>
+
+    <!-- Notification container -->
+    <div id="notification-container"></div>
+
+    <script>
+        let allLateTolls = [];
+        let filteredLateTolls = [];
+
+        // Load late tolls on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLateTolls();
+        });
+
+        async function loadLateTolls() {
+            try {
+                const response = await fetch('/api/trips/late-tolls', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load late tolls: ${response.status}`);
+                }
+
+                const result = await response.json();
+                allLateTolls = result.data || [];
+                
+                renderStats();
+                applyFilters();
+
+            } catch (error) {
+                console.error('Error loading late tolls:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Load Error',
+                    message: 'Failed to load late tolls. Please refresh the page.'
+                });
+            }
+        }
+
+        function renderStats() {
+            const statsGrid = document.getElementById('stats-grid');
+            
+            const totalCount = allLateTolls.length;
+            const totalAmount = allLateTolls.reduce((sum, toll) => sum + parseFloat(toll.toll_amount || 0), 0);
+            const detectedCount = allLateTolls.filter(toll => toll.status === 'detected').length;
+            const acknowledgedCount = allLateTolls.filter(toll => toll.status === 'acknowledged').length;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalCount}</div>
+                    <div class="stat-label">Total Late Tolls</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$${totalAmount.toFixed(2)}</div>
+                    <div class="stat-label">Total Amount</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${detectedCount}</div>
+                    <div class="stat-label">Needs Attention</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${acknowledgedCount}</div>
+                    <div class="stat-label">Acknowledged</div>
+                </div>
+            `;
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const sortFilter = document.getElementById('sort-filter').value;
+            
+            // Apply status filter
+            filteredLateTolls = allLateTolls.filter(toll => {
+                if (statusFilter && toll.status !== statusFilter) return false;
+                return true;
+            });
+            
+            // Apply sorting
+            filteredLateTolls.sort((a, b) => {
+                switch(sortFilter) {
+                    case 'detection_date_asc':
+                        return new Date(a.detection_date) - new Date(b.detection_date);
+                    case 'detection_date_desc':
+                        return new Date(b.detection_date) - new Date(a.detection_date);
+                    case 'amount_asc':
+                        return parseFloat(a.toll_amount) - parseFloat(b.toll_amount);
+                    case 'amount_desc':
+                        return parseFloat(b.toll_amount) - parseFloat(a.toll_amount);
+                    default:
+                        return new Date(b.detection_date) - new Date(a.detection_date);
+                }
+            });
+            
+            renderLateTolls();
+            updateAcknowledgeAllButton();
+        }
+
+        function renderLateTolls() {
+            const container = document.getElementById('late-tolls-list');
+            
+            if (filteredLateTolls.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎯</div>
+                        <h3>No Late Tolls Found</h3>
+                        <p>No late tolls match your current filters, or none have been detected yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredLateTolls.map(toll => `
+                <div class="late-toll-card">
+                    <div class="late-toll-header">
+                        <div class="late-toll-info">
+                            <h3>Trip ${toll.trips.turo_trip_id} - ${toll.trips.renter_name}</h3>
+                            <p style="color: var(--ink-muted); font-size: var(--text-sm);">
+                                ${toll.trips.vehicle_plate} • Detected ${formatDate(toll.detection_date)}
+                            </p>
+                        </div>
+                        <div class="late-toll-status status-${toll.status}">
+                            ${toll.status}
+                        </div>
+                    </div>
+                    
+                    <div class="late-toll-grid">
+                        <div class="late-toll-field">
+                            <div class="late-toll-label">Amount</div>
+                            <div class="late-toll-value late-toll-amount">$${toll.toll_amount}</div>
+                        </div>
+                        <div class="late-toll-field">
+                            <div class="late-toll-label">Location</div>
+                            <div class="late-toll-value">${toll.toll_location}</div>
+                        </div>
+                        <div class="late-toll-field">
+                            <div class="late-toll-label">Toll Date</div>
+                            <div class="late-toll-value">${formatDate(toll.toll_date)}</div>
+                        </div>
+                        <div class="late-toll-field">
+                            <div class="late-toll-label">Original Submission</div>
+                            <div class="late-toll-value">${formatDate(toll.original_submission_date)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="late-toll-actions">
+                        ${toll.status === 'detected' ? `
+                            <button class="btn btn-success btn-sm" onclick="resolveToll(${toll.id}, 'acknowledged')">
+                                ✅ Acknowledge
+                            </button>
+                        ` : ''}
+                        ${toll.status !== 'resolved' && toll.status !== 'invoiced' ? `
+                            <button class="btn btn-secondary btn-sm" onclick="resolveToll(${toll.id}, 'resolved')">
+                                ✅ Mark Resolved
+                            </button>
+                        ` : ''}
+                        ${(toll.status === 'detected' || toll.status === 'acknowledged') ? `
+                            <button class="btn btn-primary btn-sm" onclick="generateSupplementalInvoice([${toll.id}])">
+                                📄 Create Invoice
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-secondary btn-sm" onclick="viewTripDetails('${toll.trips.turo_trip_id}')">
+                            🔍 View Trip
+                        </button>
+                        <label style="margin-left: 0.5rem;">
+                            <input type="checkbox" class="late-toll-checkbox" value="${toll.id}" onchange="updateBulkActions()">
+                            Select
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateAcknowledgeAllButton() {
+            const button = document.getElementById('acknowledge-all-btn');
+            const needsAttention = filteredLateTolls.filter(toll => toll.status === 'detected');
+            
+            if (needsAttention.length > 0) {
+                button.style.display = 'block';
+                button.textContent = `✅ Acknowledge All Visible (${needsAttention.length})`;
+            } else {
+                button.style.display = 'none';
+            }
+        }
+
+        function updateBulkActions() {
+            const checkboxes = document.querySelectorAll('.late-toll-checkbox:checked');
+            const bulkInvoiceBtn = document.getElementById('bulk-invoice-btn');
+            
+            if (checkboxes.length > 0) {
+                const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+                const selectedTolls = filteredLateTolls.filter(toll => selectedIds.includes(toll.id));
+                const invoiceable = selectedTolls.filter(toll => toll.status === 'detected' || toll.status === 'acknowledged');
+                
+                if (invoiceable.length > 0) {
+                    bulkInvoiceBtn.style.display = 'inline-block';
+                    bulkInvoiceBtn.textContent = `📄 Invoice Selected (${invoiceable.length})`;
+                } else {
+                    bulkInvoiceBtn.style.display = 'none';
+                }
+            } else {
+                bulkInvoiceBtn.style.display = 'none';
+            }
+        }
+
+        async function resolveToll(lateTollId, status) {
+            try {
+                const response = await fetch(`/api/trips/late-tolls/${lateTollId}/resolve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to update late toll: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                showNotification({
+                    type: 'success',
+                    title: 'Updated',
+                    message: `Late toll ${status === 'acknowledged' ? 'acknowledged' : 'marked as resolved'} successfully`
+                });
+
+                // Refresh data
+                await loadLateTolls();
+
+            } catch (error) {
+                console.error('Error updating late toll:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Update Error',
+                    message: 'Failed to update late toll status'
+                });
+            }
+        }
+
+        async function acknowledgeAllVisible() {
+            const needsAttention = filteredLateTolls.filter(toll => toll.status === 'detected');
+            
+            if (needsAttention.length === 0) return;
+
+            try {
+                // Update all visible detected tolls
+                const promises = needsAttention.map(toll => 
+                    fetch(`/api/trips/late-tolls/${toll.id}/resolve`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'acknowledged' })
+                    })
+                );
+
+                await Promise.all(promises);
+                
+                showNotification({
+                    type: 'success',
+                    title: 'All Acknowledged',
+                    message: `Successfully acknowledged ${needsAttention.length} late tolls`
+                });
+
+                // Refresh data
+                await loadLateTolls();
+
+            } catch (error) {
+                console.error('Error acknowledging all late tolls:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Update Error',
+                    message: 'Failed to acknowledge some late tolls'
+                });
+            }
+        }
+
+        function viewTripDetails(turoTripId) {
+            window.open(`trips.html#trip-${turoTripId}`, '_blank');
+        }
+
+        function refreshData() {
+            loadLateTolls();
+            showNotification({
+                type: 'info',
+                title: 'Refreshed',
+                message: 'Late tolls data has been refreshed'
+            });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        async function generateSupplementalInvoice(lateTollIds) {
+            try {
+                const description = prompt(`Enter a description for this supplemental invoice (optional):`);
+                
+                const response = await fetch('/api/trips/late-tolls/generate-invoice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lateTollIds: lateTollIds,
+                        description: description || undefined
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to generate supplemental invoice: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                showNotification({
+                    type: 'success',
+                    title: 'Invoice Generated',
+                    message: `Supplemental invoice ${result.invoice.invoice_number} created for $${result.invoice.total_amount.toFixed(2)} (${result.invoice.item_count} toll charges)`
+                });
+
+                // Refresh data to show updated statuses
+                await loadLateTolls();
+
+            } catch (error) {
+                console.error('Error generating supplemental invoice:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Invoice Error',
+                    message: 'Failed to generate supplemental invoice'
+                });
+            }
+        }
+
+        function generateBulkInvoice() {
+            const checkboxes = document.querySelectorAll('.late-toll-checkbox:checked');
+            if (checkboxes.length === 0) {
+                showNotification({
+                    type: 'warning',
+                    title: 'No Selection',
+                    message: 'Please select late tolls to invoice'
+                });
+                return;
+            }
+
+            const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            const selectedTolls = filteredLateTolls.filter(toll => selectedIds.includes(toll.id));
+            const invoiceable = selectedTolls.filter(toll => toll.status === 'detected' || toll.status === 'acknowledged');
+            
+            if (invoiceable.length === 0) {
+                showNotification({
+                    type: 'warning',
+                    title: 'No Invoiceable Tolls',
+                    message: 'Selected tolls cannot be invoiced (already invoiced or resolved)'
+                });
+                return;
+            }
+
+            if (invoiceable.length !== selectedIds.length) {
+                const message = `${invoiceable.length} of ${selectedIds.length} selected tolls can be invoiced. Continue?`;
+                if (!confirm(message)) return;
+            }
+
+            generateSupplementalInvoice(invoiceable.map(toll => toll.id));
+        }
+
+        // Notification system (same as other pages)
+        function showNotification({ type, title, message }) {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

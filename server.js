@@ -389,6 +389,11 @@ scheduler.start();
 const automatedReporting = require('./services/automated-reporting');
 automatedReporting.initialize().catch(console.error);
 
+// Initialize late toll detection service
+const LateTollDetector = require('./services/late-toll-detector');
+const lateTollDetector = new LateTollDetector();
+lateTollDetector.start();
+
 // Initialize backup service with automatic scheduling
 // const BackupService = require('./services/backup-service'); // Disabled - using Supabase
 // const backupService = new BackupService();
