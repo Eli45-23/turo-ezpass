@@ -2467,6 +2467,7 @@ router.post('/clear-data', requireAuth, async (req, res) => {
     
     try {
         console.log('🧽 Clearing ALL data except Invoices and Transponders - requested by host:', hostId);
+        console.log('🚀 Starting clear data operation...');
         
         const results = {
             toll_accounts_deleted: 0,
@@ -2479,177 +2480,230 @@ router.post('/clear-data', requireAuth, async (req, res) => {
             transponder_mappings_preserved: 0
         };
         
-        // Start a transaction and disable foreign keys temporarily
-        await new Promise((resolve, reject) => {
-            db.serialize(() => {
-                db.run('PRAGMA foreign_keys = OFF', (err) => {
-                    if (err) reject(err);
-                    else {
-                        db.run('BEGIN TRANSACTION', (err) => {
-                            if (err) reject(err);
-                            else resolve();
-                        });
-                    }
-                });
-            });
-        });
-        
         // Count what we're preserving (for user feedback)
-        const preservedCount = await new Promise((resolve, reject) => {
-            db.all(
-                `SELECT 
-                    (SELECT COUNT(*) FROM invoices) as invoices,
-                    (SELECT COUNT(*) FROM invoice_items) as invoice_items,
-                    (SELECT COUNT(*) FROM transponder_mappings WHERE host_id = ?) as transponder_mappings`,
-                [hostId],
-                (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows[0]);
-                }
-            );
-        });
+        console.log('📊 Counting preserved data...');
+        
+        console.log('📊 Counting invoices...');
+        const { count: invoicesCount, error: invoicesCountError } = await supabaseAdmin
+            .from('invoices')
+            .select('*', { count: 'exact', head: true });
+            
+        if (invoicesCountError) {
+            console.log('❌ Error counting invoices:', invoicesCountError);
+            throw invoicesCountError;
+        }
+        
+        console.log('📊 Counting invoice items...');
+        const { count: invoiceItemsCount, error: invoiceItemsCountError } = await supabaseAdmin
+            .from('invoice_items')
+            .select('*', { count: 'exact', head: true });
+            
+        if (invoiceItemsCountError) {
+            console.log('❌ Error counting invoice items:', invoiceItemsCountError);
+            throw invoiceItemsCountError;
+        }
+            
+        console.log('📊 Counting transponder mappings...');
+        const { count: transponderMappingsCount, error: transponderMappingsCountError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('*', { count: 'exact', head: true })
+            .eq('host_id', hostId);
+            
+        if (transponderMappingsCountError) {
+            console.log('❌ Error counting transponder mappings:', transponderMappingsCountError);
+            throw transponderMappingsCountError;
+        }
+        
+        const preservedCount = {
+            invoices: invoicesCount || 0,
+            invoice_items: invoiceItemsCount || 0,
+            transponder_mappings: transponderMappingsCount || 0
+        };
         
         console.log(`🛡️ PRESERVING: ${preservedCount.invoices} invoices, ${preservedCount.invoice_items} invoice items, ${preservedCount.transponder_mappings} transponder mappings`);
         
-        // Archive toll charges referenced in invoices & delete those not in invoices
-        await new Promise((resolve, reject) => {
-            // First archive toll charges that are in invoices (preserve for toll memory)
-            db.run(
-                `UPDATE toll_charges 
-                 SET is_archived = 1 
-                 WHERE id IN (
-                     SELECT DISTINCT toll_charge_id 
-                     FROM invoice_items 
-                     WHERE toll_charge_id IS NOT NULL
-                 )`,
-                function(err) {
-                    if (err) reject(err);
-                    else {
-                        results.toll_charges_archived = this.changes;
-                        console.log(`📁 Archived ${this.changes} toll charges for toll memory system`);
-                        
-                        // Then delete toll charges not in invoices
-                        db.run(
-                            `DELETE FROM toll_charges 
-                             WHERE id NOT IN (
-                                 SELECT DISTINCT toll_charge_id 
-                                 FROM invoice_items 
-                                 WHERE toll_charge_id IS NOT NULL
-                             )`,
-                            function(err) {
-                                if (err) reject(err);
-                                else {
-                                    results.toll_charges_without_invoices_deleted = this.changes;
-                                    console.log(`🗑️ Deleted ${this.changes} toll charges not in invoices`);
-                                    resolve();
-                                }
-                            }
-                        );
-                    }
-                }
-            );
-        });
+        // Get toll charge IDs that are in invoices (to archive them)
+        console.log('📁 Getting toll charge IDs that are in invoices...');
+        const { data: tollChargesInInvoices, error: invoiceItemsError } = await supabaseAdmin
+            .from('invoice_items')
+            .select('toll_charge_id');
+            
+        if (invoiceItemsError) {
+            console.log('❌ Error querying invoice_items:', invoiceItemsError);
+            throw invoiceItemsError;
+        }
         
-        // Clear trips WITHOUT invoices AND not referenced by preserved toll_charges
-        await new Promise((resolve, reject) => {
-            db.run(
-                `DELETE FROM trips 
-                 WHERE host_id = ?
-                   AND id NOT IN (SELECT DISTINCT trip_id FROM invoices WHERE trip_id IS NOT NULL)
-                   AND id NOT IN (SELECT DISTINCT trip_id FROM toll_charges WHERE trip_id IS NOT NULL)`,
-                [hostId],
-                function(err) {
-                    if (err) reject(err);
-                    else {
-                        results.trips_without_invoices_deleted = this.changes;
-                        console.log(`🗑️ Deleted ${this.changes} trips without invoices or toll references`);
-                        resolve();
-                    }
-                }
-            );
-        });
+        const tollChargeIdsInInvoices = tollChargesInInvoices?.filter(item => item.toll_charge_id != null).map(item => item.toll_charge_id) || [];
+        console.log(`📁 Found ${tollChargeIdsInInvoices.length} toll charges in invoices: ${tollChargeIdsInInvoices.join(', ')}`);
         
-        // Clear ONLY unreferenced toll accounts (preserve those referenced by archived toll_charges)
-        await new Promise((resolve, reject) => {
-            db.run(
-                `DELETE FROM toll_accounts 
-                 WHERE host_id = ? 
-                   AND id NOT IN (
-                       SELECT DISTINCT toll_account_id 
-                       FROM toll_charges 
-                       WHERE toll_account_id IS NOT NULL
-                         AND is_archived = 1
-                   )`,
-                [hostId],
-                function(err) {
-                    if (err) reject(err);
-                    else {
-                        results.toll_accounts_deleted = this.changes;
-                        console.log(`🗑️ Deleted ${this.changes} toll accounts (preserved those referenced by archived charges)`);
-                        resolve();
-                    }
-                }
-            );
-        });
+        // Archive toll charges referenced in invoices
+        if (tollChargeIdsInInvoices.length > 0) {
+            console.log('📁 Archiving toll charges that are in invoices...');
+            const { error: archiveError } = await supabaseAdmin
+                .from('toll_charges')
+                .update({ is_archived: true })
+                .in('id', tollChargeIdsInInvoices);
+            
+            if (archiveError) {
+                console.log('❌ Error archiving toll charges:', archiveError);
+                throw archiveError;
+            }
+            results.toll_charges_archived = tollChargeIdsInInvoices.length;
+            console.log(`📁 Archived ${results.toll_charges_archived} toll charges for toll memory system`);
+        } else {
+            console.log('📁 No toll charges to archive - skipping archive step');
+        }
         
-        // Recreate any missing toll_accounts that are referenced by archived charges
-        await new Promise((resolve, reject) => {
-            db.all(
-                `SELECT DISTINCT toll_account_id 
-                 FROM toll_charges 
-                 WHERE is_archived = 1 
-                   AND toll_account_id IS NOT NULL
-                   AND toll_account_id NOT IN (SELECT id FROM toll_accounts)`,
-                [],
-                (err, missingAccounts) => {
-                    if (err) reject(err);
-                    else if (missingAccounts.length === 0) {
-                        console.log('✅ All archived toll charges have valid toll_account references');
-                        resolve();
-                    } else {
-                        console.log(`🔧 Recreating ${missingAccounts.length} missing toll_accounts for archived charges`);
-                        
-                        let completed = 0;
-                        for (const account of missingAccounts) {
-                            db.run(
-                                `INSERT INTO toll_accounts (id, host_id, provider, account_number, username, password_encrypted, is_active) 
-                                 VALUES (?, ?, ?, ?, ?, ?, 0)`,
-                                [account.toll_account_id, hostId, 'ARCHIVED', `ARCHIVED-${account.toll_account_id}`, 'archived@system', 'archived_password', 0],
-                                (err) => {
-                                    if (err) {
-                                        console.warn(`⚠️ Could not recreate toll_account ${account.toll_account_id}:`, err.message);
-                                    } else {
-                                        console.log(`✅ Recreated toll_account ${account.toll_account_id}`);
-                                    }
-                                    
-                                    completed++;
-                                    if (completed === missingAccounts.length) {
-                                        resolve();
-                                    }
-                                }
-                            );
-                        }
-                    }
-                }
-            );
-        });
+        // Delete toll charges NOT in invoices
+        console.log('🗑️ Deleting toll charges NOT in invoices...');
         
-        // Clear late tolls detected table
-        await new Promise((resolve, reject) => {
-            db.run(
-                `DELETE FROM late_tolls_detected 
-                 WHERE trip_id IN (SELECT id FROM trips WHERE host_id = ?)`,
-                [hostId],
-                function(err) {
-                    if (err) reject(err);
-                    else {
-                        results.late_tolls_deleted = this.changes;
-                        console.log(`🗑️ Deleted ${this.changes} late toll detections`);
-                        resolve();
-                    }
+        // First check how many toll charges exist
+        const { count: totalTollCharges } = await supabaseAdmin
+            .from('toll_charges')
+            .select('*', { count: 'exact', head: true });
+            
+        console.log(`📊 Found ${totalTollCharges} total toll charges in database`);
+        
+        let deletedTollCharges = 0;
+        if (totalTollCharges > 0) {
+            let deleteTollChargesQuery = supabaseAdmin
+                .from('toll_charges')
+                .delete({ count: 'exact' })
+                .gte('id', 0); // This ensures we have a WHERE clause - delete all records where id >= 0
+                
+            if (tollChargeIdsInInvoices.length > 0) {
+                console.log(`🗑️ Excluding ${tollChargeIdsInInvoices.length} toll charges that are in invoices`);
+                deleteTollChargesQuery = deleteTollChargesQuery.not('id', 'in', tollChargeIdsInInvoices);
+            } else {
+                console.log('🗑️ No toll charges to preserve - deleting all toll charges');
+            }
+            
+            const { count, error: deleteTollChargesError } = await deleteTollChargesQuery;
+            if (deleteTollChargesError) throw deleteTollChargesError;
+            deletedTollCharges = count || 0;
+        } else {
+            console.log('🗑️ No toll charges found - skipping deletion');
+        }
+        
+        results.toll_charges_without_invoices_deleted = deletedTollCharges;
+        console.log(`🗑️ Deleted ${results.toll_charges_without_invoices_deleted} toll charges not in invoices`);
+        
+        // Get trip IDs that are in invoices or referenced by toll charges
+        const { data: tripsInInvoices } = await supabaseAdmin
+            .from('invoices')
+            .select('trip_id');
+            
+        const { data: tripsInTollCharges } = await supabaseAdmin
+            .from('toll_charges')
+            .select('trip_id');
+        
+        const tripIdsToPreserve = [
+            ...(tripsInInvoices?.filter(inv => inv.trip_id != null).map(inv => inv.trip_id) || []),
+            ...(tripsInTollCharges?.filter(tc => tc.trip_id != null).map(tc => tc.trip_id) || [])
+        ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
+        
+        // Delete trips WITHOUT invoices AND not referenced by preserved toll_charges
+        console.log('🗑️ Deleting trips without invoices or toll references...');
+        let deleteTripsQuery = supabaseAdmin
+            .from('trips')
+            .delete({ count: 'exact' })
+            .eq('host_id', hostId);
+            
+        if (tripIdsToPreserve.length > 0) {
+            deleteTripsQuery = deleteTripsQuery.not('id', 'in', tripIdsToPreserve);
+        }
+        // If no trips to preserve, all trips will be deleted for this host
+        
+        const { count: deletedTrips, error: deleteTripsError } = await deleteTripsQuery;
+        
+        if (deleteTripsError) throw deleteTripsError;
+        results.trips_without_invoices_deleted = deletedTrips || 0;
+        console.log(`🗑️ Deleted ${results.trips_without_invoices_deleted} trips without invoices or toll references`);
+        
+        // Get toll account IDs referenced by archived toll charges
+        const { data: referencedTollAccounts } = await supabaseAdmin
+            .from('toll_charges')
+            .select('toll_account_id')
+            .eq('is_archived', true);
+        
+        const tollAccountIdsToPreserve = referencedTollAccounts?.filter(tc => tc.toll_account_id != null).map(tc => tc.toll_account_id) || [];
+        
+        // Delete toll accounts NOT referenced by archived toll charges
+        console.log('🗑️ Deleting toll accounts not referenced by archived charges...');
+        let deleteTollAccountsQuery = supabaseAdmin
+            .from('toll_accounts')
+            .delete({ count: 'exact' })
+            .eq('host_id', hostId);
+            
+        if (tollAccountIdsToPreserve.length > 0) {
+            deleteTollAccountsQuery = deleteTollAccountsQuery.not('id', 'in', tollAccountIdsToPreserve);
+        }
+        // If no toll accounts to preserve, all toll accounts will be deleted for this host
+        
+        const { count: deletedTollAccounts, error: deleteTollAccountsError } = await deleteTollAccountsQuery;
+        
+        if (deleteTollAccountsError) throw deleteTollAccountsError;
+        results.toll_accounts_deleted = deletedTollAccounts || 0;
+        console.log(`🗑️ Deleted ${results.toll_accounts_deleted} toll accounts (preserved those referenced by archived charges)`);
+        
+        // Check for missing toll_accounts that are referenced by archived charges
+        if (tollAccountIdsToPreserve.length > 0) {
+            const { data: existingTollAccounts } = await supabaseAdmin
+                .from('toll_accounts')
+                .select('id')
+                .in('id', tollAccountIdsToPreserve);
+            
+            const existingIds = existingTollAccounts?.map(ta => ta.id) || [];
+            const missingAccountIds = tollAccountIdsToPreserve.filter(id => !existingIds.includes(id));
+            
+            if (missingAccountIds.length > 0) {
+                console.log(`🔧 Recreating ${missingAccountIds.length} missing toll_accounts for archived charges`);
+                
+                const missingAccountsToInsert = missingAccountIds.map(accountId => ({
+                    id: accountId,
+                    host_id: hostId,
+                    provider: 'ARCHIVED',
+                    account_number: `ARCHIVED-${accountId}`,
+                    username: 'archived@system',
+                    password_encrypted: 'archived_password',
+                    is_active: false
+                }));
+                
+                const { error: insertError } = await supabaseAdmin
+                    .from('toll_accounts')
+                    .insert(missingAccountsToInsert);
+                
+                if (insertError) {
+                    console.warn(`⚠️ Could not recreate missing toll_accounts:`, insertError.message);
+                } else {
+                    console.log(`✅ Recreated ${missingAccountIds.length} toll_accounts`);
                 }
-            );
-        });
+            } else {
+                console.log('✅ All archived toll charges have valid toll_account references');
+            }
+        }
+        
+        // Clear late tolls detected table - get trip IDs first
+        const { data: hostTrips } = await supabaseAdmin
+            .from('trips')
+            .select('id')
+            .eq('host_id', hostId);
+            
+        const hostTripIds = hostTrips?.map(trip => trip.id) || [];
+        
+        let deletedLateTolls = 0;
+        if (hostTripIds.length > 0) {
+            const { count, error: deleteLateError } = await supabaseAdmin
+                .from('late_tolls_detected')
+                .delete({ count: 'exact' })
+                .in('trip_id', hostTripIds);
+                
+            if (deleteLateError) throw deleteLateError;
+            deletedLateTolls = count || 0;
+        }
+        
+        results.late_tolls_deleted = deletedLateTolls;
+        console.log(`🗑️ Deleted ${results.late_tolls_deleted} late toll detections`);
         
         // Store preserved counts for response
         results.invoices_preserved = preservedCount.invoices;
@@ -2657,78 +2711,34 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         
         // Clear analytics and logs (these can be safely cleared - don't affect toll memory)
         const analyticsTablesToClear = [
-            'analytics_metrics',
-            'automated_reports',
-            'backup_logs',
-            'bi_reports',
-            'data_checkpoints',
-            'financial_analytics',
-            'notification_events',
-            'notification_logs',
-            'notification_queue',
-            'performance_metrics',
-            'predictive_analytics',
-            'security_logs',
-            'toll_location_analytics',
-            'transaction_log',
-            'trip_status_history',
-            'trip_status_intelligence',
-            'user_trip_patterns',
-            'validation_errors',
-            'vehicle_analytics',
-            'ml_timing_patterns',
-            'login_attempts'
+            'deleted_transponder_plates',
             // NOTE: We preserve:
             // - invoices & invoice_items (toll memory system for preventing double-charging!)
             // - transponder_mappings (user vehicle configurations)
-            // - deleted_transponder_plates (user preferences)
             // - hosts (needed for login)
-            // DELETED for fresh start: toll_accounts, trips, toll_charges not in invoices
+            // DELETED for fresh start: toll_accounts, trips, toll_charges not in invoices, deleted_transponder_plates
         ];
         
         let analyticsCleared = 0;
         for (const table of analyticsTablesToClear) {
             try {
-                await new Promise((resolve, reject) => {
-                    db.run(
-                        `DELETE FROM ${table} WHERE EXISTS (
-                            SELECT 1 FROM hosts WHERE id = ? 
-                        )`,
-                        [hostId],
-                        function(err) {
-                            if (err) {
-                                console.warn(`⚠️ Could not clear analytics table ${table}:`, err.message);
-                                resolve(); // Continue with other tables
-                            } else {
-                                analyticsCleared += this.changes;
-                                console.log(`✅ Deleted ${this.changes} analytics records from ${table}`);
-                                resolve();
-                            }
-                        }
-                    );
-                });
+                const { count: deletedAnalytics, error: deleteAnalyticsError } = await supabaseAdmin
+                    .from(table)
+                    .delete({ count: 'exact' })
+                    .eq('host_id', hostId);
+                
+                if (deleteAnalyticsError) {
+                    console.warn(`⚠️ Could not clear analytics table ${table}:`, deleteAnalyticsError.message);
+                } else {
+                    analyticsCleared += deletedAnalytics || 0;
+                    console.log(`✅ Deleted ${deletedAnalytics || 0} analytics records from ${table}`);
+                }
             } catch (error) {
                 console.warn(`⚠️ Error clearing analytics table ${table}:`, error.message);
             }
         }
         
         results.analytics_cleared = analyticsCleared;
-        
-        // Commit the transaction and re-enable foreign keys
-        await new Promise((resolve, reject) => {
-            db.run('COMMIT', (err) => {
-                if (err) reject(err);
-                else {
-                    db.run('PRAGMA foreign_keys = ON', (err) => {
-                        if (err) reject(err);
-                        else {
-                            console.log('✅ Transaction committed successfully and foreign keys re-enabled');
-                            resolve();
-                        }
-                    });
-                }
-            });
-        });
         
         // Clear cache to force dashboard refresh
         const cacheKey = CacheKeys.dashboardSummary(hostId);
@@ -2743,23 +2753,6 @@ router.post('/clear-data', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ Error clearing data:', error);
-        
-        // Rollback transaction on error and re-enable foreign keys
-        await new Promise((resolve) => {
-            db.run('ROLLBACK', (err) => {
-                if (err) {
-                    console.error('❌ Error rolling back transaction:', err);
-                }
-                db.run('PRAGMA foreign_keys = ON', (err2) => {
-                    if (err2) {
-                        console.error('❌ Error re-enabling foreign keys:', err2);
-                    } else if (!err) {
-                        console.log('⚠️ Transaction rolled back and foreign keys re-enabled');
-                    }
-                    resolve();
-                });
-            });
-        });
         
         res.status(500).json({
             success: false,
