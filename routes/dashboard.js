@@ -46,7 +46,7 @@ async function checkForLateToll(tollCharge, hostId) {
             .from('invoices')
             .select(`
                 trip_id,
-                created_at as submission_date,
+                created_at,
                 trips!inner(
                     id,
                     turo_trip_id,
@@ -73,7 +73,7 @@ async function checkForLateToll(tollCharge, hostId) {
             const trip = invoice.trips;
             const tripStart = new Date(trip.start_date);
             const tripEnd = new Date(trip.end_date);
-            const submissionDate = new Date(invoice.submission_date);
+            const submissionDate = new Date(invoice.created_at);
 
             // Allow tolls within trip period or up to 7 days after trip end (late processing)
             const graceEndDate = new Date(tripEnd);
