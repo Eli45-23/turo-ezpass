@@ -779,7 +779,7 @@ async function matchTollsToTrips(hostId) {
             .from('trips')
             .select('*')
             .eq('host_id', hostId)
-            .not('trip_status', 'in', ['canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'].join(','))
+            .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)')
             .order('start_date', { ascending: true });
 
         if (tripsError) {

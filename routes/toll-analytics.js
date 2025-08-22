@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
@@ -490,102 +490,171 @@ async function getTollTrends(hostId, period, months) {
 
 // Get top toll locations
 async function getTopTollLocations(hostId, limit) {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                tc.toll_location as location,
-                COUNT(*) as usage_count,
-                COALESCE(SUM(tc.toll_amount), 0) as total_cost,
-                COALESCE(AVG(tc.toll_amount), 0) as avg_cost,
-                COUNT(DISTINCT t.vehicle_plate) as vehicles_used
-            FROM toll_charges tc
-            JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            LEFT JOIN trips t ON tc.trip_id = t.turo_trip_id
-            WHERE ta.host_id = ? AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-            GROUP BY tc.toll_location
-            ORDER BY total_cost DESC
-            LIMIT ?
-        `;
+    try {
+        // Get toll charges with account and trip info
+        const { data: tollData, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                toll_location,
+                toll_amount,
+                trip_id,
+                toll_accounts!inner(host_id),
+                trips(vehicle_plate)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false');
+
+        if (error) throw error;
+
+        // Group by toll location and calculate stats
+        const locationStats = {};
         
-        db.all(query, [hostId, limit], (err, results) => {
-            if (err) {
-                reject(err);
-                return;
+        tollData.forEach(charge => {
+            const location = charge.toll_location || 'Unknown Location';
+            const amount = parseFloat(charge.toll_amount) || 0;
+            const vehicle = charge.trips?.vehicle_plate;
+            
+            if (!locationStats[location]) {
+                locationStats[location] = {
+                    location,
+                    usage_count: 0,
+                    total_cost: 0,
+                    amounts: [],
+                    vehicles: new Set()
+                };
             }
             
-            resolve(results);
+            locationStats[location].usage_count++;
+            locationStats[location].total_cost += amount;
+            locationStats[location].amounts.push(amount);
+            if (vehicle) {
+                locationStats[location].vehicles.add(vehicle);
+            }
         });
-    });
+
+        // Convert to array and calculate averages
+        const results = Object.values(locationStats).map(stats => ({
+            location: stats.location,
+            usage_count: stats.usage_count,
+            total_cost: stats.total_cost,
+            avg_cost: stats.amounts.length > 0 ? 
+                stats.amounts.reduce((sum, amt) => sum + amt, 0) / stats.amounts.length : 0,
+            vehicles_used: stats.vehicles.size
+        }));
+
+        // Sort by total cost descending and limit
+        results.sort((a, b) => b.total_cost - a.total_cost);
+        return results.slice(0, parseInt(limit) || 10);
+        
+    } catch (error) {
+        console.error('Error in getTopTollLocations:', error);
+        throw error;
+    }
 }
 
 // Get vehicle toll impact analysis  
 async function getVehicleTollImpact(hostId) {
-    return new Promise((resolve, reject) => {
+    try {
         console.log('🔧 Getting vehicle toll impact for hostId:', hostId);
         
-        // Get vehicles with their actual toll costs using proper joins (exclude archived toll charges)
-        const vehicleQuery = `
-            SELECT 
-                t.vehicle_plate,
-                COUNT(DISTINCT t.id) as total_trips,
-                COUNT(DISTINCT tc.id) as toll_charges_count,
-                COALESCE(SUM(tc.toll_amount), 0) as total_toll_costs,
-                COALESCE(AVG(tc.toll_amount), 0) as avg_toll_amount
-            FROM trips t
-            LEFT JOIN toll_charges tc ON (
-                tc.trip_id = t.turo_trip_id 
-                OR tc.trip_id = t.id
-                OR (tc.plate_number = t.vehicle_plate AND 
-                    DATE(tc.toll_date, 'unixepoch') BETWEEN DATE(t.start_date) AND DATE(t.end_date))
-            ) AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-            LEFT JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-            WHERE t.host_id = ? 
-              AND (t.trip_status IS NULL OR t.trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-              AND (ta.host_id = ? OR ta.host_id IS NULL)
-            GROUP BY t.vehicle_plate
-            ORDER BY total_toll_costs DESC, total_trips DESC
-        `;
+        // Get all trips for this host (non-canceled)
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
+
+        if (tripsError) throw tripsError;
+
+        // Get toll charges for this host
+        const { data: tollCharges, error: tollError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .or('is_archived.is.null,is_archived.eq.false');
+
+        if (tollError) throw tollError;
+
+        // Group trips by vehicle
+        const vehicleStats = {};
         
-        db.all(vehicleQuery, [hostId, hostId], (err, vehicles) => {
-            if (err) {
-                console.error('❌ Error getting vehicles with toll data:', err);
-                reject(err);
-                return;
-            }
-            
-            console.log('✅ Found vehicles with toll data:', vehicles.length);
-            
-            const vehiclesWithTolls = vehicles.map((vehicle, index) => {
-                const tollCosts = parseFloat(vehicle.total_toll_costs) || 0;
-                const totalTrips = parseInt(vehicle.total_trips) || 0;
-                const tollCharges = parseInt(vehicle.toll_charges_count) || 0;
-                
-                // Calculate realistic toll impact percentage (cost as % of estimated revenue)
-                const estimatedRevenue = totalTrips * 85; // $85 avg per trip
-                const tollImpactPercentage = estimatedRevenue > 0 ? (tollCosts / estimatedRevenue * 100) : 0;
-                
-                return {
-                    vehicle_plate: vehicle.vehicle_plate,
-                    total_trips: totalTrips,
-                    trips_with_tolls: tollCharges,
-                    total_toll_costs: tollCosts,
-                    estimated_toll_costs: tollCosts, // For compatibility with frontend
-                    avg_toll_per_charge: tollCharges > 0 ? tollCosts / tollCharges : 0,
-                    avg_toll_per_trip: totalTrips > 0 ? tollCosts / totalTrips : 0,
-                    most_used_route: index === 0 ? 'CRZ' : index === 1 ? 'HT' : 'Unknown',
-                    toll_impact_percentage: Math.min(tollImpactPercentage, 100) // Cap at 100%
+        trips.forEach(trip => {
+            const plate = trip.vehicle_plate;
+            if (!vehicleStats[plate]) {
+                vehicleStats[plate] = {
+                    vehicle_plate: plate,
+                    total_trips: 0,
+                    tollCharges: [],
+                    trips: []
                 };
-            });
-            
-            console.log('✅ Vehicle toll data calculated with real data:', vehiclesWithTolls.map(v => ({
-                plate: v.vehicle_plate,
-                trips: v.total_trips,
-                tollCost: v.total_toll_costs,
-                tollCharges: v.trips_with_tolls
-            })));
-            resolve(vehiclesWithTolls);
+            }
+            vehicleStats[plate].total_trips++;
+            vehicleStats[plate].trips.push(trip);
         });
-    });
+
+        // Match toll charges to vehicles
+        tollCharges.forEach(charge => {
+            const plate = charge.plate_number;
+            const tripId = charge.trip_id;
+            
+            // Try to match by plate first
+            if (plate && vehicleStats[plate]) {
+                vehicleStats[plate].tollCharges.push(charge);
+            } else if (tripId) {
+                // Try to match by trip ID
+                Object.values(vehicleStats).forEach(vehicle => {
+                    const matchingTrip = vehicle.trips.find(trip => 
+                        trip.turo_trip_id === tripId || trip.id === tripId);
+                    if (matchingTrip) {
+                        vehicle.tollCharges.push(charge);
+                    }
+                });
+            }
+        });
+
+        // Calculate statistics for each vehicle
+        const vehiclesWithTolls = Object.values(vehicleStats).map((vehicle, index) => {
+            const tollCosts = vehicle.tollCharges.reduce((sum, charge) => 
+                sum + (parseFloat(charge.toll_amount) || 0), 0);
+            const totalTrips = vehicle.total_trips;
+            const tollChargesCount = vehicle.tollCharges.length;
+            
+            // Calculate realistic toll impact percentage (cost as % of estimated revenue)
+            const estimatedRevenue = totalTrips * 85; // $85 avg per trip
+            const tollImpactPercentage = estimatedRevenue > 0 ? (tollCosts / estimatedRevenue * 100) : 0;
+            
+            return {
+                vehicle_plate: vehicle.vehicle_plate,
+                total_trips: totalTrips,
+                trips_with_tolls: tollChargesCount,
+                total_toll_costs: tollCosts,
+                estimated_toll_costs: tollCosts, // For compatibility with frontend
+                avg_toll_per_charge: tollChargesCount > 0 ? tollCosts / tollChargesCount : 0,
+                avg_toll_per_trip: totalTrips > 0 ? tollCosts / totalTrips : 0,
+                most_used_route: index === 0 ? 'CRZ' : index === 1 ? 'HT' : 'Unknown',
+                toll_impact_percentage: Math.min(tollImpactPercentage, 100) // Cap at 100%
+            };
+        });
+
+        // Sort by total toll costs descending
+        vehiclesWithTolls.sort((a, b) => b.total_toll_costs - a.total_toll_costs);
+        
+        console.log('✅ Vehicle toll data calculated with real data:', vehiclesWithTolls.map(v => ({
+            plate: v.vehicle_plate,
+            trips: v.total_trips,
+            tollCost: v.total_toll_costs,
+            tollCharges: v.trips_with_tolls
+        })));
+        
+        return vehiclesWithTolls;
+        
+    } catch (error) {
+        console.error('❌ Error getting vehicles with toll data:', error);
+        throw error;
+    }
 }
 
 // Get vehicles with zero toll trips (toll-free trips)

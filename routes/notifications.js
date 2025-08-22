@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const NotificationManager = require('../services/notification-manager');
-const { db } = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 
 // Initialize notification manager
 const notificationManager = new NotificationManager();
@@ -99,13 +99,12 @@ router.post('/test', requireAuth, requireNotificationManager, async (req, res) =
     try {
         const { type = 'test-alert' } = req.body;
         
-        // Get host info
-        const host = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM hosts WHERE id = ?', [req.session.hostId], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        // Get host info from Supabase
+        const { data: host, error } = await supabaseAdmin
+            .from('hosts')
+            .select('*')
+            .eq('id', req.session.hostId)
+            .single();
 
         if (!host) {
             return res.status(404).json({ error: 'Host not found' });

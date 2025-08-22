@@ -163,7 +163,7 @@ async function executeOptimizedSummaryQuery(hostId) {
             .from('trips')
             .select('*')
             .eq('host_id', hostId)
-            .not('trip_status', 'in', ['canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'].join(','));
+            .not('trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
 
         if (tripsError) {
             console.error('❌ Error fetching trips:', tripsError);
@@ -205,7 +205,7 @@ async function executeOptimizedSummaryQuery(hostId) {
                 trips!inner(host_id, trip_status)
             `)
             .eq('trips.host_id', hostId)
-            .not('trips.trip_status', 'in', ['canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'].join(','));
+            .not('trips.trip_status', 'in', '(canceled,cancelled,declined,expired,terminated,rejected)');
 
         if (invoicesError) {
             console.error('❌ Error fetching invoices:', invoicesError);

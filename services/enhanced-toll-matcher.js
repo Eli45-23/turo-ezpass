@@ -749,7 +749,7 @@ class EnhancedTollMatcher {
                 .from('trips')
                 .select('*')
                 .eq('host_id', hostId)
-                .not('trip_status', 'in', ['canceled', 'cancelled', 'declined'].join(','))
+                .not('trip_status', 'in', '(canceled,cancelled,declined)')
                 .order('start_date', { ascending: false });
 
             if (tripsError) throw tripsError;
