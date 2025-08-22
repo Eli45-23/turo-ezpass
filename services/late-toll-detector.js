@@ -185,7 +185,7 @@ class LateTollDetector {
         try {
             const { data: stats, error } = await global.supabaseAdmin
                 .from('late_tolls_detected')
-                .select('status, toll_amount')
+                .select('status, amount')
                 .order('detection_date', { ascending: false });
 
             if (error) {
@@ -194,7 +194,7 @@ class LateTollDetector {
             }
 
             const totalCount = stats?.length || 0;
-            const totalAmount = stats?.reduce((sum, item) => sum + parseFloat(item.toll_amount || 0), 0) || 0;
+            const totalAmount = stats?.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0) || 0;
             const byStatus = stats?.reduce((acc, item) => {
                 acc[item.status] = (acc[item.status] || 0) + 1;
                 return acc;

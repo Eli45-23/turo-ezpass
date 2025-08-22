@@ -100,13 +100,8 @@ async function checkForLateToll(tollCharge, hostId) {
                         .insert({
                             trip_id: trip.id,
                             toll_charge_id: tollCharge.id,
-                            original_submission_date: submissionDate.toISOString(),
-                            detection_date: new Date().toISOString(),
-                            toll_amount: tollCharge.toll_amount,
-                            toll_location: tollCharge.toll_location,
-                            toll_date: tollCharge.toll_date,
-                            status: 'detected',
-                            host_id: hostId
+                            amount: tollCharge.toll_amount,
+                            status: 'new'
                         });
 
                     if (insertError) {

@@ -848,12 +848,15 @@ router.post('/late-tolls/:lateTollId/resolve', requireAuth, async (req, res) => 
     try {
         console.log(`🔧 Resolving late toll ${lateTollId} with status: ${status}`);
 
-        // Verify ownership
+        // Verify ownership through trip relationship
         const { data: lateToll, error: fetchError } = await supabaseAdmin
             .from('late_tolls_detected')
-            .select('*')
+            .select(`
+                *,
+                trips!inner(host_id)
+            `)
             .eq('id', lateTollId)
-            .eq('host_id', hostId)
+            .eq('trips.host_id', hostId)
             .single();
 
         if (fetchError) {
