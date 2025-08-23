@@ -128,7 +128,19 @@ class LateTollDetector {
                         continue;
                     }
                     
-                    // This is a genuinely late toll (set difference result)
+                    // Third check: Was this toll posted to E-ZPass BEFORE the invoice was submitted?
+                    // If so, it's not a "late toll" - it was just missed during original invoice creation
+                    if (toll.submission_date) {
+                        const tollPostedDate = new Date(toll.submission_date);
+                        const invoiceSubmissionDate = new Date(invoice.created_at);
+                        
+                        if (tollPostedDate <= invoiceSubmissionDate) {
+                            console.log(`⏰ Toll ${toll.id} was posted ${tollPostedDate.toISOString()} before invoice submission ${invoiceSubmissionDate.toISOString()} - not a late toll`);
+                            continue;
+                        }
+                    }
+                    
+                    // This is a genuinely late toll (posted AFTER invoice submission)
                     lateTolls.push(toll);
                 }
 
