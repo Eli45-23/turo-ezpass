@@ -159,21 +159,46 @@ class LateTollDetector {
      */
     async getTollsInExactTripWindow(trip) {
         try {
-            // Query tolls that fall strictly within the trip's start and end dates/times
-            const { data: tolls, error } = await global.supabaseAdmin
+            // Query ALL tolls assigned to this trip, then filter by time window
+            // This fixes the issue where tolls outside the trip window were incorrectly assigned
+            const { data: assignedTolls, error } = await global.supabaseAdmin
                 .from('toll_charges')
                 .select('*')
-                .eq('trip_id', trip.id)
-                .gte('toll_date', trip.start_date)
-                .lte('toll_date', trip.end_date);
+                .eq('trip_id', trip.id);
             
             if (error) {
-                console.error(`❌ Error fetching tolls in trip window for trip ${trip.id}:`, error);
+                console.error(`❌ Error fetching tolls for trip ${trip.id}:`, error);
                 return null;
             }
             
-            console.log(`🔍 Found ${tolls?.length || 0} tolls in exact window for trip ${trip.id}`);
-            return tolls || [];
+            // Filter tolls to only include those within the EXACT trip time window
+            const tollsInWindow = (assignedTolls || []).filter(toll => {
+                const tollDate = new Date(toll.toll_date);
+                const tripStart = new Date(trip.start_date);
+                const tripEnd = new Date(trip.end_date);
+                
+                return tollDate >= tripStart && tollDate <= tripEnd;
+            });
+            
+            console.log(`🔍 Found ${assignedTolls?.length || 0} assigned tolls, ${tollsInWindow.length} within exact window for trip ${trip.id}`);
+            
+            // Log any tolls that are outside the window for debugging
+            const outsideWindow = (assignedTolls || []).filter(toll => {
+                const tollDate = new Date(toll.toll_date);
+                const tripStart = new Date(trip.start_date);
+                const tripEnd = new Date(trip.end_date);
+                
+                return tollDate < tripStart || tollDate > tripEnd;
+            });
+            
+            if (outsideWindow.length > 0) {
+                console.warn(`⚠️ Found ${outsideWindow.length} tolls outside trip window for trip ${trip.id} - these will be ignored`);
+                outsideWindow.forEach(toll => {
+                    console.warn(`   - Toll ${toll.id}: ${toll.toll_date} (${toll.toll_location}) is outside ${trip.start_date} to ${trip.end_date}`);
+                });
+            }
+            
+            return tollsInWindow;
             
         } catch (error) {
             console.error(`❌ Error in getTollsInExactTripWindow:`, error);

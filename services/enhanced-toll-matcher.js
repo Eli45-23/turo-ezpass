@@ -261,13 +261,12 @@ class EnhancedTollMatcher {
             const tripStart = new Date(trip.start_date);
             const tripEnd = new Date(trip.end_date);
             
-            // Extended time window: allow 2 days before trip start for preparation/travel
-            const preBufferMs = 2 * 24 * 60 * 60 * 1000; // 2 days before
-            const postBufferMs = 4 * 60 * 60 * 1000; // 4 hours after for late returns
-            const adjustedStart = new Date(tripStart.getTime() - preBufferMs);
-            const adjustedEnd = new Date(tripEnd.getTime() + postBufferMs);
+            // STRICT time window: only match tolls within actual trip period
+            // No buffer time to prevent incorrect toll assignments
+            const adjustedStart = tripStart;
+            const adjustedEnd = tripEnd;
             
-            // Use extended time window - toll can be 2 days before to 4 hours after trip
+            // Use strict time window - toll must be within exact trip period
             if (tollDate >= adjustedStart && tollDate <= adjustedEnd) {
                 
                 // Method 1: Direct plate match
@@ -379,8 +378,8 @@ class EnhancedTollMatcher {
         for (const trip of trips) {
             const tripStart = new Date(trip.start_date);
             const tripEnd = new Date(trip.end_date);
-            const adjustedStart = new Date(tripStart.getTime() - bufferMs);
-            const adjustedEnd = new Date(tripEnd.getTime() + bufferMs);
+            const adjustedStart = tripStart;
+            const adjustedEnd = tripEnd;
             
             if (tollDate >= adjustedStart && tollDate <= adjustedEnd) {
                 if (toll.plate_number && trip.vehicle_plate) {
@@ -418,7 +417,7 @@ class EnhancedTollMatcher {
         
         const transponderNum = toll.plate_number;
         const tollDate = new Date(toll.toll_date);
-        const bufferMs = this.config.normalDateBuffer * 24 * 60 * 60 * 1000;
+        const bufferMs = 0; // No buffer - strict matching only
         
         // Check learned patterns
         if (this.patternCache.transponderMappings.has(transponderNum)) {
@@ -452,13 +451,13 @@ class EnhancedTollMatcher {
      */
     async expandedDateMatch(toll, trips, transponderMappings, hostId) {
         const tollDate = new Date(toll.toll_date);
-        const bufferMs = this.config.relaxedDateBuffer * 24 * 60 * 60 * 1000;
+        const bufferMs = 0; // No buffer - strict matching only
         
         for (const trip of trips) {
             const tripStart = new Date(trip.start_date);
             const tripEnd = new Date(trip.end_date);
-            const adjustedStart = new Date(tripStart.getTime() - bufferMs);
-            const adjustedEnd = new Date(tripEnd.getTime() + bufferMs);
+            const adjustedStart = tripStart;
+            const adjustedEnd = tripEnd;
             
             if (tollDate >= adjustedStart && tollDate <= adjustedEnd) {
                 // Check vehicle matches with expanded time window
@@ -516,9 +515,8 @@ class EnhancedTollMatcher {
             const tripStart = new Date(trip.start_date);
             const tripEnd = new Date(trip.end_date);
             
-            // Check if toll occurred during trip period (very relaxed)
-            const weekBuffer = 7 * 24 * 60 * 60 * 1000; // ±1 week
-            if (Math.abs(tollDate - tripStart) <= weekBuffer || Math.abs(tollDate - tripEnd) <= weekBuffer) {
+            // Check if toll occurred during trip period (strict)
+            if (tollDate >= tripStart && tollDate <= tripEnd) {
                 // Check time-of-day pattern
                 const tripStartHour = tripStart.getHours();
                 const tripEndHour = tripEnd.getHours();
