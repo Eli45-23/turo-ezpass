@@ -139,11 +139,17 @@ router.get('/', requireAuth, async (req, res) => {
                         minute: '2-digit',
                         hour12: true
                     }),
+                    tollDate: new Date(toll.toll_date), // Store original date for sorting
                     provider: toll.toll_accounts?.provider || 'Unknown',
                     transponder: toll.transponder_id || toll.plate_number || 'Unknown',
                     transactionId: toll.transaction_id || null
                 });
             }
+        });
+        
+        // Sort tolls within each trip from most recent to oldest
+        Object.keys(tollsByTrip).forEach(tripId => {
+            tollsByTrip[tripId].sort((a, b) => b.tollDate - a.tollDate);
         });
         
         // Transform trips data
@@ -575,7 +581,7 @@ router.get('/:id', requireAuth, async (req, res) => {
                 toll_accounts(provider, account_number)
             `)
             .eq('trip_id', trip.id)
-            .order('toll_date', { ascending: true });
+            .order('toll_date', { ascending: false });
         
         if (tollError) {
             console.error('❌ Failed to fetch toll charges:', tollError);
