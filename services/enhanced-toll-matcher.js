@@ -275,33 +275,14 @@ class EnhancedTollMatcher {
                     const tripPlate = this.normalizePlate(trip.vehicle_plate);
                     
                     if (tollPlate === tripPlate) {
-                        // Calculate confidence based on how close toll is to trip window
-                        const originalTripStart = new Date(trip.start_date);
-                        const originalTripEnd = new Date(trip.end_date);
-                        let confidence = 0.95;
-                        let timeDescription = "within trip window";
-                        
-                        if (tollDate < originalTripStart) {
-                            const hoursBefore = (originalTripStart - tollDate) / (1000 * 60 * 60);
-                            if (hoursBefore <= 24) {
-                                confidence = 0.90; // 1 day before
-                                timeDescription = `${Math.round(hoursBefore)}h before trip`;
-                            } else {
-                                confidence = 0.85; // 2 days before
-                                timeDescription = `${Math.round(hoursBefore/24)}d before trip`;
-                            }
-                        } else if (tollDate > originalTripEnd) {
-                            const hoursAfter = (tollDate - originalTripEnd) / (1000 * 60 * 60);
-                            confidence = 0.90;
-                            timeDescription = `${Math.round(hoursAfter)}h after trip`;
-                        }
-                        
+                        // Toll is already verified to be within trip window by outer if condition
+                        // No need to recalculate - it's within bounds with high confidence
                         return {
                             match: true,
                             toll: toll,
                             trip: trip,
-                            confidence: confidence,
-                            reason: `Direct plate match: ${tollPlate} (${timeDescription})`
+                            confidence: 0.95,
+                            reason: `Direct plate match: ${tollPlate} (within trip window)`
                         };
                     }
                 }
@@ -314,33 +295,14 @@ class EnhancedTollMatcher {
                         const tripPlate = this.normalizePlate(trip.vehicle_plate);
                         
                         if (resolvedPlate === tripPlate) {
-                            // Calculate confidence based on how close toll is to trip window
-                            const originalTripStart = new Date(trip.start_date);
-                            const originalTripEnd = new Date(trip.end_date);
-                            let confidence = 0.90;
-                            let timeDescription = "within trip window";
-                            
-                            if (tollDate < originalTripStart) {
-                                const hoursBefore = (originalTripStart - tollDate) / (1000 * 60 * 60);
-                                if (hoursBefore <= 24) {
-                                    confidence = 0.85; // 1 day before
-                                    timeDescription = `${Math.round(hoursBefore)}h before trip`;
-                                } else {
-                                    confidence = 0.80; // 2 days before
-                                    timeDescription = `${Math.round(hoursBefore/24)}d before trip`;
-                                }
-                            } else if (tollDate > originalTripEnd) {
-                                const hoursAfter = (tollDate - originalTripEnd) / (1000 * 60 * 60);
-                                confidence = 0.85;
-                                timeDescription = `${Math.round(hoursAfter)}h after trip`;
-                            }
-                            
+                            // Toll is already verified to be within trip window by outer if condition
+                            // Transponder matching has slightly lower confidence than direct plate matching
                             return {
                                 match: true,
                                 toll: toll,
                                 trip: trip,
-                                confidence: confidence,
-                                reason: `Transponder match: ${toll.plate_number} → ${resolvedPlate} (${transponderMapping.description}, ${timeDescription})`
+                                confidence: 0.90,
+                                reason: `Transponder match: ${toll.plate_number} → ${resolvedPlate} (${transponderMapping.description}, within trip window)`
                             };
                         }
                     }

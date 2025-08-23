@@ -119,16 +119,25 @@ class LateTollDetector {
                     // First check: Was this toll ID in the original invoice snapshot?
                     const wasInOriginalInvoice = originalTollIds.includes(toll.id);
                     if (wasInOriginalInvoice) {
+                        console.log(`🔍 Toll ${toll.id} already in original invoice - skipping`);
                         continue;
                     }
                     
-                    // Second check: Is this a duplicate based on transaction_id or fingerprint?
+                    // Second check: Is this toll already submitted to Turo in ANY invoice?
+                    // This prevents already-invoiced tolls from being flagged as late
+                    if (toll.submitted_to_turo === true || toll.invoice_id) {
+                        console.log(`🔍 Toll ${toll.id} already submitted (invoice_id: ${toll.invoice_id}) - skipping`);
+                        continue;
+                    }
+                    
+                    // Third check: Is this a duplicate based on transaction_id or fingerprint?
                     const isDuplicateInSnapshot = await this.tollExistsInInvoiceSnapshot(toll, invoice);
                     if (isDuplicateInSnapshot) {
+                        console.log(`🔍 Toll ${toll.id} is duplicate by fingerprint - skipping`);
                         continue;
                     }
                     
-                    // Third check: Was this toll posted to E-ZPass BEFORE the invoice was submitted?
+                    // Fourth check: Was this toll posted to E-ZPass BEFORE the invoice was submitted?
                     // If so, it's not a "late toll" - it was just missed during original invoice creation
                     if (toll.submission_date) {
                         const tollPostedDate = new Date(toll.submission_date);
@@ -140,7 +149,18 @@ class LateTollDetector {
                         }
                     }
                     
-                    // This is a genuinely late toll (posted AFTER invoice submission)
+                    // Additional safety check: Ensure toll date is strictly within trip window
+                    const tollDate = new Date(toll.toll_date);
+                    const tripStart = new Date(trip.start_date);
+                    const tripEnd = new Date(trip.end_date);
+                    
+                    if (tollDate < tripStart || tollDate > tripEnd) {
+                        console.log(`⚠️ Toll ${toll.id} date ${toll.toll_date} is outside trip window ${trip.start_date} to ${trip.end_date} - rejecting`);
+                        continue;
+                    }
+                    
+                    // This is a genuinely late toll (posted AFTER invoice submission AND within trip window)
+                    console.log(`🚨 Confirmed late toll: ${toll.id} - posted ${toll.submission_date || 'unknown'} after invoice ${invoice.created_at}`);
                     lateTolls.push(toll);
                 }
 
@@ -168,9 +188,26 @@ class LateTollDetector {
 
     /**
      * Get all tolls that fall within the EXACT trip time window (no grace period)
+     * Enhanced with strict validation and better logging
      */
     async getTollsInExactTripWindow(trip) {
         try {
+            // Validate trip dates first
+            const tripStart = new Date(trip.start_date);
+            const tripEnd = new Date(trip.end_date);
+            
+            if (!trip.start_date || !trip.end_date || isNaN(tripStart.getTime()) || isNaN(tripEnd.getTime())) {
+                console.error(`❌ Invalid trip dates for trip ${trip.id}: start=${trip.start_date}, end=${trip.end_date}`);
+                return null;
+            }
+            
+            if (tripStart >= tripEnd) {
+                console.error(`❌ Invalid trip date range for trip ${trip.id}: start (${trip.start_date}) >= end (${trip.end_date})`);
+                return null;
+            }
+            
+            console.log(`🔍 Checking trip ${trip.id} window: ${trip.start_date} to ${trip.end_date}`);
+            
             // Query ALL tolls assigned to this trip, then filter by time window
             // This fixes the issue where tolls outside the trip window were incorrectly assigned
             const { data: assignedTolls, error } = await global.supabaseAdmin
@@ -183,37 +220,58 @@ class LateTollDetector {
                 return null;
             }
             
-            // Filter tolls to only include those within the EXACT trip time window
-            const tollsInWindow = (assignedTolls || []).filter(toll => {
-                const tollDate = new Date(toll.toll_date);
-                const tripStart = new Date(trip.start_date);
-                const tripEnd = new Date(trip.end_date);
-                
-                return tollDate >= tripStart && tollDate <= tripEnd;
-            });
+            if (!assignedTolls || assignedTolls.length === 0) {
+                console.log(`📝 No tolls assigned to trip ${trip.id}`);
+                return [];
+            }
             
-            console.log(`🔍 Found ${assignedTolls?.length || 0} assigned tolls, ${tollsInWindow.length} within exact window for trip ${trip.id}`);
+            // Filter tolls to only include those within the EXACT trip time window
+            const tollsInWindow = [];
+            const outsideWindow = [];
+            
+            for (const toll of assignedTolls) {
+                if (!toll.toll_date) {
+                    console.warn(`⚠️ Toll ${toll.id} has no toll_date - skipping`);
+                    continue;
+                }
+                
+                const tollDate = new Date(toll.toll_date);
+                if (isNaN(tollDate.getTime())) {
+                    console.warn(`⚠️ Toll ${toll.id} has invalid toll_date: ${toll.toll_date} - skipping`);
+                    continue;
+                }
+                
+                // Strict boundary check with millisecond precision
+                if (tollDate >= tripStart && tollDate <= tripEnd) {
+                    tollsInWindow.push(toll);
+                    console.log(`✅ Toll ${toll.id} (${toll.toll_location}, ${toll.toll_date}) is within trip window`);
+                } else {
+                    outsideWindow.push(toll);
+                }
+            }
+            
+            console.log(`🔍 Trip ${trip.id}: ${assignedTolls.length} total tolls, ${tollsInWindow.length} within window, ${outsideWindow.length} outside`);
             
             // Log any tolls that are outside the window for debugging
-            const outsideWindow = (assignedTolls || []).filter(toll => {
-                const tollDate = new Date(toll.toll_date);
-                const tripStart = new Date(trip.start_date);
-                const tripEnd = new Date(trip.end_date);
-                
-                return tollDate < tripStart || tollDate > tripEnd;
-            });
-            
             if (outsideWindow.length > 0) {
-                console.warn(`⚠️ Found ${outsideWindow.length} tolls outside trip window for trip ${trip.id} - these will be ignored`);
+                console.warn(`⚠️ Found ${outsideWindow.length} tolls outside trip window for trip ${trip.id}:`);
                 outsideWindow.forEach(toll => {
-                    console.warn(`   - Toll ${toll.id}: ${toll.toll_date} (${toll.toll_location}) is outside ${trip.start_date} to ${trip.end_date}`);
+                    const tollDate = new Date(toll.toll_date);
+                    const beforeAfter = tollDate < tripStart ? 'BEFORE' : 'AFTER';
+                    const timeDiff = Math.abs(tollDate.getTime() - (tollDate < tripStart ? tripStart.getTime() : tripEnd.getTime()));
+                    const hoursDiff = Math.round(timeDiff / (1000 * 60 * 60) * 100) / 100;
+                    
+                    console.warn(`   - Toll ${toll.id}: ${toll.toll_date} (${toll.toll_location}) is ${hoursDiff}h ${beforeAfter} trip window`);
                 });
+                
+                // Log a warning if tolls are being incorrectly assigned
+                console.warn(`🚨 These tolls should be unassigned from trip ${trip.id} as they fall outside the trip window`);
             }
             
             return tollsInWindow;
             
         } catch (error) {
-            console.error(`❌ Error in getTollsInExactTripWindow:`, error);
+            console.error(`❌ Error in getTollsInExactTripWindow for trip ${trip?.id}:`, error);
             return null;
         }
     }
