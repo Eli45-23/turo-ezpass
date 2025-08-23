@@ -1334,6 +1334,51 @@
         }
 
 
+        // Global variables for progress tracking
+        let progressEventSource = null;
+        let currentSessionId = null;
+
+        // Connect to Server-Sent Events for real-time progress
+        function connectToProgressStream(sessionId) {
+            // Close existing connection if any
+            if (progressEventSource) {
+                progressEventSource.close();
+            }
+            
+            console.log(`🔌 Connecting to progress stream: ${sessionId}`);
+            progressEventSource = new EventSource(`/api/dashboard/progress/${sessionId}`);
+            
+            progressEventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📊 Progress update:', data);
+                    
+                    if (data.type === 'progress') {
+                        updateProgress(data.progress, data.message);
+                    } else if (data.type === 'connected') {
+                        console.log('✅ Progress tracking connected');
+                        updateProgress(5, 'Connected to progress tracking...');
+                    }
+                } catch (error) {
+                    console.error('❌ Error parsing progress data:', error);
+                }
+            };
+            
+            progressEventSource.onerror = function(error) {
+                console.error('❌ Progress stream error:', error);
+                // Don't show error to user unless it's critical
+            };
+        }
+
+        // Disconnect from progress stream
+        function disconnectProgressStream() {
+            if (progressEventSource) {
+                progressEventSource.close();
+                progressEventSource = null;
+                console.log('🔌 Progress stream disconnected');
+            }
+        }
+
         // Process CSV files
         async function processCSVFiles() {
             if (!selectedFiles.turo || !selectedFiles.ezpass) {
@@ -1344,12 +1389,18 @@
             const processBtn = document.getElementById('process-btn');
             const originalText = processBtn.textContent;
             
+            // Generate unique session ID for this upload
+            currentSessionId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
             // Show loading state
             processBtn.classList.add('btn-loading');
             processBtn.disabled = true;
             
             // Show progress
             showProgress();
+            
+            // Connect to SSE for real-time progress
+            connectToProgressStream(currentSessionId);
             
             try {
                 // Get and validate date range settings
@@ -1371,6 +1422,7 @@
                 formData.append('accuracyLevel', accuracyLevel);
                 formData.append('processAllTolls', 'true');
                 formData.append('useSmartMatching', 'true');
+                formData.append('sessionId', currentSessionId);
                 
                 // Add date range parameters
                 console.log('🔍 FRONTEND DEBUG: Date range settings:', dateRangeSettings);
@@ -1401,44 +1453,77 @@
                 
                 console.log('📦 FormData prepared, sending request...');
                 
-                updateProgress(20, 'Uploading CSV files...');
+                // Use XMLHttpRequest for upload progress tracking
+                const xhr = new XMLHttpRequest();
                 
-                const response = await fetch('/api/dashboard/csv/process-both-smart', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'include'
+                // Track upload progress
+                xhr.upload.addEventListener('progress', (event) => {
+                    if (event.lengthComputable) {
+                        const uploadPercent = Math.round((event.loaded / event.total) * 15); // Upload is 0-15%
+                        updateProgress(uploadPercent, `Uploading files... ${Math.round((event.loaded / event.total) * 100)}%`);
+                    }
                 });
                 
-                updateProgress(50, 'Processing data...');
-                
-                const result = await response.json();
-                
-                updateProgress(100, 'Complete!');
-                
-                if (result.success) {
-                    showStatus(`✅ Processing complete! ${result.message || 'Files processed successfully'}`, 'success');
-                    
-                    // Clear files after successful processing
-                    setTimeout(() => {
-                        removeFile('turo');
-                        removeFile('ezpass');
+                // Handle response
+                xhr.onload = function() {
+                    try {
+                        if (xhr.status === 200) {
+                            const result = JSON.parse(xhr.responseText);
+                            
+                            if (result.success) {
+                                showStatus(`✅ Processing complete! ${result.message || 'Files processed successfully'}`, 'success');
+                                
+                                // Clear files after successful processing
+                                setTimeout(() => {
+                                    removeFile('turo');
+                                    removeFile('ezpass');
+                                    hideProgress();
+                                    disconnectProgressStream();
+                                    resetButtonState();
+                                }, 3000);
+                                
+                            } else {
+                                showStatus(`❌ Processing failed: ${result.error}`, 'error');
+                                hideProgress();
+                                disconnectProgressStream();
+                                resetButtonState();
+                            }
+                        } else {
+                            throw new Error(`HTTP ${xhr.status}: ${xhr.statusText}`);
+                        }
+                    } catch (error) {
+                        console.error('Processing error:', error);
+                        showStatus(`❌ Processing error: ${error.message}`, 'error');
                         hideProgress();
-                    }, 3000);
-                    
-                } else {
-                    showStatus(`❌ Processing failed: ${result.error}`, 'error');
+                        disconnectProgressStream();
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    showStatus('❌ Network error during upload', 'error');
                     hideProgress();
+                    disconnectProgressStream();
+                    resetButtonState();
+                };
+                
+                // Function to reset button state
+                function resetButtonState() {
+                    processBtn.classList.remove('btn-loading');
+                    processBtn.disabled = false;
+                    processBtn.textContent = originalText;
+                    updateProcessButton();
                 }
+                
+                // Send the request
+                xhr.open('POST', '/api/dashboard/csv/process-both-smart');
+                xhr.withCredentials = true;
+                xhr.send(formData);
             } catch (error) {
                 console.error('Processing error:', error);
                 showStatus(`❌ Processing error: ${error.message}`, 'error');
                 hideProgress();
-            } finally {
-                // Reset button state
-                processBtn.classList.remove('btn-loading');
-                processBtn.disabled = false;
-                processBtn.textContent = originalText;
-                updateProcessButton();
+                disconnectProgressStream();
+                resetButtonState();
             }
         }
 
@@ -1522,6 +1607,11 @@
             if (e.key === 'Escape') {
                 closeModal();
             }
+        });
+
+        // Clean up SSE connection when page is closed
+        window.addEventListener('beforeunload', () => {
+            disconnectProgressStream();
         });
     </script>
 </body>

@@ -26,6 +26,9 @@ const performanceMiddleware = global.performanceMonitor ?
     createPerformanceMiddleware(global.performanceMonitor) : 
     (req, res, next) => next();
 
+// Global progress tracking for SSE
+const progressClients = new Map();
+
 /**
  * Check if a newly inserted toll charge is a late toll for an already submitted trip
  */
@@ -204,6 +207,56 @@ router.get('/test-summary', async (req, res) => {
         });
     }
 });
+
+// SSE endpoint for real-time progress updates
+router.get('/progress/:sessionId', requireAuth, (req, res) => {
+    const sessionId = req.params.sessionId;
+    const hostId = req.session.hostId;
+    
+    // Set up SSE headers
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+    
+    // Store client connection
+    progressClients.set(sessionId, { res, hostId });
+    
+    // Send initial connection confirmation
+    res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Progress tracking connected' })}\n\n`);
+    
+    // Clean up on client disconnect
+    req.on('close', () => {
+        progressClients.delete(sessionId);
+        console.log(`🔌 Progress client disconnected: ${sessionId}`);
+    });
+    
+    console.log(`🔌 Progress client connected: ${sessionId} for host ${hostId}`);
+});
+
+// Helper function to send progress updates
+function sendProgress(sessionId, progress, message, stage) {
+    const client = progressClients.get(sessionId);
+    if (client) {
+        const data = {
+            type: 'progress',
+            progress: Math.min(100, Math.max(0, progress)),
+            message: message,
+            stage: stage,
+            timestamp: new Date().toISOString()
+        };
+        
+        try {
+            client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch (error) {
+            console.error(`❌ Error sending progress to ${sessionId}:`, error);
+            progressClients.delete(sessionId);
+        }
+    }
+}
 
 // Get dashboard summary - Optimized with caching
 router.get('/summary', requireAuth, async (req, res) => {
@@ -2162,6 +2215,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
     { name: 'ezpass-csv', maxCount: 1 }
 ]), async (req, res) => {
     const hostId = req.session.hostId;
+    const sessionId = req.body.sessionId || `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
         console.log('🎯 Smart CSV Processing request received for hostId:', hostId);
@@ -2190,6 +2244,9 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         
         const turoFile = req.files['turo-csv'][0];
         const ezpassFile = req.files['ezpass-csv'][0];
+        
+        // Send initial progress update
+        sendProgress(sessionId, 10, 'Files uploaded successfully, starting processing...', 'validation');
         
         // Get smart matching options from request
         const processAllTolls = req.body.processAllTolls === 'true';
@@ -2319,6 +2376,9 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         console.log(`🎯 Processing files with smart matching: Turo (${turoFile.originalname}), EZPass (${ezpassFile.originalname})`);
         console.log(`⚙️ Smart matching settings: accuracy=${accuracyLevel}, processAll=${processAllTolls}, smartMatching=${useSmartMatching}`);
         
+        // Send progress update for CSV parsing start
+        sendProgress(sessionId, 20, 'Reading CSV files...', 'parsing');
+        
         // Parse CSV files first
         const turoData = turoFile.buffer.toString('utf8');
         const ezpassData = ezpassFile.buffer.toString('utf8');
@@ -2328,11 +2388,13 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         
         // Parse Turo CSV
         console.log('🔍 Starting Turo CSV parsing...');
+        sendProgress(sessionId, 30, 'Parsing Turo trip data...', 'parsing');
         const turoTrips = parseTuroCSV(turoData);
         console.log(`🚗 Parsed ${turoTrips.length} Turo trips`);
         
         // Parse E-ZPass CSV
         console.log('🔍 Starting E-ZPass CSV parsing...');
+        sendProgress(sessionId, 40, 'Parsing E-ZPass toll data...', 'parsing');
         const ezpassTolls = parseEZPassCSV(ezpassData);
         console.log(`🛣️ Parsed ${ezpassTolls.length} E-ZPass tolls`);
         
@@ -2342,6 +2404,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         
         if (dateFilter && dateFilter.filterType !== 'all') {
             console.log('📅 Applying date filtering...');
+            sendProgress(sessionId, 45, 'Applying date filters...', 'filtering');
             
             let filterFromDate, filterToDate;
             
@@ -2389,6 +2452,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         
         // Store basic CSV data first
         console.log('📁 Storing CSV data in database...');
+        sendProgress(sessionId, 50, 'Storing data in database...', 'storage');
         const basicResults = await storeTollMatchingResults(
             { matches: [], unmatched: [] }, // Empty matching results for now
             hostId, 
@@ -2427,6 +2491,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             
             // Start simple matching following user's 4-step process
             console.log('🚀 Starting simple toll matching after CSV import...');
+            sendProgress(sessionId, 60, 'Starting intelligent toll matching...', 'matching');
             
             // Add small delay to ensure all database transactions have committed
             console.log('⏱️ Waiting 2 seconds for database consistency...');
@@ -2434,6 +2499,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             
             // Fetch database records instead of using CSV objects
             console.log('🔍 Fetching database records for matching...');
+            sendProgress(sessionId, 65, 'Fetching database records for matching...', 'matching');
             
             // Get trips from database (recently inserted)
             const { data: databaseTrips, error: tripsError } = await supabaseAdmin
@@ -2474,6 +2540,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             
             console.log(`🎯 Filtered to ${recentTrips.length} recently imported trips for matching`);
             
+            sendProgress(sessionId, 75, 'Running toll matching algorithm...', 'matching');
             const matchResult = await simpleMatcher.matchTollsToTrips(hostId, recentTrips, databaseTolls, progressCallback);
             
             // Send final completion event
@@ -2489,11 +2556,13 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             
             // Clear dashboard cache to force fresh data load
             console.log('🗑️ Clearing dashboard cache...');
+            sendProgress(sessionId, 90, 'Finalizing results...', 'completion');
             const cacheKey = CacheKeys.dashboardSummary(hostId);
             await cacheManager.del(cacheKey);
             console.log('✅ Dashboard cache cleared');
             
             // Calculate enhanced statistics
+            sendProgress(sessionId, 95, 'Calculating final statistics...', 'completion');
             const enhancedStats = {
                 trips_processed: turoTrips.length,
                 tolls_imported: ezpassTolls.length,
@@ -2507,6 +2576,8 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
                 medium_confidence_matches: matchResult.mediumConfidence,
                 low_confidence_matches: matchResult.lowConfidence
             };
+            
+            sendProgress(sessionId, 100, 'Processing complete!', 'complete');
             
             res.json({
                 success: true,
