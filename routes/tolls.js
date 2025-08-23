@@ -4,6 +4,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const { createCSVUploadMiddleware, cleanupFile } = require('../middleware/csv-validation');
 const { verificationStatusLimiter } = require('../middleware/security');
 const EnhancedTollMatcher = require('../services/enhanced-toll-matcher');
+const LateTollDetector = require('../services/late-toll-detector');
 
 // Enhanced CSV upload middleware for toll charges
 const tollCSVUpload = createCSVUploadMiddleware({
@@ -139,6 +140,17 @@ router.post('/import-csv', requireAuth, ...tollCSVUpload, async (req, res) => {
         console.log('🎯 Starting automatic toll-to-trip matching...');
         const matchResult = await matchTollsToTrips(hostId);
         
+        // Run late toll detection after import and matching
+        console.log('🔍 Running late toll detection after import...');
+        try {
+            const lateTollDetector = new LateTollDetector();
+            await lateTollDetector.detectLateTolls();
+            console.log('✅ Late toll detection completed');
+        } catch (lateDetectionError) {
+            console.error('⚠️ Late toll detection failed:', lateDetectionError);
+            // Don't fail the import if late detection fails
+        }
+        
         // Clean up uploaded file safely
         cleanupFile(req.file.path);
         
@@ -246,6 +258,17 @@ router.post('/import-csv-smart', requireAuth, ...tollCSVUpload, async (req, res)
                 hostId: hostId,
                 result: matchResult
             });
+        }
+        
+        // Run late toll detection after import and matching
+        console.log('🔍 Running late toll detection after smart import...');
+        try {
+            const lateTollDetector = new LateTollDetector();
+            await lateTollDetector.detectLateTolls();
+            console.log('✅ Late toll detection completed');
+        } catch (lateDetectionError) {
+            console.error('⚠️ Late toll detection failed:', lateDetectionError);
+            // Don't fail the import if late detection fails
         }
         
         // Clean up uploaded file safely
@@ -573,7 +596,8 @@ async function importTollsFromCSV(csvData, hostId) {
             location: ['location', 'toll_location', 'plaza', 'facility', 'toll_plaza'],
             amount: ['amount', 'toll_amount', 'charge', 'fee', 'cost'],
             plate: ['plate', 'plate_number', 'license_plate', 'vehicle', 'tag'],
-            account: ['account', 'account_number', 'transponder', 'tag_number']
+            account: ['account', 'account_number', 'transponder', 'tag_number'],
+            transaction_id: ['transaction_id', 'txn_id', 'id', 'lane_id', 'reference', 'transaction']
         };
         
         // Find column indices
@@ -612,7 +636,8 @@ async function importTollsFromCSV(csvData, hostId) {
                         location: columns[columnIndices.location] || 'Unknown Location',
                         amount: parseFloat(columns[columnIndices.amount] || '0'),
                         plate: columns[columnIndices.plate] || '',
-                        account: columns[columnIndices.account] || ''
+                        account: columns[columnIndices.account] || '',
+                        transaction_id: columns[columnIndices.transaction_id] || null
                     };
                     
                     // Validate required data
@@ -629,14 +654,21 @@ async function importTollsFromCSV(csvData, hostId) {
                     }
                     
                     // Prepare toll charge for batch insert
-                    tollCharges.push({
+                    const tollCharge = {
                         toll_account_id: tollAccount.id,
                         toll_date: tollDate.toISOString(),
                         toll_location: tollData.location,
                         toll_amount: tollData.amount,
                         plate_number: tollData.plate,
                         is_matched: false
-                    });
+                    };
+                    
+                    // Add transaction_id if available
+                    if (tollData.transaction_id) {
+                        tollCharge.transaction_id = tollData.transaction_id;
+                    }
+                    
+                    tollCharges.push(tollCharge);
                     
                 } catch (error) {
                     errors.push(`Row ${i + 1}: ${error.message}`);

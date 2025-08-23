@@ -58,12 +58,13 @@ class LateTollDetector {
         try {
             console.log('🔍 Scanning for late tolls...');
             
-            // Get all submitted trips (those with invoices)
+            // Get all submitted trips (those with invoices) including toll_charge_ids
             const { data: submittedTrips, error: tripsError } = await global.supabaseAdmin
                 .from('invoices')
                 .select(`
                     trip_id,
                     created_at,
+                    toll_charge_ids,
                     trips!inner(
                         id,
                         turo_trip_id,
@@ -93,17 +94,42 @@ class LateTollDetector {
                 const trip = invoice.trips;
                 const submissionDate = new Date(invoice.created_at);
                 
-                // Find toll charges for this trip that were created after submission
-                const { data: lateTolls, error: tollError } = await global.supabaseAdmin
-                    .from('toll_charges')
-                    .select('*')
-                    .eq('trip_id', trip.id)
-                    .eq('submitted_to_turo', false) // Not yet submitted
-                    .gte('created_at', invoice.created_at); // Created after original submission
-
-                if (tollError) {
-                    console.error(`❌ Error checking late tolls for trip ${trip.id}:`, tollError);
+                // Parse the original invoice toll_charge_ids snapshot
+                const originalTollIds = [];
+                if (invoice.toll_charge_ids) {
+                    try {
+                        const parsedIds = JSON.parse(invoice.toll_charge_ids);
+                        originalTollIds.push(...parsedIds);
+                    } catch (parseError) {
+                        console.error(`❌ Error parsing toll_charge_ids for invoice:`, parseError);
+                    }
+                }
+                
+                // Find ALL toll charges in the trip's exact time window (no grace period)
+                const tollsInWindow = await this.getTollsInExactTripWindow(trip);
+                if (!tollsInWindow) {
+                    console.log(`⚠️ No tolls found in trip window for trip ${trip.id}`);
                     continue;
+                }
+                
+                // Compute set difference: tolls in window that are NOT in original invoice snapshot
+                const lateTolls = [];
+                
+                for (const toll of tollsInWindow) {
+                    // First check: Was this toll ID in the original invoice snapshot?
+                    const wasInOriginalInvoice = originalTollIds.includes(toll.id);
+                    if (wasInOriginalInvoice) {
+                        continue;
+                    }
+                    
+                    // Second check: Is this a duplicate based on transaction_id or fingerprint?
+                    const isDuplicateInSnapshot = await this.tollExistsInInvoiceSnapshot(toll, invoice);
+                    if (isDuplicateInSnapshot) {
+                        continue;
+                    }
+                    
+                    // This is a genuinely late toll (set difference result)
+                    lateTolls.push(toll);
                 }
 
                 if (lateTolls && lateTolls.length > 0) {
@@ -111,7 +137,7 @@ class LateTollDetector {
                     
                     // Record each late toll detection
                     for (const toll of lateTolls) {
-                        await this.recordLateTollDetection(trip, toll, submissionDate);
+                        await this.recordLateTollDetection(trip, toll, invoice.id);
                         lateTollsFound++;
                     }
                 }
@@ -129,9 +155,121 @@ class LateTollDetector {
     }
 
     /**
+     * Get all tolls that fall within the EXACT trip time window (no grace period)
+     */
+    async getTollsInExactTripWindow(trip) {
+        try {
+            // Query tolls that fall strictly within the trip's start and end dates/times
+            const { data: tolls, error } = await global.supabaseAdmin
+                .from('toll_charges')
+                .select('*')
+                .eq('trip_id', trip.id)
+                .gte('toll_date', trip.start_date)
+                .lte('toll_date', trip.end_date);
+            
+            if (error) {
+                console.error(`❌ Error fetching tolls in trip window for trip ${trip.id}:`, error);
+                return null;
+            }
+            
+            console.log(`🔍 Found ${tolls?.length || 0} tolls in exact window for trip ${trip.id}`);
+            return tolls || [];
+            
+        } catch (error) {
+            console.error(`❌ Error in getTollsInExactTripWindow:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Create a toll fingerprint for duplicate detection
+     */
+    createTollFingerprint(toll) {
+        // Normalize the location by removing common variations
+        const location = (toll.toll_location || '').toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^\w]/g, '');
+        
+        // Format date to YYYY-MM-DD for consistent matching
+        let dateString = '';
+        if (toll.toll_date) {
+            const date = new Date(toll.toll_date);
+            dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+        
+        // Normalize plate number
+        const plate = (toll.plate_number || '').toUpperCase().replace(/[^\w]/g, '');
+        
+        // Use amount as string with 2 decimal places
+        const amount = parseFloat(toll.toll_amount || 0).toFixed(2);
+        
+        return `${plate}_${location}_${dateString}_${amount}`;
+    }
+
+    /**
+     * Check if toll exists in invoice snapshot by transaction_id or fingerprint
+     */
+    async tollExistsInInvoiceSnapshot(toll, invoice) {
+        // If toll has transaction_id and it's in the invoice snapshot, it's a duplicate
+        if (toll.transaction_id && invoice.toll_charge_ids) {
+            try {
+                const originalTollIds = JSON.parse(invoice.toll_charge_ids);
+                
+                // Check if any of the original tolls have the same transaction_id
+                for (const tollId of originalTollIds) {
+                    const { data: originalToll, error } = await global.supabaseAdmin
+                        .from('toll_charges')
+                        .select('transaction_id')
+                        .eq('id', tollId)
+                        .single();
+                    
+                    if (!error && originalToll && originalToll.transaction_id === toll.transaction_id) {
+                        console.log(`🔍 Found duplicate by transaction_id: ${toll.transaction_id}`);
+                        return true;
+                    }
+                }
+            } catch (parseError) {
+                console.error('Error parsing toll_charge_ids:', parseError);
+            }
+        }
+        
+        // If no transaction_id match, check by fingerprint
+        const tollFingerprint = this.createTollFingerprint(toll);
+        
+        if (invoice.toll_charge_ids) {
+            try {
+                const originalTollIds = JSON.parse(invoice.toll_charge_ids);
+                
+                // Get all original tolls and check their fingerprints
+                const { data: originalTolls, error } = await global.supabaseAdmin
+                    .from('toll_charges')
+                    .select('*')
+                    .in('id', originalTollIds);
+                
+                if (error) {
+                    console.error('Error fetching original tolls for fingerprint check:', error);
+                    return false;
+                }
+                
+                for (const originalToll of originalTolls) {
+                    const originalFingerprint = this.createTollFingerprint(originalToll);
+                    if (originalFingerprint === tollFingerprint) {
+                        console.log(`🔍 Found duplicate by fingerprint: ${tollFingerprint}`);
+                        return true;
+                    }
+                }
+            } catch (parseError) {
+                console.error('Error parsing toll_charge_ids for fingerprint check:', parseError);
+            }
+        }
+        
+        return false;
+    }
+
+    /**
      * Record a late toll detection in the database
      */
-    async recordLateTollDetection(trip, toll, originalSubmissionDate) {
+    async recordLateTollDetection(trip, toll, originalInvoiceId) {
         try {
             // Check if this late toll was already detected
             const { data: existing, error: existingError } = await global.supabaseAdmin
@@ -157,6 +295,7 @@ class LateTollDetector {
                 .insert({
                     trip_id: trip.id,
                     toll_charge_id: toll.id,
+                    original_invoice_id: originalInvoiceId,
                     amount: toll.toll_amount,
                     status: 'new'
                 })
