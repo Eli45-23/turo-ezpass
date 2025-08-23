@@ -327,6 +327,7 @@ router.get('/', requireAuth, async (req, res) => {
                     date: lateToll.toll_charges.toll_date,
                     amount: parseFloat(lateToll.toll_charges.toll_amount || 0),
                     transactionId: lateToll.toll_charges.transaction_id,
+                    detectionDate: lateToll.detection_date,
                     time: lateToll.toll_charges.toll_date ? 
                         new Date(lateToll.toll_charges.toll_date).toLocaleDateString() + ' ' +
                         new Date(lateToll.toll_charges.toll_date).toLocaleTimeString('en-US', { 
