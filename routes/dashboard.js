@@ -1242,12 +1242,13 @@ function parseEZPassCSV(csvData) {
             toll.transponderId = null;
         }
         
-        // Parse dates with proper Date+Time handling for EZ-Pass CSV
+        // Parse dates with timezone-neutral handling for EZ-Pass CSV
         if (toll['Posted Date']) {
             const postedDateStr = toll['Posted Date'];
             if (postedDateStr.includes('/')) {
                 const [month, day, year] = postedDateStr.split('/');
-                toll.postedDate = new Date(year, month - 1, day);
+                // Create timezone-neutral date to avoid UTC conversion issues
+                toll.postedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00.000Z`);
             } else {
                 toll.postedDate = new Date(toll['Posted Date']);
             }
@@ -1261,7 +1262,8 @@ function parseEZPassCSV(csvData) {
             let transactionDate;
             if (transDateStr.includes('/')) {
                 const [month, day, year] = transDateStr.split('/');
-                transactionDate = new Date(year, month - 1, day);
+                // Create timezone-neutral base date
+                transactionDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00.000Z`);
             } else {
                 transactionDate = new Date(toll['Date']);
             }
@@ -1278,7 +1280,8 @@ function parseEZPassCSV(csvData) {
                     if (isPM && hours !== 12) hours += 12;
                     if (!isPM && hours === 12) hours = 0;
                     
-                    transactionDate.setHours(hours, minutes, 0, 0);
+                    // Use UTC methods to maintain timezone neutrality
+                    transactionDate.setUTCHours(hours, minutes, 0, 0);
                 }
             }
             
