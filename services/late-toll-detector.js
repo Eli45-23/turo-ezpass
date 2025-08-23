@@ -366,6 +366,20 @@ class LateTollDetector {
      */
     async recordLateTollDetection(trip, toll, originalInvoiceId) {
         try {
+            // CRITICAL VALIDATION: Double-check that toll is within trip boundaries before recording
+            const tollDate = new Date(toll.toll_date);
+            const tripStart = new Date(trip.start_date);
+            const tripEnd = new Date(trip.end_date);
+            
+            if (tollDate < tripStart || tollDate > tripEnd) {
+                console.error(`🚨 CRITICAL: Attempted to record late toll ${toll.id} outside trip boundaries!`);
+                console.error(`   Toll date: ${toll.toll_date}`);
+                console.error(`   Trip window: ${trip.start_date} to ${trip.end_date}`);
+                console.error(`   Trip: ${trip.turo_trip_id || trip.id}`);
+                console.error(`🚫 REJECTING this late toll detection - it would be invalid`);
+                return;
+            }
+            
             // Check if this late toll was already detected
             const { data: existing, error: existingError } = await global.supabaseAdmin
                 .from('late_tolls_detected')
@@ -381,6 +395,7 @@ class LateTollDetector {
 
             if (existing) {
                 // Already recorded, skip
+                console.log(`🔍 Late toll ${toll.id} already recorded for trip ${trip.turo_trip_id || trip.id} - skipping`);
                 return;
             }
 
