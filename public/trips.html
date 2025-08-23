@@ -1571,7 +1571,10 @@
                 return;
             }
             
-            container.innerHTML = lateTollTrips.map(trip => createLateTollCard(trip)).join('');
+            // Sort trips by start date (most recent first) as a safety net
+            const sortedTrips = [...lateTollTrips].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+            
+            container.innerHTML = sortedTrips.map(trip => createLateTollCard(trip)).join('');
         }
         
         function createLateTollCard(trip) {

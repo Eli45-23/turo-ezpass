@@ -348,18 +348,20 @@ router.get('/', requireAuth, async (req, res) => {
             });
             
             // Convert to array and add additional trip properties
-            transformedTrips.lateTolls = Object.values(lateTollsByTrip).map(trip => {
-                const startDate = new Date(trip.startDate);
-                const endDate = new Date(trip.endDate);
-                
-                return {
-                    ...trip,
-                    duration: calculateDuration(startDate, endDate),
-                    vehicle_description: vehicleDescriptions[trip.vehicle] || '',
-                    tolls: trip.lateTolls, // For compatibility with existing card renderer
-                    tollTotal: trip.lateTollTotal // For compatibility with existing card renderer
-                };
-            });
+            transformedTrips.lateTolls = Object.values(lateTollsByTrip)
+                .map(trip => {
+                    const startDate = new Date(trip.startDate);
+                    const endDate = new Date(trip.endDate);
+                    
+                    return {
+                        ...trip,
+                        duration: calculateDuration(startDate, endDate),
+                        vehicle_description: vehicleDescriptions[trip.vehicle] || '',
+                        tolls: trip.lateTolls, // For compatibility with existing card renderer
+                        tollTotal: trip.lateTollTotal // For compatibility with existing card renderer
+                    };
+                })
+                .sort((a, b) => new Date(b.startDate) - new Date(a.startDate)); // Sort by trip start date (most recent first)
         }
         
         console.log('📊 Trip summary:', {
