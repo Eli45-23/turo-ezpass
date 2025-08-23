@@ -1860,6 +1860,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                             plate_number: toll.plateNumber,
                             transponder_id: toll.transponderId,
                             transaction_id: toll.laneId,
+                            submission_date: toll.postedDate, // Save the posted date from E-ZPass CSV
                             is_matched: false
                         })
                         .select()

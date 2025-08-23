@@ -293,7 +293,8 @@ router.get('/', requireAuth, async (req, res) => {
                     toll_location,
                     toll_amount,
                     toll_date,
-                    transaction_id
+                    transaction_id,
+                    submission_date
                 )
             `)
             .eq('trips.host_id', hostId)
@@ -327,7 +328,8 @@ router.get('/', requireAuth, async (req, res) => {
                     date: lateToll.toll_charges.toll_date,
                     amount: parseFloat(lateToll.toll_charges.toll_amount || 0),
                     transactionId: lateToll.toll_charges.transaction_id,
-                    detectionDate: lateToll.detection_date,
+                    postedDate: lateToll.toll_charges.submission_date, // Posted date from E-ZPass CSV
+                    detectionDate: lateToll.detection_date, // Keep for fallback
                     time: lateToll.toll_charges.toll_date ? 
                         new Date(lateToll.toll_charges.toll_date).toLocaleDateString() + ' ' +
                         new Date(lateToll.toll_charges.toll_date).toLocaleTimeString('en-US', { 
