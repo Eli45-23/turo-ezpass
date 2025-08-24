@@ -2971,40 +2971,71 @@ router.post('/trips/create-invoice', requireAuth, (req, res) => {
             // Generate invoice number
             const invoiceNumber = `INV-${Date.now()}-${tripId}`;
             
-            // Insert invoice record
-            db.run(
-                `INSERT INTO invoices (
-                    trip_id, invoice_number, total_amount, status
-                ) VALUES (?, ?, ?, 'pending')`,
-                [tripId, invoiceNumber, totalAmount],
-                function(err) {
-                    if (err) {
-                        console.error('Error creating invoice:', err);
+            // CRITICAL: Capture BilledSet before creating invoice
+            // Query all tolls assigned to this trip at invoice creation time
+            global.supabaseAdmin
+                .from('toll_charges')
+                .select('id, toll_date, toll_location, toll_amount, plate_number, lane_transaction_id')
+                .eq('trip_id', tripId)
+                .then(({ data: billedTolls, error: tollsError }) => {
+                    if (tollsError) {
+                        console.error('Error fetching tolls for invoice snapshot:', tollsError);
                         return res.status(500).json({
                             success: false,
-                            error: 'Failed to create invoice'
+                            error: 'Failed to capture toll snapshot'
                         });
                     }
                     
-                    // Update trip status to indicate invoice created
-                    db.run(
-                        `UPDATE trips SET invoice_status = 'created', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                        [tripId],
-                        (updateErr) => {
-                            if (updateErr) {
-                                console.error('Error updating trip status:', updateErr);
-                                // Don't fail the response, invoice was created successfully
+                    // Create BilledSet: toll IDs and full snapshot
+                    const tollIds = billedTolls ? billedTolls.map(t => t.id) : [];
+                    const snapshotData = billedTolls || [];
+                    
+                    console.log(`📸 Invoice snapshot for trip ${tripId}: ${tollIds.length} tolls captured`);
+                    
+                    // Insert invoice with proper BilledSet capture
+                    global.supabaseAdmin
+                        .from('invoices')
+                        .insert({
+                            trip_id: tripId,
+                            invoice_number: invoiceNumber,
+                            total_amount: totalAmount,
+                            status: 'pending',
+                            toll_charge_ids: JSON.stringify(tollIds),
+                            snapshot_data: JSON.stringify(snapshotData),
+                            created_at: new Date().toISOString()
+                        })
+                        .then(({ error: invoiceError }) => {
+                            if (invoiceError) {
+                                console.error('Error creating invoice:', invoiceError);
+                                return res.status(500).json({
+                                    success: false,
+                                    error: 'Failed to create invoice'
+                                });
                             }
                             
-                            res.json({
-                                success: true,
-                                invoiceId: invoiceNumber,
-                                message: 'Invoice created successfully'
-                            });
-                        }
-                    );
-                }
-            );
+                            // Update trip status via Supabase
+                            global.supabaseAdmin
+                                .from('trips')
+                                .update({
+                                    invoice_status: 'created',
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', tripId)
+                                .then(({ error: updateError }) => {
+                                    if (updateError) {
+                                        console.error('Error updating trip status:', updateError);
+                                        // Don't fail the response, invoice was created successfully
+                                    }
+                                    
+                                    res.json({
+                                        success: true,
+                                        invoiceId: invoiceNumber,
+                                        billedTollsCount: tollIds.length,
+                                        message: `Invoice created successfully with ${tollIds.length} tolls captured`
+                                    });
+                                });
+                        });
+                });
         }
     );
 });
