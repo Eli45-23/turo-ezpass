@@ -78,12 +78,12 @@ async function checkForLateToll(tollCharge, hostId) {
             const tripEnd = new Date(trip.end_date);
             const submissionDate = new Date(invoice.created_at);
 
-            // Allow tolls within trip period or up to 7 days after trip end (late processing)
-            const graceEndDate = new Date(tripEnd);
-            graceEndDate.setDate(graceEndDate.getDate() + 7);
-
-            if (tollDate >= tripStart && tollDate <= graceEndDate) {
-                // This is a late toll! Check if we already detected it
+            // Use strict trip window boundaries - no grace period
+            // Late tolls are determined by set difference (CurrentSet - BilledSet),
+            // NOT by E-ZPass posting date or grace periods
+            
+            if (tollDate >= tripStart && tollDate <= tripEnd) {
+                // Toll is within trip window - check if it's in BilledSet or a late toll
                 const { data: existing, error: existingError } = await supabaseAdmin
                     .from('late_tolls_detected')
                     .select('id')
