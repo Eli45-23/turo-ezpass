@@ -1872,10 +1872,26 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             csvTollAccount = newTollAccount;
         }
         
+        console.log(`🔍 DEBUG: Starting toll insertion loop for ${ezpassTolls.length} tolls`);
+        console.log(`🔍 DEBUG: csvTollAccount details:`, {
+            id: csvTollAccount?.id,
+            provider: csvTollAccount?.provider,
+            host_id: csvTollAccount?.host_id
+        });
+
         for (const toll of ezpassTolls) {
             // FIXED: Store ALL tolls regardless of transponder mappings
             // This allows users to upload toll data first, then add transponder mappings later
             let shouldInsert = true; // Always insert tolls
+            
+            console.log(`🔍 DEBUG: Processing toll ${ezpassTolls.indexOf(toll) + 1}/${ezpassTolls.length}:`, {
+                laneId: toll.laneId,
+                transactionDate: toll.transactionDate,
+                amount: toll.amount,
+                location: toll.location,
+                plateNumber: toll.plateNumber,
+                transponderId: toll.transponderId
+            });
             
             // Log whether toll matches known vehicles (for informational purposes)
             if (toll.plateNumber) {
@@ -1909,6 +1925,15 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 }
 
                 console.log(`✅ Valid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
+                console.log(`🔍 DEBUG: About to insert toll with data:`, {
+                    toll_account_id: csvTollAccount.id,
+                    toll_date: toll.transactionDate,
+                    toll_location: toll.location,
+                    toll_amount: toll.amount,
+                    plate_number: toll.plateNumber,
+                    transponder_id: toll.transponderId,
+                    transaction_id: toll.laneId
+                });
 
                 try {
                     // Check if transaction_id already exists to avoid UNIQUE constraint violations
@@ -1968,7 +1993,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                         }
                     }
 
-                    console.log(`✅ Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId || 'unknown'}`);
+                    console.log(`✅ SUCCESS: Inserted toll: ${toll.laneId} for ${toll.plateNumber || toll.transponderId || 'unknown'}`);
+                    console.log(`🔍 DEBUG: Inserted toll record:`, newTollCharge);
                     dbUpdates.tolls_inserted++;
 
                     // Check for late toll detection - see if this toll matches an already submitted trip
