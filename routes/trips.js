@@ -17,7 +17,7 @@ const requireAuth = async (req, res, next) => {
         
         if (token) {
             // Using Supabase authentication
-            const { user, error } = await supabaseAdmin.auth.getUser(token);
+            const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
             
             if (error || !user) {
                 console.log('❌ Invalid Supabase token');

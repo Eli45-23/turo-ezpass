@@ -274,7 +274,7 @@ router.get('/status', async (req, res) => {
     if (token) {
         try {
             const { supabaseAdmin } = require('../config/supabase');
-            const { user, error } = await supabaseAdmin.auth.getUser(token);
+            const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
             
             if (error || !user) {
                 console.log('❌ Invalid Supabase token:', error?.message);
