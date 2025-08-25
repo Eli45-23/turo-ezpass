@@ -184,27 +184,47 @@ router.post('/login',
                 hostId: data.user.id
             });
 
-            console.log('✅ User logged in successfully:', {
-                hostId: data.user.id,
-                email: email,
-                sessionExpires: data.session.expires_at
-            });
+            // Set Express session data for backward compatibility
+            req.session.hostId = hostData.id;
+            req.session.email = hostData.email;
+            req.session.fullName = hostData.full_name;
+            
+            // Force session save
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('❌ Session save failed on Supabase login:', saveErr);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Login session creation failed'
+                    });
+                }
+                
+                console.log('✅ User logged in successfully:', {
+                    hostId: data.user.id,
+                    email: email,
+                    sessionExpires: data.session.expires_at,
+                    sessionSet: {
+                        hostId: req.session.hostId,
+                        email: req.session.email
+                    }
+                });
 
-            // Set session info in response headers for frontend compatibility
-            res.setHeader('X-Session-Token', data.session.access_token);
-            res.setHeader('X-User-ID', data.user.id);
+                // Set session info in response headers for frontend compatibility
+                res.setHeader('X-Session-Token', data.session.access_token);
+                res.setHeader('X-User-ID', data.user.id);
 
-            res.json({ 
-                success: true, 
-                message: 'Login successful',
-                host: {
-                    id: hostData.id,
-                    email: hostData.email,
-                    fullName: hostData.full_name
-                },
-                session: data.session,
-                access_token: data.session.access_token,
-                authenticated: true
+                res.json({ 
+                    success: true, 
+                    message: 'Login successful',
+                    host: {
+                        id: hostData.id,
+                        email: hostData.email,
+                        fullName: hostData.full_name
+                    },
+                    session: data.session,
+                    access_token: data.session.access_token,
+                    authenticated: true
+                });
             });
 
         } catch (error) {

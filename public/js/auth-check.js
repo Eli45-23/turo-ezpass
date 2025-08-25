@@ -41,6 +41,10 @@
             }
             
             console.log('✅ User authenticated:', data.host);
+            
+            // Store user info globally for dashboard and other components
+            window.currentUser = data.host;
+            
             return true;
             
         } catch (error) {

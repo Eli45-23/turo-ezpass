@@ -150,7 +150,7 @@ const requireAuth = async (req, res, next) => {
             const { data: hostData, error: hostError } = await supabaseAdmin
                 .from('hosts')
                 .select('*')
-                .eq('id', user.user.id)
+                .eq('id', user.id)
                 .single();
             
             if (hostError || !hostData) {

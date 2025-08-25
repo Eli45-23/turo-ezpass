@@ -20,6 +20,7 @@
     <script src="/js/ui-utils.js?v=20250821"></script>
     <script src="/js/xss-utils.js?v=20250821"></script>
     <script src="/js/accessibility.js?v=20250821"></script>
+    <script src="/js/api-helper.js?v=20250825"></script>
     <script src="/js/auth-check.js?v=20250825"></script>
     
     <!-- Safari-specific cache busting (load first) -->
@@ -1125,10 +1126,7 @@
                     timestamp: new Date().toISOString()
                 });
                 
-                const response = await fetch('/api/dashboard/summary', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
+                const response = await apiHelper.getAuth('/api/dashboard/summary');
                 
                 console.log('📋 DEBUG: Response details:', {
                     status: response.status,
