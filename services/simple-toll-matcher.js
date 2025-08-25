@@ -370,7 +370,7 @@ class SimpleTollMatcher {
                 .select('transponder_number, vehicle_plate, vehicle_description')
                 .eq('host_id', hostId)
                 .eq('is_active', true)
-                .or('vehicle_description.is.null,vehicle_description.not.ilike.Auto-discovered%');
+                .or('vehicle_description.is.null,not(vehicle_description.ilike.Auto-discovered%)');
             
             if (!error && results) {
                 results.forEach(mapping => {
@@ -408,11 +408,14 @@ class SimpleTollMatcher {
             const progress = 20 + (processed / tollData.length * 60);
             
             // Resolve vehicle identity from toll
-            const tollVehicles = this.resolveTollVehicle(toll.tagOrPlate, transponderMappings);
+            let tollVehicles = this.resolveTollVehicle(toll.tagOrPlate, transponderMappings);
             
+            // If no vehicles resolved, still attempt direct matching with the identifier
+            // This follows user spec: trust the data provided, don't pre-filter
             if (tollVehicles.length === 0) {
-                console.log(`⚠️ UNMATCHED: Unknown vehicle/transponder: ${toll.tagOrPlate} (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()}) - ignoring as per user spec`);
-                continue;
+                console.log(`🔍 ATTEMPTING: Direct match for identifier: ${toll.tagOrPlate} (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()})`);
+                // Use the raw identifier for direct matching
+                tollVehicles = [this.normalizePlate(toll.tagOrPlate)];
             }
             
             // Find matching trip
@@ -567,6 +570,7 @@ class SimpleTollMatcher {
     
     /**
      * Determine if a tag/plate value is a plate number vs transponder
+     * Made more permissive to follow user's specification
      */
     isPlateNumber(value) {
         if (!value) return false;
@@ -579,12 +583,14 @@ class SimpleTollMatcher {
             return false; // This is likely a transponder
         }
         
-        // Plates typically have letters and numbers, 6-8 characters
-        if (cleaned.length >= 4 && cleaned.length <= 8 && /[A-Z]/.test(cleaned)) {
-            return true; // This is likely a plate
+        // More permissive plate detection following user spec
+        // Accept plates with 3-10 characters (allows for various formats)
+        // Accept all-numeric plates, mixed alphanumeric, etc.
+        if (cleaned.length >= 3 && cleaned.length <= 10) {
+            return true; // Treat as plate - let matching logic decide validity
         }
         
-        // Default to treating it as a plate if unclear
+        // Default to treating it as a plate if unclear - trust user's data
         return true;
     }
     
