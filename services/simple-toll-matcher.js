@@ -370,10 +370,18 @@ class SimpleTollMatcher {
                 .select('transponder_number, vehicle_plate, vehicle_description')
                 .eq('host_id', hostId)
                 .eq('is_active', true)
-                .or('vehicle_description.is.null,not(vehicle_description.ilike.Auto-discovered%)');
+                .or('vehicle_description.is.null,not.vehicle_description.ilike.Auto-discovered%');
             
-            if (!error && results) {
+            if (error) {
+                console.error('❌ Supabase error loading transponder mappings:', error);
+                console.error('❌ Query details - hostId:', hostId);
+                return new Map();
+            }
+            
+            if (results && results.length > 0) {
+                console.log(`🔍 Raw transponder mappings found: ${results.length} records for host ${hostId}`);
                 results.forEach(mapping => {
+                    console.log(`🔍 Raw mapping: ${mapping.transponder_number} → ${mapping.vehicle_plate} (desc: ${mapping.vehicle_description})`);
                     // Additional safety check: skip any auto-discovered mappings
                     if (!mapping.vehicle_description || !mapping.vehicle_description.startsWith('Auto-discovered')) {
                         mappings.set(mapping.transponder_number, this.normalizePlate(mapping.vehicle_plate));
@@ -383,6 +391,8 @@ class SimpleTollMatcher {
                     }
                 });
                 console.log(`🔗 Loaded ${mappings.size} user-defined transponder mappings (excluding auto-discovered)`);
+            } else {
+                console.log(`⚠️ No transponder mappings found for host ${hostId}`);
             }
             return mappings;
         } catch (error) {

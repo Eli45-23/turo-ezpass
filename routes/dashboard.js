@@ -2564,9 +2564,21 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             const recentTrips = databaseTrips?.filter(trip => recentTripIds.has(trip.turo_trip_id)) || [];
             
             console.log(`🎯 Filtered to ${recentTrips.length} recently imported trips for matching`);
+            console.log(`🔍 SimpleTollMatcher Input Data:`);
+            console.log(`  - Host ID: ${hostId}`);
+            console.log(`  - Trips: ${recentTrips?.length || 0}`);
+            console.log(`  - Tolls: ${databaseTolls?.length || 0}`);
+            if (recentTrips?.length > 0) {
+                console.log(`  - Sample trip: ${recentTrips[0].turo_trip_id} - ${recentTrips[0].vehicle_plate}`);
+            }
+            if (databaseTolls?.length > 0) {
+                console.log(`  - Sample toll: ${databaseTolls[0].transaction_id} - ${databaseTolls[0].plate_number || databaseTolls[0].transponder_id}`);
+            }
             
             sendProgress(sessionId, 75, 'Running toll matching algorithm...', 'matching');
+            console.log('🚀 STARTING SimpleTollMatcher.matchTollsToTrips()...');
             const matchResult = await simpleMatcher.matchTollsToTrips(hostId, recentTrips, databaseTolls, progressCallback);
+            console.log('✅ COMPLETED SimpleTollMatcher.matchTollsToTrips():', matchResult);
             
             // Send final completion event
             const sendToHost = req.app.get('sendToHost');
