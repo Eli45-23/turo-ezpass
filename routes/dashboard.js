@@ -1583,6 +1583,31 @@ function calculateMatchScore(toll, trip, transponderMapping) {
 async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, userEmail) {
     // Store CSV results in the database for persistence
     
+    // Helper function to retry database operations with exponential backoff
+    async function retryOperation(operation, maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await operation();
+            } catch (error) {
+                const isInfrastructureError = error.message && (
+                    error.message.includes('502 Bad Gateway') ||
+                    error.message.includes('503 Service Unavailable') ||
+                    error.message.includes('504 Gateway Timeout') ||
+                    error.message.includes('cloudflare') ||
+                    error.message.includes('<html>')
+                );
+                
+                if (isInfrastructureError && attempt < maxRetries) {
+                    const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                    console.log(`⏳ Infrastructure error (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+                throw error;
+            }
+        }
+    }
+    
     const dbUpdates = {
         trips_updated: 0,
         tolls_inserted: 0,
@@ -1902,25 +1927,36 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                         continue;
                     }
 
-                    // Insert toll charge with Supabase
-                    const { data: newTollCharge, error: insertError } = await supabaseAdmin
-                        .from('toll_charges')
-                        .insert({
-                            toll_account_id: csvTollAccount.id,
-                            toll_date: toll.transactionDate,
-                            toll_location: toll.location,
-                            toll_amount: toll.amount,
-                            plate_number: toll.plateNumber,
-                            transponder_id: toll.transponderId,
-                            transaction_id: toll.laneId,
-                            submission_date: toll.postedDate, // Save the posted date from E-ZPass CSV
-                            is_matched: false
-                        })
-                        .select()
-                        .single();
+                    // Insert toll charge with Supabase (with retry logic)
+                    const { data: newTollCharge, error: insertError } = await retryOperation(async () => {
+                        return await supabaseAdmin
+                            .from('toll_charges')
+                            .insert({
+                                toll_account_id: csvTollAccount.id,
+                                toll_date: toll.transactionDate,
+                                toll_location: toll.location,
+                                toll_amount: toll.amount,
+                                plate_number: toll.plateNumber,
+                                transponder_id: toll.transponderId,
+                                transaction_id: toll.laneId,
+                                submission_date: toll.postedDate, // Save the posted date from E-ZPass CSV
+                                is_matched: false
+                            })
+                            .select()
+                            .single();
+                    });
 
                     if (insertError) {
-                        if (insertError.code === '23503') { // Foreign key constraint
+                        // Check for infrastructure/gateway errors
+                        if (insertError.message && (
+                            insertError.message.includes('502 Bad Gateway') ||
+                            insertError.message.includes('503 Service Unavailable') ||
+                            insertError.message.includes('504 Gateway Timeout') ||
+                            insertError.message.includes('cloudflare') ||
+                            insertError.message.includes('<html>')
+                        )) {
+                            throw new Error(`INFRASTRUCTURE_ERROR: Supabase is temporarily unavailable. Please try again in a few minutes. (Processed ${dbUpdates.tolls_inserted} tolls successfully)`);
+                        } else if (insertError.code === '23503') { // Foreign key constraint
                             throw new Error(`Foreign key constraint violation: toll_account_id ${csvTollAccount.id} does not exist in toll_accounts table`);
                         } else if (insertError.code === '23505') { // Unique constraint
                             console.log(`⚠️ Skipping duplicate transaction_id: ${toll.laneId}`);
@@ -2026,7 +2062,10 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
         let errorType = 'UNKNOWN_ERROR';
         let errorDetails = error.message;
         
-        if (error.message.includes('FOREIGN KEY constraint failed')) {
+        if (error.message.includes('INFRASTRUCTURE_ERROR')) {
+            errorType = 'INFRASTRUCTURE_ERROR';
+            errorDetails = error.message.replace('INFRASTRUCTURE_ERROR: ', '');
+        } else if (error.message.includes('FOREIGN KEY constraint failed')) {
             errorType = 'FOREIGN_KEY_VIOLATION';
             if (error.message.includes('toll_account_id')) {
                 errorDetails = 'Toll account reference is invalid - toll_accounts table missing required record';
