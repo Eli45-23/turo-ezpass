@@ -257,16 +257,47 @@ router.post('/logout', validateCSRF, (req, res) => {
 });
 
 // Check authentication status
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    
     console.log('🔍 Auth status check:', {
+        hasAuthHeader: !!authHeader,
+        hasToken: !!token,
         hasSession: !!req.session,
         hostId: req.session?.hostId,
         sessionKeys: req.session ? Object.keys(req.session) : 'no session',
-        cookies: req.headers.cookie?.substring(0, 100) + '...',
         timestamp: new Date().toISOString()
     });
     
+    // First try Supabase JWT authentication
+    if (token) {
+        try {
+            const { supabaseAdmin } = require('../config/supabase');
+            const { user, error } = await supabaseAdmin.auth.getUser(token);
+            
+            if (error || !user) {
+                console.log('❌ Invalid Supabase token:', error?.message);
+            } else {
+                console.log('✅ Valid Supabase token for user:', user.email);
+                return res.json({ 
+                    success: true,
+                    authenticated: true,
+                    host: {
+                        id: user.id,
+                        email: user.email,
+                        fullName: user.user_metadata?.full_name || user.email
+                    }
+                });
+            }
+        } catch (error) {
+            console.log('❌ Supabase token validation error:', error.message);
+        }
+    }
+    
+    // Fall back to session-based authentication
     if (req.session && req.session.hostId) {
+        console.log('✅ Valid session authentication for:', req.session.email);
         res.json({ 
             success: true,
             authenticated: true,
@@ -277,6 +308,7 @@ router.get('/status', (req, res) => {
             }
         });
     } else {
+        console.log('❌ No valid authentication found');
         res.json({ 
             success: true,
             authenticated: false 

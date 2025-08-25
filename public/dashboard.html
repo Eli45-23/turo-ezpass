@@ -1044,15 +1044,8 @@
                 timestamp: new Date().toISOString()
             });
             
-            // Check authentication before initializing dashboard
-            const isAuthenticated = await checkAuthentication();
-            if (!isAuthenticated) {
-                console.log('⚠️ User not authenticated, redirecting to login...');
-                window.location.href = '/';
-                return;
-            }
-            
-            console.log('✅ User authenticated, initializing dashboard...');
+            // Auth check is handled by auth-check.js
+            console.log('✅ Auth check passed, initializing dashboard...');
             
             // Initialize Lucide icons again after DOM is loaded
             lucide.createIcons();
@@ -1071,67 +1064,7 @@
             });
         }
 
-        // Check if user is authenticated
-        async function checkAuthentication() {
-            try {
-                console.log('🔐 Checking authentication status...');
-                
-                // Check for stored Supabase token
-                const storedToken = localStorage.getItem('supabase_token');
-                const storedSession = localStorage.getItem('supabase_session');
-                
-                console.log('🔍 Stored auth data:', {
-                    hasToken: !!storedToken,
-                    hasSession: !!storedSession,
-                    tokenLength: storedToken?.length || 0
-                });
-                
-                const headers = {
-                    'Content-Type': 'application/json'
-                };
-                
-                // Add Authorization header if we have a Supabase token
-                if (storedToken) {
-                    headers['Authorization'] = `Bearer ${storedToken}`;
-                    console.log('🎫 Using stored Supabase token for auth check');
-                } else {
-                    console.log('⚠️ No stored token found, falling back to cookies');
-                }
-                
-                const response = await fetch('/api/auth/status', {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers
-                });
-                
-                console.log('🔍 Auth check response:', {
-                    status: response.status,
-                    ok: response.ok,
-                    statusText: response.statusText
-                });
-                
-                if (!response.ok) {
-                    console.log('⚠️ Auth check failed with status:', response.status);
-                    return false;
-                }
-                
-                const data = await response.json();
-                console.log('🔍 Auth status data:', data);
-                
-                if (data.success && data.authenticated) {
-                    console.log('✅ User is authenticated:', data.host);
-                    // Store user info for use throughout the app
-                    window.currentUser = data.host;
-                    return true;
-                } else {
-                    console.log('⚠️ User is not authenticated');
-                    return false;
-                }
-            } catch (error) {
-                console.error('❌ Auth check error:', error);
-                return false;
-            }
-        }
+        // Authentication is handled by auth-check.js
         
         function setupEventListeners() {
             // Upload CTA

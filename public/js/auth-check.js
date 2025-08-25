@@ -36,7 +36,7 @@
                 localStorage.removeItem('supabase_token');
                 
                 // Redirect to login page
-                window.location.href = '/login.html';
+                window.location.href = '/';
                 return false;
             }
             
@@ -51,7 +51,7 @@
             localStorage.removeItem('supabase_token');
             
             // Redirect to login page
-            window.location.href = '/login.html';
+            window.location.href = '/';
             return false;
         }
     }
