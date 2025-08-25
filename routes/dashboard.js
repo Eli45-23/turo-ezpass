@@ -2056,22 +2056,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             databaseUpdates: dbUpdates
         });
         
-        // Rollback transaction on error
-        try {
-            await new Promise((resolve, reject) => {
-                db.run('ROLLBACK', (rollbackErr) => {
-                    if (rollbackErr) {
-                        console.error('❌ Failed to rollback transaction:', rollbackErr.message);
-                        reject(rollbackErr);
-                    } else {
-                        console.log('🔄 Transaction rolled back due to error');
-                        resolve();
-                    }
-                });
-            });
-        } catch (rollbackError) {
-            console.error('❌ Critical: Failed to rollback transaction:', rollbackError.message);
-        }
+        // Note: Supabase handles transactions automatically - no manual rollback needed
+        console.log('⚠️ Transaction failed - Supabase will handle rollback automatically');
         
         // Re-throw with enhanced error information
         const enhancedError = new Error(`${errorType}: ${errorDetails}`);
