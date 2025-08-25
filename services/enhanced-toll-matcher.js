@@ -597,7 +597,7 @@ class EnhancedTollMatcher {
                 .eq('host_id', hostId)
                 .eq('transponder_number', transponderId)
                 .eq('is_active', true)
-                .or('(vehicle_description.is.null),(vehicle_description.not.like.Auto-discovered%)')
+                .or('vehicle_description.is.null,vehicle_description.not.like.Auto-discovered%')
                 .single();
 
             if (error || !mapping) {
@@ -634,7 +634,7 @@ class EnhancedTollMatcher {
                 .eq('host_id', hostId)
                 .eq('vehicle_plate', normalizedPlate)
                 .eq('is_active', true)
-                .or('(vehicle_description.is.null),(vehicle_description.not.like.Auto-discovered%)');
+                .or('vehicle_description.is.null,vehicle_description.not.like.Auto-discovered%');
 
             if (error || !mappings) {
                 return [];
@@ -726,7 +726,7 @@ class EnhancedTollMatcher {
                 .select('*')
                 .eq('host_id', hostId)
                 .eq('is_active', true)
-                .or('(vehicle_description.is.null),(vehicle_description.not.like.Auto-discovered%)');
+                .or('vehicle_description.is.null,vehicle_description.not.like.Auto-discovered%');
 
             if (mappingsError) throw mappingsError;
             
