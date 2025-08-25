@@ -2,52 +2,48 @@ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
 
-// Middleware to check authentication (UUID-based like dashboard.js)
+// Middleware to check authentication
 const requireAuth = async (req, res, next) => {
     console.log('🔐 Auth check - Session:', {
         hostId: req.session.hostId,
         sessionId: req.session.id,
-        path: req.path,
-        cookies: req.headers.cookie
+        path: req.path
     });
     
     try {
-        // Check if we have a UUID in session
-        if (!req.session.hostId || typeof req.session.hostId === 'number') {
-            console.log('🔧 No UUID hostId in session - creating/getting UUID for user');
+        // Check for Authorization header (Supabase JWT)
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (token) {
+            // Using Supabase authentication
+            const { user, error } = await supabaseAdmin.auth.getUser(token);
             
-            const userEmail = req.session.email || 'eliascolon23@gmail.com';
+            if (error || !user) {
+                console.log('❌ Invalid Supabase token');
+                return res.status(401).json({ success: false, error: 'Authentication required' });
+            }
             
-            // Check if host already exists in Supabase
-            const { data: existingHost, error } = await supabaseAdmin
+            // Get host data from database
+            const { data: hostData, error: hostError } = await supabaseAdmin
                 .from('hosts')
-                .select('id')
-                .eq('email', userEmail)
+                .select('*')
+                .eq('id', user.user.id)
                 .single();
             
-            if (existingHost) {
-                console.log('✅ Found existing host UUID:', existingHost.id);
-                req.session.hostId = existingHost.id;
-                req.session.email = userEmail;
-            } else {
-                // Create new host record
-                const { data: newHost, error: createError } = await supabaseAdmin
-                    .from('hosts')
-                    .insert({
-                        email: userEmail,
-                        full_name: 'User'
-                    })
-                    .select()
-                    .single();
-                
-                if (createError) {
-                    console.error('❌ Failed to create host:', createError);
-                    return res.status(500).json({ success: false, error: 'Authentication failed' });
-                }
-                
-                console.log('✅ Created new host UUID:', newHost.id);
-                req.session.hostId = newHost.id;
-                req.session.email = userEmail;
+            if (hostError || !hostData) {
+                console.log('❌ Host not found for authenticated user');
+                return res.status(401).json({ success: false, error: 'User profile not found' });
+            }
+            
+            req.session.hostId = hostData.id;
+            req.session.email = hostData.email;
+            req.session.fullName = hostData.full_name;
+        } else {
+            // Fallback to session-based auth - must have both hostId and email
+            if (!req.session.hostId || !req.session.email) {
+                console.log('❌ No valid session found');
+                return res.status(401).json({ success: false, error: 'Authentication required' });
             }
         }
         
