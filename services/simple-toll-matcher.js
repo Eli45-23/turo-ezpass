@@ -432,19 +432,23 @@ class SimpleTollMatcher {
             // If no vehicles resolved, still attempt direct matching with the identifier
             // This follows user spec: trust the data provided, don't pre-filter
             if (tollVehicles.length === 0) {
-                console.log(`🔍 ATTEMPTING: Direct match for identifier: ${toll.tagOrPlate} (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()})`);
+                const tollDateStr = toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date';
+                console.log(`🔍 ATTEMPTING: Direct match for identifier: ${toll.tagOrPlate} (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${tollDateStr})`);
                 // Use the raw identifier for direct matching
                 tollVehicles = [this.normalizePlate(toll.tagOrPlate)];
                 console.log(`   Direct Match Vehicles: [${tollVehicles.join(', ')}]`);
             }
             
             // Find matching trip
-            console.log(`   Searching for trips with vehicles: [${tollVehicles.join(', ')}] on ${toll.tollDate.toLocaleDateString()}`);
+            const tollSearchDateStr = toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date';
+            console.log(`   Searching for trips with vehicles: [${tollVehicles.join(', ')}] on ${tollSearchDateStr}`);
             const matchingTrip = this.findMatchingTrip(toll, tollVehicles, tripData);
             
             if (matchingTrip) {
                 console.log(`   ✅ MATCH FOUND: Trip ${matchingTrip.id} (${matchingTrip.guest}) - Vehicle ${matchingTrip.vehicle}`);
-                console.log(`      Trip dates: ${matchingTrip.startDate.toLocaleDateString()} - ${matchingTrip.endDate.toLocaleDateString()}`);
+                const tripStartStr = matchingTrip.startDate ? matchingTrip.startDate.toLocaleDateString() : 'No start date';
+                const tripEndStr = matchingTrip.endDate ? matchingTrip.endDate.toLocaleDateString() : 'No end date';
+                console.log(`      Trip dates: ${tripStartStr} - ${tripEndStr}`);
             } else {
                 console.log(`   ❌ NO MATCH: No suitable trip found for this toll`);
                 // Log why no trips matched
@@ -453,15 +457,18 @@ class SimpleTollMatcher {
                     const tripVehicle = this.normalizePlate(trip.vehicle);
                     const vehicleMatch = tollVehicles.includes(tripVehicle);
                     const timeWindow = this.isWithinTimeWindow(toll.tollDate, trip.startDate, trip.endDate);
-                    console.log(`     Trip ${idx+1}: ${trip.vehicle} (${trip.startDate.toLocaleDateString()} - ${trip.endDate.toLocaleDateString()}) - Vehicle Match: ${vehicleMatch}, Time Match: ${timeWindow}`);
+                    const startDateStr = trip.startDate ? trip.startDate.toLocaleDateString() : 'No start date';
+                    const endDateStr = trip.endDate ? trip.endDate.toLocaleDateString() : 'No end date';
+                    console.log(`     Trip ${idx+1}: ${trip.vehicle} (${startDateStr} - ${endDateStr}) - Vehicle Match: ${vehicleMatch}, Time Match: ${timeWindow}`);
                 });
             }
             
             if (matchingTrip) {
+                const tollDateStr = toll.tollDate ? toll.tollDate.toISOString() : 'No date';
                 matches.push({
                     toll: toll,
                     trip: matchingTrip,
-                    reason: `Vehicle: ${tollVehicles.join('/')} - Time: ${toll.tollDate.toISOString()} within trip window`,
+                    reason: `Vehicle: ${tollVehicles.join('/')} - Time: ${tollDateStr} within trip window`,
                     confidence: 0.95
                 });
                 
@@ -475,7 +482,7 @@ class SimpleTollMatcher {
                         id: toll.laneTransactionId,
                         location: toll.tollLocation,
                         amount: toll.amount,
-                        date: toll.tollDate.toLocaleDateString(),
+                        date: toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date',
                         plate: toll.tagOrPlate,
                         status: 'MATCHED',
                         tripId: matchingTrip.reservationId,
@@ -483,7 +490,8 @@ class SimpleTollMatcher {
                     }
                 });
             } else {
-                console.log(`❌ NO MATCH: Toll ${toll.laneTransactionId} (${toll.tagOrPlate}) - no trip found within time window (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()})`);
+                const noMatchDateStr = toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date';
+                console.log(`❌ NO MATCH: Toll ${toll.laneTransactionId} (${toll.tagOrPlate}) - no trip found within time window (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${noMatchDateStr})`);
                 
                 progressCallback({
                     step: 'matching',
@@ -493,7 +501,7 @@ class SimpleTollMatcher {
                         id: toll.laneTransactionId,
                         location: toll.tollLocation,
                         amount: toll.amount,
-                        date: toll.tollDate.toLocaleDateString(),
+                        date: toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date',
                         plate: toll.tagOrPlate,
                         status: 'UNMATCHED',
                         reason: 'Personal driving (no rental trip found)'
@@ -843,14 +851,16 @@ class SimpleTollMatcher {
         if (unknownVehicles.size > 0) {
             console.log('📋 Sample unknown vehicle tolls:');
             personalDrivingTolls.filter(t => unknownVehicles.has(t.tagOrPlate)).slice(0, 5).forEach(toll => {
-                console.log(`  - ${toll.tagOrPlate}: $${toll.amount} at ${toll.tollLocation} on ${toll.tollDate.toLocaleDateString()}`);
+                const matchedDateStr = toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date';
+                console.log(`  - ${toll.tagOrPlate}: $${toll.amount} at ${toll.tollLocation} on ${matchedDateStr}`);
             });
         }
         
         if (knownVehiclesNoTrip.size > 0) {
             console.log('📋 Sample time window issues:');
             personalDrivingTolls.filter(t => knownVehiclesNoTrip.has(t.tagOrPlate)).slice(0, 5).forEach(toll => {
-                console.log(`  - ${toll.tagOrPlate}: $${toll.amount} at ${toll.tollLocation} on ${toll.tollDate.toLocaleDateString()}`);
+                const matchedDateStr = toll.tollDate ? toll.tollDate.toLocaleDateString() : 'No date';
+                console.log(`  - ${toll.tagOrPlate}: $${toll.amount} at ${toll.tollLocation} on ${matchedDateStr}`);
             });
         }
     }
