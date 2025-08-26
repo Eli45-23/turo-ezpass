@@ -280,9 +280,27 @@ router.post('/logout', validateCSRF, async (req, res) => {
             });
         }
 
+        // CRITICAL: Clear all session data for complete isolation
+        // This prevents data leakage when another user logs in on same device
+        if (req.session) {
+            const sessionHostId = req.session.hostId;
+            req.session.destroy((err) => {
+                if (err) {
+                    console.error('❌ Session destroy error:', err);
+                } else {
+                    console.log(`✅ Session destroyed for host: ${sessionHostId}`);
+                }
+            });
+        }
+
+        // Set cache control headers to prevent browser caching of sensitive data
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         res.json({ 
             success: true, 
-            message: 'Logged out successfully' 
+            message: 'Logged out successfully - session cleared' 
         });
 
     } catch (error) {

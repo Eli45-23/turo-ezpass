@@ -183,15 +183,13 @@ router.get('/', requireAuth, async (req, res) => {
                 submittedDate: null
             };
             
-            // Categorize trips based on dates and status
-            if (endDate < now && trip.trip_status !== 'upcoming') {
-                // Only include completed trips that have toll charges > $0
-                if (tollTotal > 0) {
-                    transformedTrips.completed.push({
-                        ...tripData,
-                        status: 'completed'
-                    });
-                }
+            // Categorize trips based on dates only (per user requirements)
+            if (endDate < now) {
+                // Include ALL completed trips, regardless of toll amount
+                transformedTrips.completed.push({
+                    ...tripData,
+                    status: 'completed'
+                });
             } else if (startDate <= now && endDate >= now) {
                 transformedTrips.inProgress.push({
                     ...tripData,

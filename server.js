@@ -424,6 +424,8 @@ app.use('/api/notifications', notificationLimiter, notificationRoutes);
 app.use('/api/analytics', analyticsLimiter, analyticsRoutes);
 app.use('/api/toll-analytics', analyticsLimiter, require('./routes/toll-analytics'));
 app.use('/api/enhanced-smart-status', dashboardLimiter, require('./routes/enhanced-smart-status'));
+app.use('/api/personal-tolls', tollOperationsLimiter, require('./routes/personal-tolls'));
+app.use('/api/late-tolls', tollOperationsLimiter, require('./routes/late-tolls'));
 app.use('/api/ml-matching', mlOperationsLimiter, mlMatchingRoutes);
 app.use('/api/ml-training', mlOperationsLimiter, mlTrainingRoutes);
 // app.use('/api/backup', dashboardLimiter, backupRoutes); // Disabled - using Supabase

@@ -192,6 +192,9 @@ class EnhancedTollMatcher {
             
             const appliedCount = await this.applyMatches(matchResults);
             
+            // Mark remaining unmatched tolls as Personal Tolls for this host
+            const personalTollsCount = await this.markPersonalTolls(hostId, unmatchedTolls, matchResults);
+            
             // Learn from successful matches
             if (this.config.enablePatternLearning && appliedCount > 0) {
                 await this.learnFromMatches(matchResults, hostId);
@@ -199,13 +202,14 @@ class EnhancedTollMatcher {
             
             progressCallback({
                 step: 'completed',
-                message: `Enhanced matching complete: ${appliedCount}/${unmatchedTolls.length} tolls matched`,
+                message: `Enhanced matching complete: ${appliedCount}/${unmatchedTolls.length} tolls matched, ${personalTollsCount} marked as personal`,
                 progress: 100
             });
             
             return {
                 totalCharges: unmatchedTolls.length,
                 matchedCount: appliedCount,
+                personalTollsCount: personalTollsCount,
                 highConfidence: matchResults.filter(m => m.confidence >= 0.85).length,
                 mediumConfidence: matchResults.filter(m => m.confidence >= 0.65 && m.confidence < 0.85).length,
                 lowConfidence: matchResults.filter(m => m.confidence < 0.65).length,
@@ -782,7 +786,22 @@ class EnhancedTollMatcher {
         for (const result of matchResults) {
             if (result.confidence >= this.config.autoMatchThreshold) {
                 try {
-                    console.log(`🔍 DEBUG: Applying match - Toll ID ${result.toll.id} → Trip ID ${result.trip.id} (${result.trip.turo_trip_id})`);
+                    // CRITICAL SECURITY: Verify host isolation - prevent cross-host contamination
+                    const tollHostId = result.toll.toll_accounts?.host_id;
+                    const tripHostId = result.trip.host_id;
+                    
+                    if (!tollHostId || !tripHostId) {
+                        console.error(`❌ SECURITY: Missing host data - Toll ${result.toll.id}: tollHost=${tollHostId}, tripHost=${tripHostId}`);
+                        continue;
+                    }
+                    
+                    if (tollHostId !== tripHostId) {
+                        console.error(`🚫 SECURITY: Cross-host match blocked! Toll ${result.toll.id} (host: ${tollHostId}) → Trip ${result.trip.id} (host: ${tripHostId})`);
+                        console.error(`🚫 This would cause data contamination between accounts - match rejected`);
+                        continue;
+                    }
+                    
+                    console.log(`🔍 DEBUG: Host validation passed - Applying match - Toll ID ${result.toll.id} → Trip ID ${result.trip.id} (${result.trip.turo_trip_id})`);
                     
                     const { data, error } = await supabaseAdmin
                         .from('toll_charges')
@@ -810,6 +829,49 @@ class EnhancedTollMatcher {
         
         console.log(`🎯 Applied ${appliedCount}/${matchResults.length} matches to database`);
         return appliedCount;
+    }
+    
+    /**
+     * Mark remaining unmatched tolls as Personal Tolls for host
+     */
+    async markPersonalTolls(hostId, unmatchedTolls, matchResults) {
+        try {
+            // Get IDs of tolls that were successfully matched
+            const matchedTollIds = matchResults
+                .filter(r => r.confidence >= this.config.autoMatchThreshold)
+                .map(r => r.toll.id);
+            
+            // Find tolls that remain unmatched (not in matchedTollIds)
+            const personalTolls = unmatchedTolls.filter(toll => !matchedTollIds.includes(toll.id));
+            
+            if (personalTolls.length === 0) {
+                console.log('🏠 No personal tolls to mark');
+                return 0;
+            }
+            
+            console.log(`🏠 Marking ${personalTolls.length} tolls as Personal Tolls for host ${hostId}`);
+            
+            // Mark these tolls as personal (host was driving when car wasn't rented)
+            const { error } = await supabaseAdmin
+                .from('toll_charges')
+                .update({ 
+                    is_personal: true,
+                    is_matched: false // Keep as unmatched but categorized as personal
+                })
+                .in('id', personalTolls.map(toll => toll.id));
+            
+            if (error) {
+                console.error('❌ Failed to mark personal tolls:', error);
+                return 0;
+            }
+            
+            console.log(`✅ Successfully marked ${personalTolls.length} tolls as Personal Tolls`);
+            return personalTolls.length;
+            
+        } catch (error) {
+            console.error('❌ Exception marking personal tolls:', error);
+            return 0;
+        }
     }
     
     /**

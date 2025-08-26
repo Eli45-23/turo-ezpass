@@ -29,11 +29,12 @@ class SchedulerService {
             console.error('❌ Failed to initialize notification manager:', error);
         }
         
-        // Auto-match tolls every 30 minutes
-        const tollMatchingJob = cron.schedule('*/30 * * * *', async () => {
-            console.log('🔄 Running automatic toll matching...');
-            await this.runTollMatching();
-        });
+        // DISABLED: Auto-match tolls globally - now only runs per-user on demand
+        // This ensures data isolation - matching only happens within user sessions
+        // const tollMatchingJob = cron.schedule('*/30 * * * *', async () => {
+        //     console.log('🔄 Running automatic toll matching...');
+        //     await this.runTollMatching();
+        // });
         
         // Generate pending invoices daily at 9 AM
         const invoiceGenerationJob = cron.schedule('0 9 * * *', async () => {
@@ -77,7 +78,7 @@ class SchedulerService {
             await this.sendMonthlySummaries();
         });
         
-        this.jobs = [tollMatchingJob, invoiceGenerationJob, tollSyncJob, cleanupJob, tripStatusJob, 
+        this.jobs = [invoiceGenerationJob, tollSyncJob, cleanupJob, tripStatusJob, 
                      notificationQueueJob, weeklySummaryJob, monthlySummaryJob];
         console.log('✅ Scheduled tasks started successfully');
     }
@@ -117,6 +118,60 @@ class SchedulerService {
             
         } catch (error) {
             console.error('❌ Error in toll matching job:', error);
+        }
+    }
+
+    /**
+     * Run toll matching for a specific host only (per-user isolation)
+     * This replaces the global matching to ensure data isolation
+     */
+    async runTollMatchingForHost(hostId, options = {}) {
+        try {
+            console.log(`🎯 Running toll matching for host: ${hostId}`);
+            
+            // Verify host exists and is active
+            const { data: host, error: hostError } = await supabaseAdmin
+                .from('hosts')
+                .select('id, email, full_name')
+                .eq('id', hostId)
+                .single();
+            
+            if (hostError || !host) {
+                console.error(`❌ Host ${hostId} not found or inactive`);
+                return { success: false, error: 'Host not found' };
+            }
+            
+            // Run toll matching only for this host
+            const result = await this.turoService.autoMatchTolls(hostId, options);
+            
+            console.log(`✅ Host ${host.email}: ${result.matchedCount}/${result.totalCharges} tolls matched`);
+            
+            // Log the activity for this specific host
+            await this.logActivity('toll_matching_per_user', {
+                hostId,
+                hostEmail: host.email,
+                matchedCount: result.matchedCount,
+                totalCharges: result.totalCharges,
+                personalTollsCount: result.personalTollsCount || 0
+            });
+            
+            return {
+                success: true,
+                hostId,
+                hostEmail: host.email,
+                matchedCount: result.matchedCount,
+                totalCharges: result.totalCharges,
+                personalTollsCount: result.personalTollsCount || 0,
+                confidence: result.confidence || {}
+            };
+            
+        } catch (error) {
+            console.error(`❌ Error in per-user toll matching for host ${hostId}:`, error);
+            return {
+                success: false,
+                error: error.message,
+                hostId
+            };
         }
     }
 

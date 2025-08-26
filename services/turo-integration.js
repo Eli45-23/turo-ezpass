@@ -643,18 +643,64 @@ class TuroIntegrationService {
                 });
             }
             
-            // Apply matches to database using Supabase
+            // Apply matches to database using Supabase with host isolation checks
             for (const match of matches) {
-                const { error } = await supabaseAdmin
-                    .from('toll_charges')
-                    .update({ 
-                        trip_id: match.tripId, 
-                        is_matched: true 
-                    })
-                    .eq('id', match.chargeId);
+                try {
+                    // CRITICAL SECURITY: Verify host isolation before applying match
+                    // Get the toll's host_id through toll_account relationship
+                    const { data: tollData, error: tollError } = await supabaseAdmin
+                        .from('toll_charges')
+                        .select(`
+                            id,
+                            toll_accounts!inner(host_id)
+                        `)
+                        .eq('id', match.chargeId)
+                        .single();
                     
-                if (!error) {
-                    matchedCount++;
+                    if (tollError || !tollData) {
+                        console.error(`❌ SECURITY: Failed to get toll host for charge ${match.chargeId}:`, tollError);
+                        continue;
+                    }
+                    
+                    // Get the trip's host_id
+                    const { data: tripData, error: tripError } = await supabaseAdmin
+                        .from('trips')
+                        .select('id, host_id, turo_trip_id')
+                        .eq('id', match.tripId)
+                        .single();
+                        
+                    if (tripError || !tripData) {
+                        console.error(`❌ SECURITY: Failed to get trip host for trip ${match.tripId}:`, tripError);
+                        continue;
+                    }
+                    
+                    const tollHostId = tollData.toll_accounts?.host_id;
+                    const tripHostId = tripData.host_id;
+                    
+                    if (tollHostId !== tripHostId) {
+                        console.error(`🚫 SECURITY: Cross-host match blocked in legacy matcher! Toll ${match.chargeId} (host: ${tollHostId}) → Trip ${match.tripId} (host: ${tripHostId})`);
+                        console.error(`🚫 This would cause data contamination between accounts - match rejected`);
+                        continue;
+                    }
+                    
+                    console.log(`🔍 LEGACY: Host validation passed - Applying match - Toll ID ${match.chargeId} → Trip ID ${match.tripId} (${tripData.turo_trip_id})`);
+                    
+                    // Now apply the match
+                    const { error } = await supabaseAdmin
+                        .from('toll_charges')
+                        .update({ 
+                            trip_id: match.tripId, 
+                            is_matched: true 
+                        })
+                        .eq('id', match.chargeId);
+                        
+                    if (!error) {
+                        matchedCount++;
+                    } else {
+                        console.error(`❌ Failed to apply legacy match for toll ${match.chargeId}:`, error);
+                    }
+                } catch (error) {
+                    console.error(`❌ Exception in legacy match security check for toll ${match.chargeId}:`, error);
                 }
             }
             
