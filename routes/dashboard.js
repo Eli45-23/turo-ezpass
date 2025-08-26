@@ -1854,7 +1854,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             const { data: newTollAccount, error: createTollAccountError } = await supabaseAdmin
                 .from('toll_accounts')
                 .insert({
-                    host_id: hostId, // CRITICAL: Validated host_id from authenticated session
+                    host_id: hostId, // Uses authenticated session host_id
                     provider: 'CSV Import',
                     account_number: 'CSV_UPLOAD_' + Date.now(),
                     username: 'csv_import@system',
@@ -1864,7 +1864,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 .select()
                 .single();
             
-            console.log(`✅ Created toll_account with host_id validation: ${hostId}`);
+            console.log(`✅ Created toll_account for host: ${hostId}`);
             
             if (createTollAccountError) {
                 throw new Error(`Failed to create toll account: ${createTollAccountError.message}`);
@@ -1954,9 +1954,9 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                         continue;
                     }
 
-                    // Insert toll charge with Supabase (with retry logic and host_id validation)
+                    // Insert toll charge with Supabase (with retry logic)
                     const { data: newTollCharge, error: insertError } = await retryOperation(async () => {
-                        console.log(`🔐 Inserting toll with host_id validation: ${hostId}`);
+                        console.log(`💾 Inserting toll for toll_account: ${csvTollAccount.id}`);
                         return await supabaseAdmin
                             .from('toll_charges')
                             .insert({
@@ -1968,8 +1968,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                 transponder_id: toll.transponderId,
                                 transaction_id: toll.laneId,
                                 submission_date: toll.postedDate, // Save the posted date from E-ZPass CSV
-                                is_matched: false,
-                                host_id: hostId // CRITICAL: Ensure host_id matches the session
+                                is_matched: false
                             })
                             .select()
                             .single();

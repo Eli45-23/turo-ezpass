@@ -1,7 +1,8 @@
 -- Migration: Add host_id validation and constraints to prevent mismatches
 -- Date: 2024-01-15
+-- Updated: Focuses on toll_account validation and toll_charges relationship validation
 
--- 1. Add check constraint to ensure host_id consistency within user's data
+-- 1. Add check constraint to ensure host_id consistency within toll_accounts
 ALTER TABLE toll_accounts 
 ADD CONSTRAINT toll_accounts_host_id_consistency_check 
 CHECK (
@@ -11,38 +12,33 @@ CHECK (
     host_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 );
 
--- 2. Add check constraint to toll_charges to ensure they match their account's host_id
-ALTER TABLE toll_charges 
-ADD CONSTRAINT toll_charges_host_id_consistency_check 
-CHECK (
-    -- Ensure that toll_charges host_id matches the associated toll_account
-    NOT EXISTS (
-        SELECT 1 FROM toll_accounts ta 
-        WHERE ta.id = toll_charges.toll_account_id 
-        AND ta.host_id != toll_charges.host_id
-    )
-);
-
--- 3. Create function to validate host_id consistency across related tables
-CREATE OR REPLACE FUNCTION validate_host_id_consistency()
+-- 2. Create function to validate toll_account relationships
+CREATE OR REPLACE FUNCTION validate_toll_charge_account_consistency()
 RETURNS trigger AS $$
+DECLARE
+    account_host_id UUID;
 BEGIN
-    -- For toll_accounts: ensure host_id is valid
-    IF TG_TABLE_NAME = 'toll_accounts' THEN
-        IF NEW.host_id IS NULL OR length(NEW.host_id) != 36 THEN
-            RAISE EXCEPTION 'Invalid host_id format in toll_accounts: %', NEW.host_id;
-        END IF;
+    -- Get the host_id from the associated toll_account
+    SELECT host_id INTO account_host_id 
+    FROM toll_accounts 
+    WHERE id = NEW.toll_account_id;
+    
+    -- Validate the account belongs to a valid host
+    IF account_host_id IS NULL THEN
+        RAISE EXCEPTION 'Invalid toll_account_id: % does not exist', NEW.toll_account_id;
     END IF;
     
-    -- For toll_charges: ensure host_id matches parent toll_account
-    IF TG_TABLE_NAME = 'toll_charges' THEN
-        IF EXISTS (
-            SELECT 1 FROM toll_accounts ta 
-            WHERE ta.id = NEW.toll_account_id 
-            AND ta.host_id != NEW.host_id
-        ) THEN
-            RAISE EXCEPTION 'Host ID mismatch: toll_charge host_id (%) does not match toll_account host_id', NEW.host_id;
-        END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Create function to validate toll_accounts
+CREATE OR REPLACE FUNCTION validate_toll_account_host_id()
+RETURNS trigger AS $$
+BEGIN
+    -- Ensure host_id is valid UUID format
+    IF NEW.host_id IS NULL OR length(NEW.host_id::text) != 36 THEN
+        RAISE EXCEPTION 'Invalid host_id format in toll_accounts: %', NEW.host_id;
     END IF;
     
     RETURN NEW;
@@ -53,80 +49,67 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS validate_toll_accounts_host_id ON toll_accounts;
 CREATE TRIGGER validate_toll_accounts_host_id
     BEFORE INSERT OR UPDATE ON toll_accounts
-    FOR EACH ROW EXECUTE FUNCTION validate_host_id_consistency();
+    FOR EACH ROW EXECUTE FUNCTION validate_toll_account_host_id();
 
-DROP TRIGGER IF EXISTS validate_toll_charges_host_id ON toll_charges;
-CREATE TRIGGER validate_toll_charges_host_id
+DROP TRIGGER IF EXISTS validate_toll_charge_account ON toll_charges;
+CREATE TRIGGER validate_toll_charge_account
     BEFORE INSERT OR UPDATE ON toll_charges
-    FOR EACH ROW EXECUTE FUNCTION validate_host_id_consistency();
+    FOR EACH ROW EXECUTE FUNCTION validate_toll_charge_account_consistency();
 
--- 5. Create index for efficient host_id lookups and consistency checks
+-- 5. Create indexes for efficient lookups and consistency checks
 CREATE INDEX IF NOT EXISTS idx_toll_accounts_host_id ON toll_accounts(host_id);
-CREATE INDEX IF NOT EXISTS idx_toll_charges_host_id ON toll_charges(host_id);
-CREATE INDEX IF NOT EXISTS idx_toll_charges_account_host_lookup ON toll_charges(toll_account_id, host_id);
+CREATE INDEX IF NOT EXISTS idx_toll_charges_account_id ON toll_charges(toll_account_id);
+CREATE INDEX IF NOT EXISTS idx_toll_charges_trip_id ON toll_charges(trip_id);
+CREATE INDEX IF NOT EXISTS idx_toll_charges_plate ON toll_charges(plate_number);
+CREATE INDEX IF NOT EXISTS idx_toll_charges_transponder ON toll_charges(transponder_id);
 
--- 6. Create monitoring view to detect host_id mismatches
+-- 6. Create monitoring view to detect orphaned records
 CREATE OR REPLACE VIEW host_id_mismatch_monitor AS
 SELECT 
     'toll_charges' as table_name,
     tc.id as record_id,
-    tc.host_id as record_host_id,
-    ta.host_id as expected_host_id,
+    ta.host_id as account_host_id,
     tc.toll_account_id,
     ta.provider,
-    tc.charge_date,
-    tc.amount
+    tc.toll_date as charge_date,
+    tc.toll_amount as amount,
+    'orphaned_toll_charge' as issue_type
 FROM toll_charges tc
-JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-WHERE tc.host_id != ta.host_id
+LEFT JOIN toll_accounts ta ON tc.toll_account_id = ta.id
+WHERE ta.id IS NULL
 
 UNION ALL
 
 SELECT 
-    'transponder_plate_mappings' as table_name,
-    tpm.id as record_id,
-    tpm.host_id as record_host_id,
-    ta.host_id as expected_host_id,
-    tpm.toll_account_id,
-    ta.provider,
-    null as charge_date,
-    null as amount
-FROM transponder_plate_mappings tpm
-JOIN toll_accounts ta ON tpm.toll_account_id = ta.id
-WHERE tpm.host_id != ta.host_id;
+    'transponder_mappings' as table_name,
+    tm.id as record_id,
+    tm.host_id as account_host_id,
+    NULL as toll_account_id,
+    'Transponder Mapping' as provider,
+    NULL as charge_date,
+    NULL as amount,
+    'active_transponder_mapping' as issue_type
+FROM transponder_mappings tm
+WHERE tm.is_active = true;
 
--- 7. Create function to fix host_id mismatches (emergency use only)
-CREATE OR REPLACE FUNCTION fix_host_id_mismatches(target_host_id UUID)
-RETURNS TABLE(fixed_table TEXT, fixed_count INTEGER) AS $$
+-- 7. Create function to clean up orphaned records (emergency use only)
+CREATE OR REPLACE FUNCTION cleanup_orphaned_toll_charges()
+RETURNS TABLE(cleanup_action TEXT, record_count INTEGER) AS $$
 DECLARE
-    toll_charges_fixed INTEGER := 0;
-    transponder_mappings_fixed INTEGER := 0;
+    orphaned_count INTEGER := 0;
 BEGIN
-    -- Fix toll_charges
-    UPDATE toll_charges 
-    SET host_id = target_host_id
-    FROM toll_accounts ta
-    WHERE toll_charges.toll_account_id = ta.id 
-    AND ta.host_id = target_host_id 
-    AND toll_charges.host_id != target_host_id;
+    -- Delete toll_charges that reference non-existent toll_accounts
+    DELETE FROM toll_charges tc
+    WHERE NOT EXISTS (
+        SELECT 1 FROM toll_accounts ta 
+        WHERE ta.id = tc.toll_account_id
+    );
     
-    GET DIAGNOSTICS toll_charges_fixed = ROW_COUNT;
-    
-    -- Fix transponder_plate_mappings
-    UPDATE transponder_plate_mappings 
-    SET host_id = target_host_id
-    FROM toll_accounts ta
-    WHERE transponder_plate_mappings.toll_account_id = ta.id 
-    AND ta.host_id = target_host_id 
-    AND transponder_plate_mappings.host_id != target_host_id;
-    
-    GET DIAGNOSTICS transponder_mappings_fixed = ROW_COUNT;
+    GET DIAGNOSTICS orphaned_count = ROW_COUNT;
     
     -- Return results
-    RETURN QUERY VALUES 
-        ('toll_charges', toll_charges_fixed),
-        ('transponder_plate_mappings', transponder_mappings_fixed);
+    RETURN QUERY VALUES ('orphaned_toll_charges_deleted', orphaned_count);
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION fix_host_id_mismatches IS 'Emergency function to fix host_id mismatches. Use with caution.';
+COMMENT ON FUNCTION cleanup_orphaned_toll_charges IS 'Emergency function to clean up orphaned toll charges. Use with caution.';
