@@ -523,50 +523,103 @@ function validateInput(schema) {
 
 /**
  * Enhanced authentication middleware with security logging
+ * Supports both JWT tokens (Supabase) and session-based auth
  */
-function requireAuth(req, res, next) {
-    if (!req.session || !req.session.hostId) {
-        logSecurityEvent('UNAUTHORIZED_ACCESS', {
+async function requireAuth(req, res, next) {
+    try {
+        // First try JWT token authentication
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (token) {
+            // Using Supabase JWT authentication
+            const { supabaseAdmin } = require('../config/supabase');
+            const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+            
+            if (!error && user) {
+                // Get host data from database using Supabase
+                const { data: hostData, error: hostError } = await supabaseAdmin
+                    .from('hosts')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!hostError && hostData) {
+                    // Set session data for backward compatibility
+                    req.session = req.session || {};
+                    req.session.hostId = hostData.id;
+                    req.session.email = hostData.email;
+                    req.session.fullName = hostData.full_name;
+                    
+                    // Store host info for route handlers
+                    req.host = hostData;
+                    req.user = user; // Store user info too
+                    
+                    return next();
+                }
+            }
+        }
+        
+        // Fallback to session-based authentication
+        if (!req.session || !req.session.hostId) {
+            logSecurityEvent('UNAUTHORIZED_ACCESS', {
+                ip: req.ip,
+                userAgent: req.get('User-Agent'),
+                endpoint: req.path,
+                method: req.method,
+                sessionId: req.sessionID,
+                hasToken: !!token
+            });
+            
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
+        // Verify session is still valid in database using Supabase
+        const { supabaseAdmin } = require('../config/supabase');
+        const { data: hostData, error: hostError } = await supabaseAdmin
+            .from('hosts')
+            .select('*')
+            .eq('id', req.session.hostId)
+            .single();
+        
+        if (hostError || !hostData) {
+            logSecurityEvent('INVALID_SESSION', {
+                ip: req.ip,
+                userAgent: req.get('User-Agent'),
+                endpoint: req.path,
+                method: req.method,
+                hostId: req.session.hostId,
+                sessionId: req.sessionID
+            });
+            
+            req.session.destroy();
+            return res.status(401).json({
+                success: false,
+                error: 'Session expired'
+            });
+        }
+        
+        // Store host info for use in route handlers
+        req.host = hostData;
+        next();
+        
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        logSecurityEvent('AUTH_ERROR', {
             ip: req.ip,
             userAgent: req.get('User-Agent'),
             endpoint: req.path,
-            method: req.method,
-            sessionId: req.sessionID
+            error: error.message
         });
         
-        return res.status(401).json({
+        return res.status(500).json({
             success: false,
-            error: 'Authentication required'
+            error: 'Authentication failed'
         });
     }
-    
-    // Verify session is still valid in database
-    db.get(
-        'SELECT id, email FROM hosts WHERE id = ?',
-        [req.session.hostId],
-        (err, host) => {
-            if (err || !host) {
-                logSecurityEvent('INVALID_SESSION', {
-                    ip: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    endpoint: req.path,
-                    method: req.method,
-                    hostId: req.session.hostId,
-                    sessionId: req.sessionID
-                });
-                
-                req.session.destroy();
-                return res.status(401).json({
-                    success: false,
-                    error: 'Session expired'
-                });
-            }
-            
-            // Store host info for use in route handlers
-            req.host = host;
-            next();
-        }
-    );
 }
 
 /**
