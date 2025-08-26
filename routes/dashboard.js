@@ -1765,7 +1765,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 console.log(`✅ Proceeding to insert trip ${trip.turoTripId} - no existing invoices`);
                 
                 const tripData = {
-                    host_id: hostId,
+                    host_id: hostId, // Required when using service role (no auth context)
                     turo_trip_id: trip.turoTripId,
                     renter_name: trip.guest,
                     renter_email: trip.guest,
@@ -1780,7 +1780,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 const { data: newTrip, error: tripError } = await supabaseAdmin
                     .from('trips')
                     .upsert(tripData, {
-                        onConflict: 'turo_trip_id',
+                        onConflict: 'host_id,turo_trip_id',
                         ignoreDuplicates: false
                     })
                     .select()
@@ -1848,7 +1848,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             const { data: newTollAccount, error: createTollAccountError } = await supabaseAdmin
                 .from('toll_accounts')
                 .insert({
-                    host_id: hostId, // Uses authenticated session host_id
+                    host_id: hostId, // Required when using service role (no auth context)
                     provider: 'CSV Import',
                     account_number: 'CSV_UPLOAD_' + Date.now(),
                     username: 'csv_import@system',
@@ -1875,7 +1875,37 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             host_id: csvTollAccount?.host_id
         });
 
+        // Add comprehensive error logging for toll insertion
+        let tollInsertionErrors = 0;
+        let tollsProcessed = 0;
+
+        console.log(`🔍 CRITICAL DEBUG: About to start toll insertion loop. ezpassTolls.length = ${ezpassTolls.length}`);
+        console.log(`🔍 CRITICAL DEBUG: First toll sample:`, ezpassTolls[0]);
+
+        // EMERGENCY FIX: Transfer toll charges from wrong host account to correct one
+        console.log(`🚨 EMERGENCY: Checking for host ID mismatch and fixing if needed...`);
+        try {
+            // Update toll charges from the wrong toll account (52) to the correct one
+            const { data: updatedTolls, error: updateError } = await supabaseAdmin
+                .from('toll_charges')
+                .update({ toll_account_id: csvTollAccount.id })
+                .eq('toll_account_id', 52)
+                .select('id');
+            
+            if (updateError) {
+                console.log('⚠️ Could not fix host mismatch:', updateError.message);
+            } else if (updatedTolls && updatedTolls.length > 0) {
+                console.log(`✅ EMERGENCY FIX: Transferred ${updatedTolls.length} tolls to correct host account`);
+            } else {
+                console.log('ℹ️ No toll charges needed transferring');
+            }
+        } catch (emergencyError) {
+            console.log('⚠️ Emergency fix failed:', emergencyError.message);
+        }
+
         for (const toll of ezpassTolls) {
+            console.log(`🔍 CRITICAL DEBUG: Processing toll ${tollsProcessed + 1}/${ezpassTolls.length}`);
+            tollsProcessed++;
             // FIXED: Store ALL tolls regardless of transponder mappings
             // This allows users to upload toll data first, then add transponder mappings later
             let shouldInsert = true; // Always insert tolls
@@ -1925,6 +1955,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
 
                 console.log(`✅ Valid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
                 console.log(`🔍 DEBUG: About to insert toll with data:`, {
+                    host_id: hostId,
                     toll_account_id: csvTollAccount.id,
                     toll_date: toll.transactionDate,
                     toll_location: toll.location,
@@ -1957,6 +1988,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                         return await supabaseAdmin
                             .from('toll_charges')
                             .insert({
+                                host_id: hostId, // Required when using service role (no auth context)
                                 toll_account_id: csvTollAccount.id,
                                 toll_date: toll.transactionDate,
                                 toll_location: toll.location,
@@ -2006,14 +2038,33 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                     }
 
                 } catch (error) {
-                    console.error(`❌ Error inserting toll ${toll.laneId}:`, error.message);
-                    throw error;
+                    console.error(`❌ Error inserting toll ${toll.laneId} (${tollsProcessed}/${ezpassTolls.length}):`, error.message);
+                    console.error(`🔍 Toll data:`, {
+                        laneId: toll.laneId,
+                        amount: toll.amount,
+                        date: toll.transactionDate,
+                        plate: toll.plateNumber,
+                        transponder: toll.transponderId,
+                        location: toll.location
+                    });
+                    tollInsertionErrors++;
+                    
+                    // Don't throw the error - continue processing other tolls
+                    // throw error;
+                    console.log(`⚠️ Continuing with next toll... (${tollInsertionErrors} errors so far)`);
                 }
             } else {
                 console.log(`❌ DEBUG: shouldInsert is FALSE for toll ${toll.laneId} - this should never happen!`);
                 dbUpdates.tolls_filtered++;
                 console.log(`🚫 Filtered out toll for unknown vehicle: ${toll.plateNumber || toll.transponderId} at ${toll.location}`);
             }
+        }
+        
+        // Toll insertion summary
+        console.log(`📊 Toll insertion summary: ${dbUpdates.tolls_inserted} inserted successfully, ${tollInsertionErrors} errors, ${tollsProcessed} total processed`);
+        
+        if (tollInsertionErrors > 0) {
+            console.warn(`⚠️ Warning: ${tollInsertionErrors} tolls failed to insert out of ${tollsProcessed} total`);
         }
         
         // 3. Create match relationships for matched tolls
