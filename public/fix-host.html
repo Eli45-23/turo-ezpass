@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Host ID Mismatch</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .button { background: #4CAF50; color: white; padding: 15px 32px; font-size: 16px; border: none; cursor: pointer; margin: 10px; }
+        .result { background: #f9f9f9; padding: 20px; margin: 20px 0; border-left: 5px solid #ccc; }
+        .error { border-left-color: #f44336; background: #ffebee; }
+        .success { border-left-color: #4CAF50; background: #e8f5e9; }
+    </style>
+</head>
+<body>
+    <h1>Fix Host ID Mismatch</h1>
+    <p>This will update toll_account #46 to use the correct host_id so toll matching works.</p>
+    
+    <button class="button" onclick="fixHostId()">Fix Host ID Mismatch</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function fixHostId() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Fixing host ID mismatch...</p>';
+            
+            try {
+                const response = await fetch('/dashboard/fix-host-id', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ Success!</h3>
+                            <p>${data.message}</p>
+                            <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Error</h3>
+                            <p>${data.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Network Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

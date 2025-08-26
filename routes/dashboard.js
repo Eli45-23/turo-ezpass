@@ -3239,4 +3239,59 @@ router.get('/test-matching', requireAuth, async (req, res) => {
     }
 });
 
+// TEMPORARY: Fix host_id mismatch for toll_account
+router.post('/fix-host-id', requireAuth, async (req, res) => {
+    try {
+        console.log('🔧 Fixing host_id mismatch for toll_account...');
+        
+        // Update toll_account #46 to use the correct host_id
+        const { data, error } = await supabaseAdmin
+            .from('toll_accounts')
+            .update({ host_id: '2e95a231-d871-447b-85ea-07e216f76689' })
+            .eq('id', 46)
+            .select();
+            
+        if (error) {
+            console.error('❌ Error fixing host_id:', error);
+            throw error;
+        }
+        
+        console.log('✅ Successfully updated toll_account host_id:', data);
+        
+        // Verify the fix
+        const { data: verification, error: verifyError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select(`
+                id,
+                host_id,
+                provider,
+                toll_charges(count)
+            `)
+            .eq('id', 46)
+            .single();
+            
+        if (verifyError) {
+            console.error('❌ Error verifying fix:', verifyError);
+            throw verifyError;
+        }
+        
+        res.json({
+            success: true,
+            message: 'Host ID mismatch fixed successfully',
+            data: {
+                updated_toll_account: data[0],
+                verification: verification,
+                toll_count: verification?.toll_charges?.[0]?.count || 'unknown'
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to fix host_id:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
