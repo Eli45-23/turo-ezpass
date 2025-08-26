@@ -142,7 +142,7 @@ class SimpleTollMatcher {
         this.analyzePersonalDrivingTolls(tollData, matches, transponderMappings);
         
         // Apply matches to database
-        const appliedCount = await this.applyMatches(matches);
+        const appliedCount = await this.applyMatches(matches, hostId);
         
         progressCallback({
             step: 'completed',
@@ -653,7 +653,7 @@ class SimpleTollMatcher {
     /**
      * Apply matches to database
      */
-    async applyMatches(matches) {
+    async applyMatches(matches, hostId = null) {
         let appliedCount = 0;
         
         for (const match of matches) {
@@ -704,6 +704,21 @@ class SimpleTollMatcher {
         }
         
         console.log(`✅ Applied ${appliedCount}/${matches.length} matches to database`);
+        
+        // Clear dashboard cache if host ID provided and matches were applied
+        if (hostId && appliedCount > 0) {
+            try {
+                // Import cache utilities
+                const { cacheManager, CacheKeys } = require('../config/cache');
+                const cacheKey = CacheKeys.dashboardSummary(hostId);
+                await cacheManager.del(cacheKey);
+                console.log(`🗑️ Cleared dashboard cache after applying ${appliedCount} matches`);
+            } catch (cacheError) {
+                console.warn('⚠️ Failed to clear cache after applying matches:', cacheError.message);
+                // Don't fail the whole operation if cache clearing fails
+            }
+        }
+        
         return appliedCount;
     }
     

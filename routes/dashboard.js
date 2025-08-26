@@ -259,20 +259,32 @@ function sendProgress(sessionId, progress, message, stage) {
 router.get('/summary', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const startTime = Date.now();
+    const forceRefresh = req.query.fresh === 'true';
     
     try {
-        // Try to get from cache first
+        let cachedSummary;
         const cacheKey = CacheKeys.dashboardSummary(hostId);
-        const cachedSummary = await cacheManager.getOrSet(
-            cacheKey,
-            async () => {
-                // Optimized single query to get all summary data
-                const summaryData = await executeOptimizedSummaryQuery(hostId);
-                return summaryData;
-            },
-            300, // Cache for 5 minutes
-            { l1TTL: 60 } // L1 cache for 1 minute
-        );
+        
+        if (forceRefresh) {
+            console.log('🔄 Force refresh requested - bypassing cache');
+            // Clear cache and get fresh data
+            await cacheManager.del(cacheKey);
+            cachedSummary = await executeOptimizedSummaryQuery(hostId);
+            // Store in cache for next time
+            await cacheManager.set(cacheKey, cachedSummary, 300, { l1TTL: 60 });
+        } else {
+            // Try to get from cache first
+            cachedSummary = await cacheManager.getOrSet(
+                cacheKey,
+                async () => {
+                    // Optimized single query to get all summary data
+                    const summaryData = await executeOptimizedSummaryQuery(hostId);
+                    return summaryData;
+                },
+                300, // Cache for 5 minutes
+                { l1TTL: 60 } // L1 cache for 1 minute
+            );
+        }
         
         const loadTime = Date.now() - startTime;
         
@@ -283,7 +295,12 @@ router.get('/summary', requireAuth, async (req, res) => {
         
         res.json({
             success: true,
-            data: cachedSummary,
+            data: {
+                ...cachedSummary,
+                lastUpdated: new Date().toISOString(),
+                fromCache: !forceRefresh,
+                cacheKey: cacheKey.split(':').pop() // Just the host ID part for security
+            },
             loadTime: loadTime
         });
         
@@ -3502,6 +3519,81 @@ router.post('/admin/emergency-host-id-fix', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ Emergency host_id fix failed:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Clear dashboard cache endpoint
+router.post('/clear-cache', requireAuth, async (req, res) => {
+    try {
+        const hostId = req.session.hostId;
+        console.log('🗑️ Manual cache clear requested for host:', hostId);
+        
+        const cacheKey = CacheKeys.dashboardSummary(hostId);
+        await cacheManager.del(cacheKey);
+        
+        console.log('✅ Dashboard cache cleared successfully');
+        
+        res.json({
+            success: true,
+            message: 'Dashboard cache cleared successfully. Next request will fetch fresh data.',
+            hostId: hostId,
+            cacheKey: cacheKey
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to clear cache:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Quick test endpoint to verify toll counts
+router.get('/test/toll-counts', requireAuth, async (req, res) => {
+    try {
+        const hostId = req.session.hostId;
+        console.log('🧪 Testing toll counts for host:', hostId);
+        
+        // Count matched vs unmatched tolls directly from database
+        const { data: counts, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                is_matched,
+                toll_amount,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .not('is_archived', 'eq', true);
+            
+        if (error) throw error;
+        
+        const matched = counts.filter(tc => tc.is_matched === true);
+        const unmatched = counts.filter(tc => tc.is_matched === false || tc.is_matched === null);
+        
+        const matchedAmount = matched.reduce((sum, tc) => sum + (parseFloat(tc.toll_amount) || 0), 0);
+        const unmatchedAmount = unmatched.reduce((sum, tc) => sum + (parseFloat(tc.toll_amount) || 0), 0);
+        
+        res.json({
+            success: true,
+            hostId: hostId,
+            results: {
+                total_tolls: counts.length,
+                matched_tolls: matched.length,
+                unmatched_tolls: unmatched.length,
+                matched_amount: matchedAmount.toFixed(2),
+                unmatched_amount: unmatchedAmount.toFixed(2),
+                total_amount: (matchedAmount + unmatchedAmount).toFixed(2)
+            },
+            message: `Database shows ${matched.length} matched and ${unmatched.length} unmatched tolls`
+        });
+        
+    } catch (error) {
+        console.error('❌ Test toll counts failed:', error);
         res.status(500).json({
             success: false,
             error: error.message
