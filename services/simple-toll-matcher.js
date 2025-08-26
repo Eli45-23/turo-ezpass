@@ -417,8 +417,17 @@ class SimpleTollMatcher {
             processed++;
             const progress = 20 + (processed / tollData.length * 60);
             
+            console.log(`\n🔍 DETAILED ANALYSIS: Processing toll ${processed}/${tollData.length}`);
+            console.log(`   Transaction ID: ${toll.laneTransactionId}`);
+            console.log(`   Tag/Plate: ${toll.tagOrPlate}`);
+            console.log(`   Amount: $${toll.amount}`);
+            console.log(`   Date: ${toll.tollDate.toLocaleString()}`);
+            console.log(`   Location: ${toll.tollLocation}`);
+            
             // Resolve vehicle identity from toll
             let tollVehicles = this.resolveTollVehicle(toll.tagOrPlate, transponderMappings);
+            
+            console.log(`   Resolved Vehicles: [${tollVehicles.join(', ')}]`);
             
             // If no vehicles resolved, still attempt direct matching with the identifier
             // This follows user spec: trust the data provided, don't pre-filter
@@ -426,10 +435,27 @@ class SimpleTollMatcher {
                 console.log(`🔍 ATTEMPTING: Direct match for identifier: ${toll.tagOrPlate} (Amount: $${toll.amount}, Location: ${toll.tollLocation}, Date: ${toll.tollDate.toLocaleDateString()})`);
                 // Use the raw identifier for direct matching
                 tollVehicles = [this.normalizePlate(toll.tagOrPlate)];
+                console.log(`   Direct Match Vehicles: [${tollVehicles.join(', ')}]`);
             }
             
             // Find matching trip
+            console.log(`   Searching for trips with vehicles: [${tollVehicles.join(', ')}] on ${toll.tollDate.toLocaleDateString()}`);
             const matchingTrip = this.findMatchingTrip(toll, tollVehicles, tripData);
+            
+            if (matchingTrip) {
+                console.log(`   ✅ MATCH FOUND: Trip ${matchingTrip.id} (${matchingTrip.guest}) - Vehicle ${matchingTrip.vehicle}`);
+                console.log(`      Trip dates: ${matchingTrip.startDate.toLocaleDateString()} - ${matchingTrip.endDate.toLocaleDateString()}`);
+            } else {
+                console.log(`   ❌ NO MATCH: No suitable trip found for this toll`);
+                // Log why no trips matched
+                console.log(`   Available trips:`);
+                tripData.forEach((trip, idx) => {
+                    const tripVehicle = this.normalizePlate(trip.vehicle);
+                    const vehicleMatch = tollVehicles.includes(tripVehicle);
+                    const timeWindow = this.isWithinTimeWindow(toll.tollDate, trip.startDate, trip.endDate);
+                    console.log(`     Trip ${idx+1}: ${trip.vehicle} (${trip.startDate.toLocaleDateString()} - ${trip.endDate.toLocaleDateString()}) - Vehicle Match: ${vehicleMatch}, Time Match: ${timeWindow}`);
+                });
+            }
             
             if (matchingTrip) {
                 matches.push({
@@ -490,10 +516,17 @@ class SimpleTollMatcher {
         const vehicles = [];
         const normalized = this.normalizePlate(tagOrPlate);
         
+        console.log(`🔍 Resolving vehicle for: "${tagOrPlate}" (normalized: "${normalized}")`);
+        
         // Check if it's a transponder that maps to a plate
         if (transponderMappings.has(tagOrPlate)) {
             const mappedPlate = transponderMappings.get(tagOrPlate);
-            vehicles.push(mappedPlate);
+            const normalizedMappedPlate = this.normalizePlate(mappedPlate);
+            vehicles.push(normalizedMappedPlate);
+            console.log(`   ✅ Transponder mapping: ${tagOrPlate} → ${normalizedMappedPlate}`);
+        } else if (tagOrPlate && tagOrPlate.match(/^\d{10,11}$/)) {
+            // It looks like a transponder ID but no mapping found
+            console.log(`   ❌ No mapping found for transponder: ${tagOrPlate}`);
         }
         
         // Check if it's a direct plate match
@@ -501,17 +534,19 @@ class SimpleTollMatcher {
             // FIXED: Always include direct plate matches, even without transponder mappings
             if (!vehicles.includes(normalized)) {
                 vehicles.push(normalized);
+                console.log(`   ✅ Direct plate match: ${normalized}`);
             }
             
             // Also check if it's mapped via transponder for completeness
             for (const [transponder, plate] of transponderMappings.entries()) {
                 if (this.normalizePlate(plate) === normalized) {
-                    // Already added above, no need to add again
+                    console.log(`   ℹ️ Plate ${normalized} also mapped from transponder ${transponder}`);
                     break;
                 }
             }
         }
         
+        console.log(`   Final resolved vehicles: [${vehicles.join(', ')}]`);
         return vehicles;
     }
     

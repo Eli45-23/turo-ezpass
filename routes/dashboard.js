@@ -2239,14 +2239,14 @@ router.post('/csv/process-both', requireAuth, upload.fields([
             });
         }
         
-        // Perform EXACT toll matching after CSV import
-        console.log('🔍 Starting exact toll-to-trip matching...');
-        const matchingResults = await performTollMatching(turoTrips, ezpassTolls, hostId);
-        console.log(`🎯 Matching complete: ${matchingResults.matches.length} exact matches found`);
-        
-        // Store results in database
-        console.log('🔍 Starting database storage...');
-        const dbResults = await storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, req.session.email);
+        // Use SimpleTollMatcher for consistent matching logic
+        console.log('🎯 Starting SimpleTollMatcher for CSV processing...');
+        const SimpleTollMatcher = require('../services/simple-toll-matcher');
+        const simpleMatcher = new SimpleTollMatcher();
+        const matchingResults = await simpleMatcher.matchTollsToTrips(hostId, turoTrips, ezpassTolls, (progress) => {
+            console.log('🔄 CSV Matching progress:', progress);
+        });
+        console.log(`🎯 SimpleTollMatcher complete: ${matchingResults.matchedCount || 0} tolls matched out of ${matchingResults.totalTolls || 0} total`);
         console.log('💾 Database storage complete');
         
         // Clear dashboard cache to force fresh data load
@@ -2706,12 +2706,14 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
                 }
             });
         } else {
-            // Fallback to basic matching
-            console.log('🔍 Using basic toll matching...');
-            const matchingResults = await performTollMatching(turoTrips, ezpassTolls, hostId);
-            
-            // Store matching results
-            const results = await storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, req.session.email);
+            // Fallback to SimpleTollMatcher (consistent approach)
+            console.log('🎯 Using SimpleTollMatcher fallback...');
+            const SimpleTollMatcher = require('../services/simple-toll-matcher');
+            const simpleMatcher = new SimpleTollMatcher();
+            const matchingResults = await simpleMatcher.matchTollsToTrips(hostId, turoTrips, ezpassTolls, (progress) => {
+                console.log('🔄 Fallback Matching progress:', progress);
+            });
+            console.log(`🎯 Fallback SimpleTollMatcher complete: ${matchingResults.matchedCount || 0} tolls matched`);
             
             // Clear cache
             const cacheKey = CacheKeys.dashboardSummary(hostId);
@@ -3503,6 +3505,141 @@ router.post('/admin/emergency-host-id-fix', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message
+        });
+    }
+});
+
+// Comprehensive toll matching debug endpoint
+router.get('/debug/toll-matching', requireAuth, async (req, res) => {
+    try {
+        const hostId = req.session.hostId;
+        console.log('🧪 COMPREHENSIVE TOLL MATCHING DEBUG for host:', hostId);
+        
+        // 1. Get trips from Supabase
+        const { data: trips, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('*')
+            .eq('host_id', hostId)
+            .neq('trip_status', 'Cancelled')
+            .order('start_date', { ascending: false })
+            .limit(10);
+            
+        if (tripsError) throw tripsError;
+        
+        // 2. Get toll charges from Supabase
+        const { data: tollCharges, error: tollsError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', false)
+            .order('toll_date', { ascending: false })
+            .limit(20);
+            
+        if (tollsError) throw tollsError;
+        
+        // 3. Get transponder mappings
+        const { data: mappings, error: mappingsError } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('*')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
+            
+        if (mappingsError) throw mappingsError;
+        
+        console.log('📊 Debug Data Summary:');
+        console.log(`   Trips: ${trips?.length || 0}`);
+        console.log(`   Toll Charges: ${tollCharges?.length || 0}`);
+        console.log(`   Transponder Mappings: ${mappings?.length || 0}`);
+        
+        // 4. Analyze specific failing cases
+        const analysis = {
+            trips: trips || [],
+            tollCharges: tollCharges || [],
+            mappings: mappings || [],
+            potentialMatches: []
+        };
+        
+        // Find potential matches manually
+        for (const toll of tollCharges || []) {
+            const tollDate = new Date(toll.toll_date);
+            console.log(`\n🔍 Analyzing toll ID ${toll.id}:`);
+            console.log(`   Plate: ${toll.plate_number}`);
+            console.log(`   Transponder: ${toll.transponder_id}`);
+            console.log(`   Date: ${tollDate.toLocaleString()}`);
+            console.log(`   Amount: $${toll.toll_amount}`);
+            
+            // Find transponder mapping if applicable
+            let resolvedPlate = toll.plate_number;
+            if (toll.transponder_id && !toll.plate_number) {
+                const mapping = mappings?.find(m => m.transponder_number === toll.transponder_id);
+                if (mapping) {
+                    resolvedPlate = mapping.vehicle_plate;
+                    console.log(`   Resolved transponder ${toll.transponder_id} → ${resolvedPlate}`);
+                } else {
+                    console.log(`   ❌ No mapping found for transponder ${toll.transponder_id}`);
+                }
+            }
+            
+            // Find matching trips
+            const matchingTrips = trips?.filter(trip => {
+                const tripStart = new Date(trip.start_date);
+                const tripEnd = new Date(trip.end_date);
+                const plateMatch = trip.vehicle_plate === resolvedPlate;
+                const dateInRange = tollDate >= tripStart && tollDate <= tripEnd;
+                
+                console.log(`   Checking trip ${trip.id}:`);
+                console.log(`     Plate: ${trip.vehicle_plate} (match: ${plateMatch})`);
+                console.log(`     Range: ${tripStart.toLocaleString()} - ${tripEnd.toLocaleString()}`);
+                console.log(`     Date in range: ${dateInRange}`);
+                
+                return plateMatch && dateInRange;
+            }) || [];
+            
+            if (matchingTrips.length > 0) {
+                console.log(`   ✅ Found ${matchingTrips.length} potential matches!`);
+                analysis.potentialMatches.push({
+                    toll: toll,
+                    resolvedPlate: resolvedPlate,
+                    matchingTrips: matchingTrips
+                });
+            } else {
+                console.log(`   ❌ No matches found`);
+            }
+        }
+        
+        // 5. Test SimpleTollMatcher with this data
+        const SimpleTollMatcher = require('../services/simple-toll-matcher');
+        const matcher = new SimpleTollMatcher();
+        
+        console.log('\n🎯 Testing SimpleTollMatcher with real data...');
+        const matchResult = await matcher.matchTollsToTrips(hostId, trips, tollCharges, (progress) => {
+            console.log('🔄 Matching progress:', progress);
+        });
+        
+        res.json({
+            success: true,
+            debug: {
+                hostId: hostId,
+                summary: {
+                    trips: trips?.length || 0,
+                    tollCharges: tollCharges?.length || 0,
+                    mappings: mappings?.length || 0,
+                    potentialMatches: analysis.potentialMatches.length
+                },
+                data: analysis,
+                matcherResult: matchResult
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Debug toll matching failed:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
         });
     }
 });
