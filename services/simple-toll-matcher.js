@@ -651,6 +651,23 @@ class SimpleTollMatcher {
     }
     
     /**
+     * Check if a toll date is within the trip time window
+     */
+    isWithinTimeWindow(tollDate, tripStartDate, tripEndDate) {
+        if (!tollDate || !tripStartDate || !tripEndDate) {
+            return false;
+        }
+        
+        // Convert to Date objects if they aren't already
+        const tollDateTime = tollDate instanceof Date ? tollDate : new Date(tollDate);
+        const tripStart = tripStartDate instanceof Date ? tripStartDate : new Date(tripStartDate);
+        const tripEnd = tripEndDate instanceof Date ? tripEndDate : new Date(tripEndDate);
+        
+        // Check if toll date falls within trip window (inclusive)
+        return tollDateTime >= tripStart && tollDateTime <= tripEnd;
+    }
+    
+    /**
      * Apply matches to database
      */
     async applyMatches(matches, hostId = null) {
