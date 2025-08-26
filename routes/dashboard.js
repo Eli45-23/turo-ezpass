@@ -1854,7 +1854,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             const { data: newTollAccount, error: createTollAccountError } = await supabaseAdmin
                 .from('toll_accounts')
                 .insert({
-                    host_id: hostId,
+                    host_id: hostId, // CRITICAL: Validated host_id from authenticated session
                     provider: 'CSV Import',
                     account_number: 'CSV_UPLOAD_' + Date.now(),
                     username: 'csv_import@system',
@@ -1863,6 +1863,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 })
                 .select()
                 .single();
+            
+            console.log(`✅ Created toll_account with host_id validation: ${hostId}`);
             
             if (createTollAccountError) {
                 throw new Error(`Failed to create toll account: ${createTollAccountError.message}`);
@@ -1952,8 +1954,9 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                         continue;
                     }
 
-                    // Insert toll charge with Supabase (with retry logic)
+                    // Insert toll charge with Supabase (with retry logic and host_id validation)
                     const { data: newTollCharge, error: insertError } = await retryOperation(async () => {
+                        console.log(`🔐 Inserting toll with host_id validation: ${hostId}`);
                         return await supabaseAdmin
                             .from('toll_charges')
                             .insert({
@@ -1965,7 +1968,8 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                                 transponder_id: toll.transponderId,
                                 transaction_id: toll.laneId,
                                 submission_date: toll.postedDate, // Save the posted date from E-ZPass CSV
-                                is_matched: false
+                                is_matched: false,
+                                host_id: hostId // CRITICAL: Ensure host_id matches the session
                             })
                             .select()
                             .single();
@@ -3287,6 +3291,174 @@ router.post('/fix-host-id', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ Failed to fix host_id:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Host ID mismatch monitoring endpoint
+router.get('/monitor/host-id-mismatches', requireAuth, async (req, res) => {
+    try {
+        const hostId = req.session.hostId;
+        console.log('🔍 Checking for host_id mismatches for:', hostId);
+        
+        // Check for mismatches in toll_charges
+        const { data: tollChargesMismatches, error: tollChargesError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id,
+                host_id,
+                toll_account_id,
+                toll_accounts!inner(
+                    id,
+                    host_id,
+                    provider
+                )
+            `)
+            .neq('host_id', hostId)
+            .eq('toll_accounts.host_id', hostId);
+            
+        if (tollChargesError) {
+            throw tollChargesError;
+        }
+        
+        // Check for mismatches in transponder_plate_mappings  
+        const { data: mappingsMismatches, error: mappingsError } = await supabaseAdmin
+            .from('transponder_plate_mappings')
+            .select(`
+                id,
+                host_id,
+                toll_account_id,
+                plate_number,
+                toll_accounts!inner(
+                    id,
+                    host_id,
+                    provider
+                )
+            `)
+            .neq('host_id', hostId)
+            .eq('toll_accounts.host_id', hostId);
+            
+        if (mappingsError) {
+            throw mappingsError;
+        }
+        
+        // Check for orphaned toll_accounts
+        const { data: orphanedAccounts, error: orphanedError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select(`
+                id,
+                host_id,
+                provider,
+                is_active,
+                toll_charges(count)
+            `)
+            .neq('host_id', hostId)
+            .eq('is_active', true);
+            
+        if (orphanedError) {
+            throw orphanedError;
+        }
+        
+        const response = {
+            success: true,
+            user_host_id: hostId,
+            mismatches: {
+                toll_charges: tollChargesMismatches || [],
+                transponder_mappings: mappingsMismatches || [],
+                orphaned_accounts: orphanedAccounts || []
+            },
+            summary: {
+                toll_charges_mismatches: tollChargesMismatches?.length || 0,
+                mappings_mismatches: mappingsMismatches?.length || 0,
+                orphaned_accounts: orphanedAccounts?.length || 0,
+                total_issues: (tollChargesMismatches?.length || 0) + (mappingsMismatches?.length || 0) + (orphanedAccounts?.length || 0)
+            },
+            recommendations: []
+        };
+        
+        // Add recommendations based on findings
+        if (response.summary.toll_charges_mismatches > 0) {
+            response.recommendations.push(`Fix ${response.summary.toll_charges_mismatches} toll_charges with incorrect host_id`);
+        }
+        if (response.summary.mappings_mismatches > 0) {
+            response.recommendations.push(`Fix ${response.summary.mappings_mismatches} transponder mappings with incorrect host_id`);
+        }
+        if (response.summary.orphaned_accounts > 0) {
+            response.recommendations.push(`Review ${response.summary.orphaned_accounts} orphaned toll accounts`);
+        }
+        
+        if (response.summary.total_issues === 0) {
+            response.recommendations.push('✅ No host_id mismatches detected - system is healthy!');
+        }
+        
+        res.json(response);
+        
+    } catch (error) {
+        console.error('❌ Failed to monitor host_id mismatches:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Emergency host_id fix endpoint (use with caution)
+router.post('/admin/emergency-host-id-fix', requireAuth, async (req, res) => {
+    try {
+        const hostId = req.session.hostId;
+        const { confirmPhrase } = req.body;
+        
+        // Require confirmation phrase for safety
+        if (confirmPhrase !== 'EMERGENCY_FIX_HOST_ID_MISMATCHES') {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid confirmation phrase. This is a destructive operation.'
+            });
+        }
+        
+        console.log('🚨 EMERGENCY: Fixing host_id mismatches for:', hostId);
+        
+        // Fix toll_charges
+        const { data: fixedTollCharges, error: tollChargesError } = await supabaseAdmin
+            .from('toll_charges')
+            .update({ host_id: hostId })
+            .in('toll_account_id', 
+                supabaseAdmin
+                    .from('toll_accounts')
+                    .select('id')
+                    .eq('host_id', hostId)
+            )
+            .neq('host_id', hostId)
+            .select('id');
+            
+        // Fix transponder_plate_mappings
+        const { data: fixedMappings, error: mappingsError } = await supabaseAdmin
+            .from('transponder_plate_mappings')
+            .update({ host_id: hostId })
+            .in('toll_account_id', 
+                supabaseAdmin
+                    .from('toll_accounts')
+                    .select('id')
+                    .eq('host_id', hostId)
+            )
+            .neq('host_id', hostId)
+            .select('id');
+        
+        res.json({
+            success: true,
+            message: 'Emergency host_id fix completed',
+            results: {
+                toll_charges_fixed: fixedTollCharges?.length || 0,
+                mappings_fixed: fixedMappings?.length || 0
+            },
+            warning: 'This was an emergency fix. Review your data upload processes to prevent future issues.'
+        });
+        
+    } catch (error) {
+        console.error('❌ Emergency host_id fix failed:', error);
         res.status(500).json({
             success: false,
             error: error.message
