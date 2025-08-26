@@ -1309,6 +1309,18 @@ function parseEZPassCSV(csvData) {
         }
         toll.laneId = laneId;
         
+        // Filter out payment transactions (not actual tolls)
+        if (toll.location && toll.location.toUpperCase().includes('PAYMENT')) {
+            console.log(`⚠️ Skipping payment transaction: $${toll.amount} on ${toll.transactionDate}`);
+            continue;
+        }
+        
+        // Filter out tolls without plate or transponder data (can't be matched)
+        if (!toll.plateNumber && !toll.transponderId) {
+            console.log(`⚠️ Skipping toll with no plate/transponder data: ${toll.location} $${toll.amount}`);
+            continue;
+        }
+        
         tolls.push(toll);
     }
     
@@ -1331,6 +1343,21 @@ function parseEZPassCSV(csvData) {
         
         if (duplicateCount > 0) {
             console.log(`⚠️ Resolved ${duplicateCount} duplicate transaction IDs`);
+        }
+        
+        // Calculate parsing statistics
+        const totalRows = lines.length - headerLineIndex - 1; // Total data rows
+        const validTolls = tolls.length;
+        const filteredCount = totalRows - validTolls;
+        
+        console.log(`📊 E-ZPass CSV Parsing Results:`);
+        console.log(`   📄 Total data rows: ${totalRows}`);
+        console.log(`   ✅ Valid tolls processed: ${validTolls}`);
+        console.log(`   ⚠️ Payments/invalid rows filtered: ${filteredCount}`);
+        
+        if (validTolls === 0) {
+            console.log('❌ WARNING: No valid toll transactions found!');
+            console.log('   This CSV may contain only payments or have incorrect format.');
         }
         
         console.log('🛣️ Sample E-ZPass toll:', tolls.length > 0 ? JSON.stringify(tolls[0], null, 2) : 'No tolls found');
@@ -2203,6 +2230,15 @@ router.post('/csv/process-both', requireAuth, upload.fields([
         const ezpassTolls = parseEZPassCSV(ezpassData);
         console.log(`🛣️ Parsed ${ezpassTolls.length} E-ZPass tolls`);
         
+        // Validate that we have actual toll data
+        if (ezpassTolls.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No valid toll transactions found in E-ZPass CSV. The file may contain only payments/recharges or be in the wrong format. Please ensure you downloaded the toll transaction history, not the payment history.',
+                suggestion: 'Download the E-ZPass CSV that shows actual toll charges with plate numbers and locations, not account payments.'
+            });
+        }
+        
         // Perform EXACT toll matching after CSV import
         console.log('🔍 Starting exact toll-to-trip matching...');
         const matchingResults = await performTollMatching(turoTrips, ezpassTolls, hostId);
@@ -2451,6 +2487,12 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
         sendProgress(sessionId, 40, 'Parsing E-ZPass toll data...', 'parsing');
         const ezpassTolls = parseEZPassCSV(ezpassData);
         console.log(`🛣️ Parsed ${ezpassTolls.length} E-ZPass tolls`);
+        
+        // Validate that we have actual toll data
+        if (ezpassTolls.length === 0) {
+            sendProgress(sessionId, 100, 'Error: No valid toll transactions found', 'error');
+            throw new Error('No valid toll transactions found in E-ZPass CSV. The file may contain only payments/recharges or be in the wrong format. Please ensure you downloaded the toll transaction history, not the payment history.');
+        }
         
         // Apply date filtering if specified
         let filteredTuroTrips = turoTrips;
