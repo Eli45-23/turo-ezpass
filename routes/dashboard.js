@@ -182,7 +182,7 @@ router.use(performanceMiddleware);
 
 // Test route without authentication for debugging
 router.get('/test-summary', async (req, res) => {
-    const hostId = 1; // Hard-coded for testing
+    const hostId = '2e95a231-d871-447b-85ea-07e216f76689'; // Hard-coded UUID for testing (host with actual data)
     
     try {
         console.log('🔍 Test route called for hostId:', hostId);
@@ -3173,51 +3173,54 @@ router.post('/test-simple-matcher', requireAuth, async (req, res) => {
         const SimpleTollMatcher = require('../services/simple-toll-matcher');
         const matcher = new SimpleTollMatcher();
         
-        // Get trips from database (exclude cancelled trips)
-        const trips = await new Promise((resolve, reject) => {
-            db.all(
-                `SELECT id, turo_trip_id, renter_name, vehicle_plate, start_date, end_date 
-                 FROM trips WHERE host_id = ? 
-                 AND (trip_status IS NULL OR (trip_status NOT LIKE '%cancel%' AND trip_status NOT LIKE '%decline%' AND trip_status NOT LIKE '%expired%' AND trip_status NOT LIKE '%terminated%' AND trip_status NOT LIKE '%rejected%'))
-                 ORDER BY start_date DESC LIMIT 20`,
-                [hostId],
-                (err, results) => {
-                    if (err) reject(err);
-                    else resolve(results.map(trip => ({
-                        turoTripId: trip.turo_trip_id,
-                        guest: trip.renter_name,
-                        vehiclePlate: trip.vehicle_plate,
-                        startDate: trip.start_date,
-                        endDate: trip.end_date,
-                        id: trip.id
-                    })));
-                }
-            );
-        });
+        // Get trips from database using Supabase (exclude cancelled trips)
+        const { data: tripsData, error: tripsError } = await supabaseAdmin
+            .from('trips')
+            .select('id, turo_trip_id, renter_name, vehicle_plate, start_date, end_date')
+            .eq('host_id', hostId)
+            .not('trip_status', 'in', '("canceled","cancelled","declined","expired","terminated","rejected")')
+            .order('start_date', { ascending: false })
+            .limit(20);
+            
+        if (tripsError) {
+            throw tripsError;
+        }
         
-        // Get tolls from database  
-        const tolls = await new Promise((resolve, reject) => {
-            db.all(
-                `SELECT tc.id, tc.transaction_id, tc.plate_number, tc.transponder_id, tc.toll_date, tc.toll_location, tc.toll_amount
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ? AND tc.is_matched = 0 AND (tc.is_archived = 0 OR tc.is_archived IS NULL)
-                 ORDER BY tc.toll_date DESC LIMIT 50`,
-                [hostId],
-                (err, results) => {
-                    if (err) reject(err);
-                    else resolve(results.map(toll => ({
-                        laneId: toll.transaction_id,
-                        plateNumber: toll.plate_number,
-                        transponderId: toll.transponder_id,
-                        transactionDate: toll.toll_date,
-                        location: toll.toll_location,
-                        amount: toll.toll_amount,
-                        id: toll.id
-                    })));
-                }
-            );
-        });
+        const trips = tripsData.map(trip => ({
+            turoTripId: trip.turo_trip_id,
+            guest: trip.renter_name,
+            vehiclePlate: trip.vehicle_plate,
+            startDate: trip.start_date,
+            endDate: trip.end_date,
+            id: trip.id
+        }));
+        
+        // Get tolls from database using Supabase
+        const { data: tollsData, error: tollsError } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                id, transaction_id, plate_number, transponder_id, toll_date, toll_location, toll_amount,
+                toll_accounts!inner(host_id)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', false)
+            .not('is_archived', 'eq', true)
+            .order('toll_date', { ascending: false })
+            .limit(50);
+            
+        if (tollsError) {
+            throw tollsError;
+        }
+        
+        const tolls = tollsData.map(toll => ({
+            laneId: toll.transaction_id,
+            plateNumber: toll.plate_number,
+            transponderId: toll.transponder_id,
+            transactionDate: toll.toll_date,
+            location: toll.toll_location,
+            amount: toll.toll_amount,
+            id: toll.id
+        }));
         
         console.log(`🧪 Test data: ${trips.length} trips, ${tolls.length} tolls`);
         

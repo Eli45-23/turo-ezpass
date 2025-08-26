@@ -530,149 +530,144 @@ class TuroIntegrationService {
      * Legacy toll matching algorithm (for fallback)
      */
     async legacyAutoMatchTolls(hostId, options = {}) {
-        return new Promise((resolve, reject) => {
-            // Get all unmatched toll charges
-            db.all(
-                `SELECT tc.*, ta.host_id
-                 FROM toll_charges tc
-                 JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-                 WHERE ta.host_id = ? AND tc.is_matched = 0`,
-                [hostId],
-                (err, unmatchedCharges) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
+        try {
+            // Get all unmatched toll charges using Supabase
+            const { data: unmatchedCharges, error: tollError } = await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId)
+                .eq('is_matched', false);
+                
+            if (tollError) {
+                throw tollError;
+            }
+            
+            // Get all active/completed trips for matching - exclude canceled trips
+            const { data: trips, error: tripError } = await supabaseAdmin
+                .from('trips')
+                .select('*')
+                .eq('host_id', hostId)
+                .not('trip_status', 'in', '("canceled","cancelled","declined","expired","terminated","rejected")')
+                .order('start_date', { ascending: false });
+                
+            if (tripError) {
+                throw tripError;
+            }
+            
+            // Get transponder mappings from database for accurate matching
+            const { data: transponderMappings, error: mappingErr } = await supabaseAdmin
+                .from('transponder_mappings')
+                .select('transponder_number, vehicle_plate, vehicle_description')
+                .eq('host_id', hostId)
+                .eq('is_active', true);
+                
+            const transponderMap = {};
+            if (!mappingErr && transponderMappings) {
+                transponderMappings.forEach(mapping => {
+                    transponderMap[mapping.transponder_number] = mapping.vehicle_plate;
+                });
+                console.log(`📡 Loaded ${transponderMappings.length} transponder mappings for matching`);
+            }
+            
+            let matchedCount = 0;
+            const matches = [];
+            
+            // Send progress update: processing charges
+            if (options.progressCallback) {
+                options.progressCallback({
+                    step: 'processing',
+                    message: `Processing ${unmatchedCharges.length} unmatched tolls...`,
+                    progress: 50
+                });
+            }
+            
+            unmatchedCharges.forEach((charge, index) => {
+                const matchResult = this.findLegacyMatchWithDetails(charge, trips, transponderMap);
+                
+                if (matchResult.matchingTrip) {
+                    matches.push({
+                        chargeId: charge.id,
+                        tripId: matchResult.matchingTrip.id,
+                        confidence: this.calculateMatchConfidence(charge, matchResult.matchingTrip)
+                    });
                     
-                    // Get all active/completed trips for matching - exclude canceled trips
-                    db.all(
-                        `SELECT * FROM trips 
-                         WHERE host_id = ? 
-                         AND (trip_status IS NULL OR trip_status NOT IN ('canceled', 'cancelled', 'declined', 'expired', 'terminated', 'rejected'))
-                         ORDER BY 
-                            CASE WHEN trip_status IN ('completed', 'active', 'confirmed') THEN 1 ELSE 2 END,
-                            start_date DESC`,
-                        [hostId],
-                        (err, trips) => {
-                            if (err) {
-                                reject(err);
-                                return;
+                    // Send progress update for each match found
+                    if (options.progressCallback) {
+                        options.progressCallback({
+                            step: 'matching',
+                            message: `✅ MATCHED: ${charge.toll_location} ($${charge.toll_amount}) → Trip ${matchResult.matchingTrip.turo_trip_id}`,
+                            progress: 50 + Math.floor((index + 1) / unmatchedCharges.length * 30),
+                            tollDetails: {
+                                id: charge.id,
+                                location: charge.toll_location,
+                                amount: charge.toll_amount,
+                                date: new Date(charge.toll_date).toLocaleDateString(),
+                                plate: charge.plate_number,
+                                status: 'MATCHED',
+                                tripId: matchResult.matchingTrip.turo_trip_id,
+                                confidence: this.calculateMatchConfidence(charge, matchResult.matchingTrip),
+                                reason: matchResult.reason
                             }
-                            
-                            // Get transponder mappings from database for accurate matching
-                            db.all(
-                                `SELECT transponder_number, vehicle_plate, vehicle_description 
-                                 FROM transponder_mappings 
-                                 WHERE host_id = ? AND is_active = 1`,
-                                [hostId],
-                                (mappingErr, transponderMappings) => {
-                                    const transponderMap = {};
-                                    if (!mappingErr && transponderMappings) {
-                                        transponderMappings.forEach(mapping => {
-                                            transponderMap[mapping.transponder_number] = mapping.vehicle_plate;
-                                        });
-                                        console.log(`📡 Loaded ${transponderMappings.length} transponder mappings for matching`);
-                                    }
-                                    
-                                    let matchedCount = 0;
-                                    const matches = [];
-                                    
-                                    // Send progress update: processing charges
-                                    if (options.progressCallback) {
-                                        options.progressCallback({
-                                            step: 'processing',
-                                            message: `Processing ${unmatchedCharges.length} unmatched tolls...`,
-                                            progress: 50
-                                        });
-                                    }
-                                    
-                                    unmatchedCharges.forEach((charge, index) => {
-                                        const matchResult = this.findLegacyMatchWithDetails(charge, trips, transponderMap);
-                                        
-                                        if (matchResult.matchingTrip) {
-                                            matches.push({
-                                                chargeId: charge.id,
-                                                tripId: matchResult.matchingTrip.id,
-                                                confidence: this.calculateMatchConfidence(charge, matchResult.matchingTrip)
-                                            });
-                                            
-                                            // Send progress update for each match found
-                                            if (options.progressCallback) {
-                                                options.progressCallback({
-                                                    step: 'matching',
-                                                    message: `✅ MATCHED: ${charge.toll_location} ($${charge.toll_amount}) → Trip ${matchResult.matchingTrip.turo_trip_id}`,
-                                                    progress: 50 + Math.floor((index + 1) / unmatchedCharges.length * 30),
-                                                    tollDetails: {
-                                                        id: charge.id,
-                                                        location: charge.toll_location,
-                                                        amount: charge.toll_amount,
-                                                        date: new Date(charge.toll_date).toLocaleDateString(),
-                                                        plate: charge.plate_number,
-                                                        status: 'MATCHED',
-                                                        tripId: matchResult.matchingTrip.turo_trip_id,
-                                                        confidence: this.calculateMatchConfidence(charge, matchResult.matchingTrip),
-                                                        reason: matchResult.reason
-                                                    }
-                                                });
-                                            }
-                                        } else {
-                                            // Send progress update for unmatched tolls with reason
-                                            if (options.progressCallback) {
-                                                options.progressCallback({
-                                                    step: 'processing',
-                                                    message: `❌ NO MATCH: ${charge.toll_location} ($${charge.toll_amount}) - ${matchResult.reason}`,
-                                                    progress: 50 + Math.floor((index + 1) / unmatchedCharges.length * 30),
-                                                    tollDetails: {
-                                                        id: charge.id,
-                                                        location: charge.toll_location,
-                                                        amount: charge.toll_amount,
-                                                        date: new Date(charge.toll_date).toLocaleDateString(),
-                                                        plate: charge.plate_number,
-                                                        status: 'UNMATCHED',
-                                                        reason: matchResult.reason
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    });
-                            
-                                    // Send progress update: applying matches  
-                                    if (options.progressCallback) {
-                                        options.progressCallback({
-                                            step: 'applying',
-                                            message: `Applying ${matches.length} matches to database...`,
-                                            progress: 85
-                                        });
-                                    }
-                                    
-                                    // Apply matches to database
-                                    matches.forEach(match => {
-                                        db.run(
-                                            `UPDATE toll_charges 
-                                             SET trip_id = ?, is_matched = 1 
-                                             WHERE id = ?`,
-                                            [match.tripId, match.chargeId],
-                                            (err) => {
-                                                if (!err) matchedCount++;
-                                            }
-                                        );
-                                    });
-                            
-                                    setTimeout(() => {
-                                        resolve({
-                                            matchedCount,
-                                            totalCharges: unmatchedCharges.length,
-                                            matches: matches,
-                                            mlEnhanced: false
-                                        });
-                                    }, 500); // Allow time for updates to complete
-                                }
-                            );
-                        }
-                    );
+                        });
+                    }
+                } else {
+                    // Send progress update for unmatched tolls with reason
+                    if (options.progressCallback) {
+                        options.progressCallback({
+                            step: 'processing',
+                            message: `❌ NO MATCH: ${charge.toll_location} ($${charge.toll_amount}) - ${matchResult.reason}`,
+                            progress: 50 + Math.floor((index + 1) / unmatchedCharges.length * 30),
+                            tollDetails: {
+                                id: charge.id,
+                                location: charge.toll_location,
+                                amount: charge.toll_amount,
+                                date: new Date(charge.toll_date).toLocaleDateString(),
+                                plate: charge.plate_number,
+                                status: 'UNMATCHED',
+                                reason: matchResult.reason
+                            }
+                        });
+                    }
                 }
-            );
-        });
+            });
+    
+            // Send progress update: applying matches  
+            if (options.progressCallback) {
+                options.progressCallback({
+                    step: 'applying',
+                    message: `Applying ${matches.length} matches to database...`,
+                    progress: 85
+                });
+            }
+            
+            // Apply matches to database using Supabase
+            for (const match of matches) {
+                const { error } = await supabaseAdmin
+                    .from('toll_charges')
+                    .update({ 
+                        trip_id: match.tripId, 
+                        is_matched: true 
+                    })
+                    .eq('id', match.chargeId);
+                    
+                if (!error) {
+                    matchedCount++;
+                }
+            }
+            
+            return {
+                matchedCount,
+                totalCharges: unmatchedCharges.length,
+                matches: matches,
+                mlEnhanced: false
+            };
+            
+        } catch (error) {
+            throw error;
+        }
     }
 
     /**
