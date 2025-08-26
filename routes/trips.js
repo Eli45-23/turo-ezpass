@@ -91,9 +91,9 @@ router.get('/', requireAuth, async (req, res) => {
             .from('toll_charges')
             .select(`
                 *,
-                toll_accounts(provider, account_number)
+                toll_accounts!inner(provider, account_number, host_id)
             `)
-            .eq('is_matched', true)
+            .eq('toll_accounts.host_id', hostId)
             .not('trip_id', 'is', null);
         
         if (tollError) {
