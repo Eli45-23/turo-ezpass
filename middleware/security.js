@@ -386,7 +386,7 @@ const schemas = {
     signup: Joi.object({
         email: Joi.string().email().required().max(255),
         password: Joi.string().min(8).max(128).required()
-            .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]')),
+            .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,128}$')),
         fullName: Joi.string().min(2).max(100).required()
             .pattern(new RegExp('^[a-zA-Z\\s\'-]+$')),
         turoHostId: Joi.string().max(50).optional().allow('')
