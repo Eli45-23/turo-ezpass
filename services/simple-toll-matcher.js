@@ -370,7 +370,7 @@ class SimpleTollMatcher {
                 .select('transponder_number, vehicle_plate, vehicle_description')
                 .eq('host_id', hostId)
                 .eq('is_active', true)
-                .or('vehicle_description.is.null,not.vehicle_description.ilike.Auto-discovered%');
+                .or('vehicle_description.is.null,vehicle_description.not.ilike.Auto-discovered%');
             
             if (error) {
                 console.error('❌ Supabase error loading transponder mappings:', error);

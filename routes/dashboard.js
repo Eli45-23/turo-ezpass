@@ -1575,6 +1575,7 @@ function calculateMatchScore(toll, trip, transponderMapping) {
 
 async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpassTolls, userEmail) {
     // Store CSV results in the database for persistence
+    console.log(`🔍 DEBUG: storeTollMatchingResults called with ${ezpassTolls.length} tolls for host ${hostId}`);
     
     // Helper function to retry database operations with exponential backoff
     async function retryOperation(operation, maxRetries = 3) {
@@ -1879,7 +1880,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             // This allows users to upload toll data first, then add transponder mappings later
             let shouldInsert = true; // Always insert tolls
             
-            console.log(`🔍 DEBUG: Processing toll ${ezpassTolls.indexOf(toll) + 1}/${ezpassTolls.length}:`, {
+            console.log(`🔍 DEBUG: Processing toll ${ezpassTolls.indexOf(toll) + 1}/${ezpassTolls.length} - shouldInsert: ${shouldInsert}:`, {
                 laneId: toll.laneId,
                 transactionDate: toll.transactionDate,
                 amount: toll.amount,
@@ -1904,7 +1905,10 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 }
             }
             
+            console.log(`🔍 DEBUG: About to check shouldInsert for toll ${toll.laneId}: shouldInsert = ${shouldInsert}`);
+            
             if (shouldInsert) {
+                console.log(`✅ DEBUG: Entering toll insertion block for ${toll.laneId}`);  
                 // Validate toll amount (must be > 0 and <= 200 per database constraint)
                 if (!toll.amount || toll.amount <= 0 || toll.amount > 200) {
                     console.log(`⚠️ Skipping invalid toll amount: $${toll.amount} for transaction ${toll.laneId}`);
@@ -2006,6 +2010,7 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                     throw error;
                 }
             } else {
+                console.log(`❌ DEBUG: shouldInsert is FALSE for toll ${toll.laneId} - this should never happen!`);
                 dbUpdates.tolls_filtered++;
                 console.log(`🚫 Filtered out toll for unknown vehicle: ${toll.plateNumber || toll.transponderId} at ${toll.location}`);
             }
