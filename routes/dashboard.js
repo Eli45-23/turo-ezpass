@@ -3693,4 +3693,62 @@ router.get('/debug/toll-matching', requireAuth, async (req, res) => {
     }
 });
 
+// Test endpoint to debug CSV toll insertion
+router.post('/test-csv-debug', async (req, res) => {
+    try {
+        const hostId = '394da1c7-6e97-4d26-a76f-c4d5aa347f3e'; // eliascolon35@gmail.com
+        console.log('🧪 Testing CSV toll insertion debugging...');
+        
+        // Create sample toll data like what would come from CSV
+        const sampleTolls = [
+            {
+                laneId: 'TEST_001',
+                transactionDate: new Date('2025-04-10T10:00:00Z'),
+                amount: 5.50,
+                location: 'TEST_BRIDGE',
+                plateNumber: 'LPJ3806',
+                transponderId: null,
+                postedDate: new Date('2025-04-11T00:00:00Z')
+            },
+            {
+                laneId: 'TEST_002', 
+                transactionDate: new Date('2025-04-15T14:30:00Z'),
+                amount: 2.25,
+                location: 'TEST_TUNNEL',
+                plateNumber: null,
+                transponderId: '08600713745',
+                postedDate: new Date('2025-04-16T00:00:00Z')
+            }
+        ];
+        
+        console.log(`🔍 Testing storeTollMatchingResults with ${sampleTolls.length} sample tolls...`);
+        
+        // Call the function directly to see what happens
+        const result = await storeTollMatchingResults(
+            { matches: [], unmatched: [] }, // empty matches
+            hostId,
+            [], // empty trips
+            sampleTolls,
+            'eliascolon35@gmail.com'
+        );
+        
+        console.log('✅ Test result:', result);
+        
+        res.json({
+            success: true,
+            message: 'CSV debug test completed',
+            result: result,
+            sampleTollsProcessed: sampleTolls.length
+        });
+        
+    } catch (error) {
+        console.error('❌ CSV debug test error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
 module.exports = router;
