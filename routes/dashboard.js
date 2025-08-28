@@ -1103,9 +1103,15 @@ function parseTuroCSV(csvData) {
         // Parse dates - handle real Turo format: "2025-04-05 10:00 AM" (Eastern Time)
         if (trip['Trip start']) {
             trip.startDate = parseTuroDateTime(trip['Trip start']);
+            if (!trip.startDate) {
+                console.warn(`⚠️ Failed to parse start date for trip ${trip['Reservation ID']}: ${trip['Trip start']}`);
+            }
         }
         if (trip['Trip end']) {
             trip.endDate = parseTuroDateTime(trip['Trip end']);
+            if (!trip.endDate) {
+                console.warn(`⚠️ Failed to parse end date for trip ${trip['Reservation ID']}: ${trip['Trip end']}`);
+            }
         }
         
         // Extract key identifiers
@@ -1124,16 +1130,25 @@ function parseTuroCSV(csvData) {
             trip.tollAmount = parseFloat(tollStr) || 0;
         }
         
-        // Only include active/completed trips - filter out cancelled trips
+        // Only include trips with valid dates and non-cancelled status
         const tripStatus = (trip.status || '').toLowerCase();
         const isCancelled = tripStatus.includes('cancel') || tripStatus.includes('decline') || 
                            tripStatus.includes('expired') || tripStatus.includes('terminated') || 
                            tripStatus.includes('rejected');
         
-        if (!isCancelled) {
+        // Check for valid dates
+        const hasValidDates = trip.startDate && trip.endDate && 
+                             !isNaN(trip.startDate.getTime()) && !isNaN(trip.endDate.getTime());
+        
+        if (!isCancelled && hasValidDates) {
             trips.push(trip);
+            console.log(`✅ Included trip: ${trip.reservationId} (Status: ${trip.status})`);
         } else {
-            console.log(`🚫 Filtered out cancelled trip: ${trip.reservationId} (Status: ${trip.status})`);
+            if (isCancelled) {
+                console.log(`🚫 Filtered out cancelled trip: ${trip.reservationId} (Status: ${trip.status})`);
+            } else if (!hasValidDates) {
+                console.log(`🚫 Filtered out trip with invalid dates: ${trip.reservationId} (Start: ${trip['Trip start']}, End: ${trip['Trip end']})`);
+            }
         }
     }
     
