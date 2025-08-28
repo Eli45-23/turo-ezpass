@@ -1,4 +1,4 @@
-const { supabaseAdmin } = require('../config/supabase');
+const { supabaseAdmin, db } = require('../config/supabase');
 
 /**
  * Simple Toll Matcher
@@ -255,9 +255,15 @@ class SimpleTollMatcher {
         } : 'No tolls');
         
         const extracted = tolls.map((toll, index) => {
+            // Fix transponder extraction: when plate_number is 'N/A', use transponder_id
+            const plateNumber = toll.plate_number || toll.plateNumber;
+            const transponderId = toll.transponder_id || toll.transponderId;
+            
             const extracted = {
                 laneTransactionId: toll.transaction_id || toll.laneId || toll.transactionId || toll.id,
-                tagOrPlate: toll.plate_number || toll.plateNumber || toll.transponder_id || toll.transponderId,
+                tagOrPlate: (plateNumber === 'N/A' && transponderId) ? transponderId : (plateNumber || transponderId),
+                transponderId: transponderId, // Keep separate reference to transponder ID
+                plateNumber: plateNumber,     // Keep separate reference to plate number
                 postedDate: toll.posted_date ? new Date(toll.posted_date) : (toll.postedDate ? new Date(toll.postedDate) : null),
                 agency: toll.agency || '',
                 entryPlaza: toll.entry_plaza || toll.entryPlaza || '',
@@ -276,7 +282,8 @@ class SimpleTollMatcher {
                     extracted: extracted,
                     tollDateValid: !isNaN(extracted.tollDate),
                     hasPlateOrTransponder: !!extracted.tagOrPlate,
-                    hasAmount: extracted.amount > 0
+                    hasAmount: extracted.amount > 0,
+                    transponderResolution: plateNumber === 'N/A' && transponderId ? `Used transponder ${transponderId} instead of plate N/A` : 'No transponder resolution needed'
                 });
             }
             
@@ -365,18 +372,17 @@ class SimpleTollMatcher {
         try {
             const mappings = new Map();
             
-            const { data: results, error } = await supabaseAdmin
-                .from('transponder_mappings')
-                .select('transponder_number, vehicle_plate, vehicle_description')
-                .eq('host_id', hostId)
-                .eq('is_active', true)
-                .or('vehicle_description.is.null,vehicle_description.not.ilike.Auto-discovered%');
-            
-            if (error) {
-                console.error('❌ Supabase error loading transponder mappings:', error);
-                console.error('❌ Query details - hostId:', hostId);
-                return new Map();
-            }
+            // 🛡️ SECURITY FIX: Use RLS context for transponder mappings
+            const results = await db.withHostContext(hostId, async () => {
+                const { data, error } = await supabaseAdmin
+                    .from('transponder_mappings')
+                    .select('transponder_number, vehicle_plate, vehicle_description')
+                    .eq('is_active', true)
+                    .or('vehicle_description.is.null,vehicle_description.not.ilike.Auto-discovered%');
+                
+                if (error) throw error;
+                return data;
+            });
             
             if (results && results.length > 0) {
                 console.log(`🔍 Raw transponder mappings found: ${results.length} records for host ${hostId}`);
@@ -420,6 +426,8 @@ class SimpleTollMatcher {
             console.log(`\n🔍 DETAILED ANALYSIS: Processing toll ${processed}/${tollData.length}`);
             console.log(`   Transaction ID: ${toll.laneTransactionId}`);
             console.log(`   Tag/Plate: ${toll.tagOrPlate}`);
+            console.log(`   Transponder ID: ${toll.transponderId || 'None'}`);
+            console.log(`   Plate Number: ${toll.plateNumber || 'None'}`);
             console.log(`   Amount: $${toll.amount}`);
             console.log(`   Date: ${toll.tollDate.toLocaleString()}`);
             console.log(`   Location: ${toll.tollLocation}`);
@@ -692,26 +700,28 @@ class SimpleTollMatcher {
                 }
                 
                 // We need to find the actual database IDs since CSV data doesn't have them
-                const tripDbId = await this.findTripDatabaseId(match.trip);
-                const tollDbId = await this.findTollDatabaseId(match.toll);
+                const tripDbId = await this.findTripDatabaseId(hostId, match.trip);
+                const tollDbId = await this.findTollDatabaseId(hostId, match.toll);
                 
                 if (tripDbId && tollDbId) {
                     try {
-                        const { error } = await supabaseAdmin
-                            .from('toll_charges')
-                            .update({
-                                trip_id: tripDbId,
-                                is_matched: true,
-                                match_timestamp: new Date().toISOString()
-                            })
-                            .eq('id', tollDbId);
+                        // 🛡️ SECURITY FIX: Use RLS context for toll matching update
+                        await db.withHostContext(hostId, async () => {
+                            const { error } = await supabaseAdmin
+                                .from('toll_charges')
+                                .update({
+                                    trip_id: tripDbId,
+                                    is_matched: true,
+                                    match_timestamp: new Date().toISOString()
+                                })
+                                .eq('id', tollDbId);
+                            
+                            if (error) throw error;
+                        });
                         
-                        if (error) {
-                            console.error(`❌ Failed to apply match for toll ${match.toll.laneTransactionId}:`, error);
-                        } else {
-                            appliedCount++;
-                            console.log(`✅ Applied match: Toll ${tollDbId} → Trip ${tripDbId} (${match.confidence})`);
-                        }
+                        // Success - toll matched and updated
+                        appliedCount++;
+                        console.log(`✅ Applied match: Toll ${tollDbId} → Trip ${tripDbId} (${match.confidence})`);
                     } catch (error) {
                         console.error(`❌ Exception applying match for toll ${match.toll.laneTransactionId}:`, error);
                     }
@@ -750,7 +760,7 @@ class SimpleTollMatcher {
     /**
      * Find trip database ID from reservation ID
      */
-    async findTripDatabaseId(trip) {
+    async findTripDatabaseId(hostId, trip) {
         try {
             console.log(`🔍 DEBUG: Looking for trip ${trip.reservationId} in database...`);
             
@@ -761,11 +771,16 @@ class SimpleTollMatcher {
             }
             
             // Otherwise, search by turo_trip_id
-            const { data: result, error } = await supabaseAdmin
+            // 🛡️ SECURITY FIX: Use explicit host_id filtering instead of broken withHostContext
+            const { data, error } = await supabaseAdmin
                 .from('trips')
                 .select('id, turo_trip_id, vehicle_plate')
                 .eq('turo_trip_id', trip.reservationId)
+                .eq('host_id', hostId) // 🛡️ CRITICAL FIX: Ensure trip belongs to this host
                 .single();
+                
+            if (error && error.code !== 'PGRST116') throw error;
+            const result = data;
             
             if (result) {
                 console.log(`✅ Found trip by turo_trip_id: ${result.id} (${result.turo_trip_id}, plate: ${result.vehicle_plate})`);
@@ -787,7 +802,7 @@ class SimpleTollMatcher {
     /**
      * Find toll database ID from transaction ID
      */
-    async findTollDatabaseId(toll) {
+    async findTollDatabaseId(hostId, toll) {
         try {
             console.log(`🔍 DEBUG: Looking for toll ${toll.laneTransactionId} in database...`);
             
@@ -798,11 +813,17 @@ class SimpleTollMatcher {
             }
             
             // Otherwise, search by transaction_id
-            const { data: result, error } = await supabaseAdmin
-                .from('toll_charges')
-                .select('id, transaction_id, toll_amount, charge_date')
-                .eq('transaction_id', toll.laneTransactionId)
-                .single();
+            // 🛡️ SECURITY FIX: Use RLS context for toll lookup
+            const result = await db.withHostContext(hostId, async () => {
+                const { data, error } = await supabaseAdmin
+                    .from('toll_charges')
+                    .select('id, transaction_id, toll_amount, charge_date')
+                    .eq('transaction_id', toll.laneTransactionId)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') throw error;
+                return data;
+            });
             
             if (result) {
                 console.log(`✅ Found toll by transaction_id: ${result.id} (${result.transaction_id}, $${result.toll_amount})`);
