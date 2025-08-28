@@ -1359,12 +1359,8 @@
         function renderTrips(category, trips) {
             const container = document.getElementById(`${category}-trips`);
             
-            // Filter out zero-toll trips from completed category (safety net)
+            // Show all trips regardless of toll amount
             let filteredTrips = trips;
-            if (category === 'completed') {
-                filteredTrips = trips.filter(trip => trip.tollTotal > 0);
-                console.log(`Filtered out ${trips.length - filteredTrips.length} zero-toll completed trips`);
-            }
             
             if (filteredTrips.length === 0) {
                 container.innerHTML = createEmptyState(category);

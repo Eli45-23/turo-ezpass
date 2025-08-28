@@ -202,8 +202,26 @@ class AuthManager {
         this.currentUser = null;
         this.session = null;
         this.token = null;
-        localStorage.removeItem('supabase_session');
-        localStorage.removeItem('supabase_token');
+        
+        // Clear ALL localStorage/sessionStorage to prevent data leakage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Clear any cached data
+        if (window.caches) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    caches.delete(name);
+                });
+            });
+        }
+        
+        // Clear any global state objects
+        if (window.userStore) window.userStore = null;
+        if (window.sessionData) window.sessionData = null;
+        if (window.cachedData) window.cachedData = null;
+        
+        console.log('🧽 Session cleared completely - all caches and storage cleared');
     }
     
     getUser() {

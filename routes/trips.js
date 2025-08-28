@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseAdmin } = require('../config/supabase');
+const { supabaseAdmin, db } = require('../config/supabase');
 
 // Middleware to check authentication
 const requireAuth = async (req, res, next) => {
@@ -69,12 +69,16 @@ router.get('/', requireAuth, async (req, res) => {
     try {
         console.log('📋 Fetching trips for host:', hostId);
         
-        // Get all trips for this host
-        const { data: trips, error: tripsError } = await supabaseAdmin
-            .from('trips')
-            .select('*')
-            .eq('host_id', hostId)
-            .order('start_date', { ascending: false });
+        // Get all trips for this host using explicit host filtering
+        const tripsResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('trips')
+                .select('*')
+                .eq('host_id', hostId)
+                .order('start_date', { ascending: false });
+        });
+        
+        const { data: trips, error: tripsError } = tripsResult;
         
         if (tripsError) {
             console.error('❌ Failed to fetch trips:', tripsError);
@@ -86,26 +90,34 @@ router.get('/', requireAuth, async (req, res) => {
         
         console.log(`📊 Found ${trips?.length || 0} trips for host`);
         
-        // Get all toll charges for this host's trips
-        const { data: tollCharges, error: tollError } = await supabaseAdmin
-            .from('toll_charges')
-            .select(`
-                *,
-                toll_accounts!inner(provider, account_number, host_id)
-            `)
-            .eq('toll_accounts.host_id', hostId)
-            .not('trip_id', 'is', null);
+        // Get all toll charges for this host using explicit host filtering
+        const tollChargesResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(provider, account_number, host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId)
+                .not('trip_id', 'is', null);
+        });
+        
+        const { data: tollCharges, error: tollError } = tollChargesResult;
         
         if (tollError) {
             console.error('❌ Failed to fetch toll charges:', tollError);
         }
         
-        // Get vehicle descriptions from transponder mappings
-        const { data: transponderMappings, error: transponderError } = await supabaseAdmin
-            .from('transponder_mappings')
-            .select('vehicle_plate, vehicle_description')
-            .eq('host_id', hostId)
-            .eq('is_active', true);
+        // Get vehicle descriptions from transponder mappings using explicit host filtering
+        const transponderResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('transponder_mappings')
+                .select('vehicle_plate, vehicle_description')
+                .eq('host_id', hostId)
+                .eq('is_active', true);
+        });
+        
+        const { data: transponderMappings, error: transponderError } = transponderResult;
         
         if (transponderError) {
             console.error('❌ Failed to fetch transponder mappings:', transponderError);
@@ -208,10 +220,14 @@ router.get('/', requireAuth, async (req, res) => {
             .map(trip => trip.internalId);
             
         if (allTripIds.length > 0) {
-            const { data: invoices } = await supabaseAdmin
-                .from('invoices')
-                .select('trip_id, created_at')
-                .in('trip_id', allTripIds);
+            const invoicesResult = await db.withHostContext(hostId, async () => {
+                return await supabaseAdmin
+                    .from('invoices')
+                    .select('trip_id, created_at')
+                    .in('trip_id', allTripIds);
+            });
+            
+            const { data: invoices } = invoicesResult;
                 
             const invoicesByTripId = {};
             (invoices || []).forEach(invoice => {
@@ -231,16 +247,20 @@ router.get('/', requireAuth, async (req, res) => {
             });
         }
         
-        // Get personal tolls (unmatched toll charges)
-        const { data: personalTolls, error: personalTollsError } = await supabaseAdmin
-            .from('toll_charges')
-            .select(`
-                *,
-                toll_accounts!inner(provider, account_number, host_id)
-            `)
-            .eq('toll_accounts.host_id', hostId)
-            .eq('is_matched', false)
-            .order('toll_date', { ascending: false });
+        // Get personal tolls (unmatched toll charges) using explicit host filtering
+        const personalTollsResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(provider, account_number, host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId)
+                .eq('is_matched', false)
+                .order('toll_date', { ascending: false });
+        });
+        
+        const { data: personalTolls, error: personalTollsError } = personalTollsResult;
         
         if (personalTollsError) {
             console.error('❌ Failed to fetch personal tolls:', personalTollsError);
@@ -269,30 +289,34 @@ router.get('/', requireAuth, async (req, res) => {
             });
         }
         
-        // Get late tolls detected for submitted trips
-        const { data: lateTolls, error: lateTollsError } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .select(`
-                *,
-                trips!inner(
-                    id,
-                    turo_trip_id,
-                    vehicle_plate,
-                    renter_name,
-                    start_date,
-                    end_date,
-                    host_id
-                ),
-                toll_charges!inner(
-                    toll_location,
-                    toll_amount,
-                    toll_date,
-                    transaction_id,
-                    submission_date
-                )
-            `)
-            .eq('trips.host_id', hostId)
-            .order('detection_date', { ascending: false });
+        // Get late tolls detected for submitted trips using explicit host filtering
+        const lateTollsResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('late_tolls_detected')
+                .select(`
+                    *,
+                    trips!inner(
+                        id,
+                        turo_trip_id,
+                        vehicle_plate,
+                        renter_name,
+                        start_date,
+                        end_date,
+                        host_id
+                    ),
+                    toll_charges!inner(
+                        toll_location,
+                        toll_amount,
+                        toll_date,
+                        transaction_id,
+                        submission_date
+                    )
+                `)
+                .eq('trips.host_id', hostId)
+                .order('detection_date', { ascending: false });
+        });
+        
+        const { data: lateTolls, error: lateTollsError } = lateTollsResult;
 
         if (!lateTollsError && lateTolls && lateTolls.length > 0) {
             // Group late tolls by trip
@@ -395,29 +419,32 @@ router.get('/late-tolls', requireAuth, async (req, res) => {
     });
     
     try {
-        // Note: This assumes a late_tolls_detected table exists
-        // For now, we'll return an empty array as this feature may not be fully implemented
-        const { data: lateTolls, error: lateTollsError } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .select(`
-                *,
-                trips!inner(
-                    turo_trip_id,
-                    vehicle_plate,
-                    renter_name,
-                    start_date,
-                    end_date,
-                    host_id
-                ),
-                toll_charges!inner(
-                    toll_location,
-                    toll_amount,
-                    toll_date,
-                    transaction_id
-                )
-            `)
-            .eq('trips.host_id', hostId)
-            .order('detection_date', { ascending: false });
+        // Get late tolls using explicit host filtering
+        const lateTollsResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('late_tolls_detected')
+                .select(`
+                    *,
+                    trips!inner(
+                        turo_trip_id,
+                        vehicle_plate,
+                        renter_name,
+                        start_date,
+                        end_date,
+                        host_id
+                    ),
+                    toll_charges!inner(
+                        toll_location,
+                        toll_amount,
+                        toll_date,
+                        transaction_id
+                    )
+                `)
+                .eq('trips.host_id', hostId)
+                .order('detection_date', { ascending: false });
+        });
+        
+        const { data: lateTolls, error: lateTollsError } = lateTollsResult;
         
         if (lateTollsError) {
             console.error('❌ Failed to fetch late tolls:', lateTollsError);
@@ -490,16 +517,20 @@ router.put('/late-tolls/:lateTollId/resolve', requireAuth, async (req, res) => {
     try {
         console.log('🔧 Resolving late toll:', lateTollId, 'status:', status);
         
-        // Verify late toll belongs to host
-        const { data: lateToll, error: fetchError } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .select(`
-                *,
-                trips!inner(host_id)
-            `)
-            .eq('id', lateTollId)
-            .eq('trips.host_id', hostId)
-            .single();
+        // Verify late toll belongs to host using explicit host filtering
+        const lateTollResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('late_tolls_detected')
+                .select(`
+                    *,
+                    trips!inner(host_id)
+                `)
+                .eq('id', lateTollId)
+                .eq('trips.host_id', hostId)
+                .single();
+        });
+        
+        const { data: lateToll, error: fetchError } = lateTollResult;
         
         if (fetchError || !lateToll) {
             console.error('❌ Late toll not found:', fetchError);
@@ -509,15 +540,20 @@ router.put('/late-tolls/:lateTollId/resolve', requireAuth, async (req, res) => {
             });
         }
         
-        // Update the late toll status
-        const { error: updateError } = await supabaseAdmin
-            .from('late_tolls_detected')
-            .update({
-                status: status,
-                resolution_notes: notes || null,
-                resolved_at: new Date().toISOString()
-            })
-            .eq('id', lateTollId);
+        // Update the late toll status using explicit host filtering
+        const updateResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('late_tolls_detected')
+                .update({
+                    status: status,
+                    resolution_notes: notes || null,
+                    resolved_at: new Date().toISOString()
+                })
+                .eq('id', lateTollId);
+            // Note: The lateTollId was already verified to belong to host above
+        });
+        
+        const { error: updateError } = updateResult;
         
         if (updateError) {
             console.error('❌ Failed to update late toll:', updateError);
@@ -554,13 +590,16 @@ router.get('/:id', requireAuth, async (req, res) => {
     try {
         console.log('📋 Fetching trip details for:', tripId, 'host:', hostId);
         
-        // Find the trip by turo_trip_id or internal id
-        const { data: trip, error: tripError } = await supabaseAdmin
-            .from('trips')
-            .select('*')
-            .eq('host_id', hostId)
-            .or(`turo_trip_id.eq.${tripId},id.eq.${tripId}`)
-            .single();
+        // Find the trip by turo_trip_id or internal id using RLS-aware context
+        const tripResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('trips')
+                .select('*')
+                .or(`turo_trip_id.eq.${tripId},id.eq.${tripId}`)
+                .single();
+        });
+        
+        const { data: trip, error: tripError } = tripResult;
         
         if (tripError || !trip) {
             console.error('❌ Trip not found:', tripError);
@@ -572,42 +611,55 @@ router.get('/:id', requireAuth, async (req, res) => {
         
         console.log('✅ Found trip:', trip.id);
         
-        // Get toll charges for this trip
-        const { data: tollCharges, error: tollError } = await supabaseAdmin
-            .from('toll_charges')
-            .select(`
-                *,
-                toll_accounts(provider, account_number)
-            `)
-            .eq('trip_id', trip.id)
-            .order('toll_date', { ascending: false });
+        // Get toll charges for this trip using RLS-aware context
+        const tollChargesResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts(provider, account_number)
+                `)
+                .eq('trip_id', trip.id)
+                .order('toll_date', { ascending: false });
+        });
+        
+        const { data: tollCharges, error: tollError } = tollChargesResult;
         
         if (tollError) {
             console.error('❌ Failed to fetch toll charges:', tollError);
         }
         
-        // Get invoice data for this trip
-        const { data: invoice, error: invoiceError } = await supabaseAdmin
-            .from('invoices')
-            .select(`
-                *,
-                invoice_items(amount)
-            `)
-            .eq('trip_id', trip.id)
-            .single();
+        // Get invoice data for this trip using explicit host filtering
+        const invoiceResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('invoices')
+                .select(`
+                    *,
+                    invoice_items(amount)
+                `)
+                .eq('trip_id', trip.id)
+                .single();
+            // Note: trip.id is already filtered by host above
+        });
+        
+        const { data: invoice, error: invoiceError } = invoiceResult;
         
         if (invoiceError && invoiceError.code !== 'PGRST116') {
             console.error('❌ Failed to fetch invoice:', invoiceError);
         }
         
-        // Get vehicle description
-        const { data: vehicleMapping, error: vehicleError } = await supabaseAdmin
-            .from('transponder_mappings')
-            .select('vehicle_description')
-            .eq('host_id', hostId)
-            .eq('vehicle_plate', trip.vehicle_plate)
-            .eq('is_active', true)
-            .single();
+        // Get vehicle description using explicit host filtering
+        const vehicleMappingResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('transponder_mappings')
+                .select('vehicle_description')
+                .eq('host_id', hostId)
+                .eq('vehicle_plate', trip.vehicle_plate)
+                .eq('is_active', true)
+                .single();
+        });
+        
+        const { data: vehicleMapping, error: vehicleError } = vehicleMappingResult;
         
         if (vehicleError && vehicleError.code !== 'PGRST116') {
             console.error('❌ Failed to fetch vehicle mapping:', vehicleError);
@@ -702,13 +754,17 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
     try {
         console.log('📤 Submitting trip to Turo:', tripId, 'for host:', hostId);
         
-        // Verify trip belongs to host and isn't already submitted
-        const { data: trip, error: tripError } = await supabaseAdmin
-            .from('trips')
-            .select('*')
-            .eq('id', tripId)
-            .eq('host_id', hostId)
-            .single();
+        // Verify trip belongs to host using explicit host filtering
+        const tripResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('trips')
+                .select('*')
+                .eq('id', tripId)
+                .eq('host_id', hostId)
+                .single();
+        });
+        
+        const { data: trip, error: tripError } = tripResult;
         
         if (tripError || !trip) {
             console.error('❌ Trip not found:', tripError);
@@ -718,12 +774,17 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             });
         }
         
-        // Check if trip already has an invoice (already submitted)
-        const { data: existingInvoice } = await supabaseAdmin
-            .from('invoices')
-            .select('id, created_at')
-            .eq('trip_id', tripId)
-            .single();
+        // Check if trip already has an invoice using explicit host filtering
+        const existingInvoiceResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('invoices')
+                .select('id, created_at')
+                .eq('trip_id', tripId)
+                .single();
+            // Note: tripId was already verified to belong to host above
+        });
+        
+        const { data: existingInvoice } = existingInvoiceResult;
             
         if (existingInvoice) {
             return res.status(409).json({ 
@@ -734,15 +795,20 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             });
         }
         
-        // Get toll charges for this trip
-        const { data: charges, error: chargesError } = await supabaseAdmin
-            .from('toll_charges')
-            .select(`
-                *,
-                toll_accounts(provider)
-            `)
-            .eq('trip_id', tripId)
-            .eq('is_matched', true);
+        // Get toll charges for this trip using explicit host filtering
+        const chargesResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(provider, host_id)
+                `)
+                .eq('trip_id', tripId)
+                .eq('toll_accounts.host_id', hostId)
+                .eq('is_matched', true);
+        });
+        
+        const { data: charges, error: chargesError } = chargesResult;
         
         if (chargesError) {
             console.error('❌ Failed to fetch toll charges:', chargesError);
@@ -791,20 +857,24 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             // Note: Skip trip table update for now since submitted_to_turo/submitted_date fields don't exist yet
             // We'll track submission status through the invoices table instead
             
-            // 2. Create invoice with snapshot data
-            const { data: invoice, error: invoiceError } = await supabaseAdmin
-                .from('invoices')
-                .insert({
-                    trip_id: tripId,
-                    invoice_number: invoiceNumber,
-                    total_amount: totalAmount,
-                    processing_fee: processingFee,
-                    status: 'sent',
-                    toll_charge_ids: tollChargeIds,
-                    snapshot_data: snapshotData
-                })
-                .select()
-                .single();
+            // 2. Create invoice with snapshot data using RLS-aware context
+            const invoiceResult = await db.withHostContext(hostId, async () => {
+                return await supabaseAdmin
+                    .from('invoices')
+                    .insert({
+                        trip_id: tripId,
+                        invoice_number: invoiceNumber,
+                        total_amount: totalAmount,
+                        processing_fee: processingFee,
+                        status: 'sent',
+                        toll_charge_ids: tollChargeIds,
+                        snapshot_data: snapshotData
+                    })
+                    .select()
+                    .single();
+            });
+            
+            const { data: invoice, error: invoiceError } = invoiceResult;
             
             if (invoiceError) {
                 throw new Error('Failed to create invoice: ' + invoiceError.message);
@@ -821,9 +891,13 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
                 amount: charge.toll_amount
             }));
             
-            const { error: itemsError } = await supabaseAdmin
-                .from('invoice_items')
-                .insert(invoiceItems);
+            const itemsResult = await db.withHostContext(hostId, async () => {
+                return await supabaseAdmin
+                    .from('invoice_items')
+                    .insert(invoiceItems);
+            });
+            
+            const { error: itemsError } = itemsResult;
             
             if (itemsError) {
                 throw new Error('Failed to create invoice items: ' + itemsError.message);
@@ -831,15 +905,19 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             
             console.log('📝 Created', invoiceItems.length, 'invoice items');
             
-            // 4. Mark all toll charges as submitted
-            const { error: updateTollsError } = await supabaseAdmin
-                .from('toll_charges')
-                .update({
-                    submitted_to_turo: true,
-                    invoice_id: invoiceId,
-                    submission_date: new Date().toISOString()
-                })
-                .in('id', tollChargeIds);
+            // 4. Mark all toll charges as submitted using RLS-aware context
+            const updateTollsResult = await db.withHostContext(hostId, async () => {
+                return await supabaseAdmin
+                    .from('toll_charges')
+                    .update({
+                        submitted_to_turo: true,
+                        invoice_id: invoiceId,
+                        submission_date: new Date().toISOString()
+                    })
+                    .in('id', tollChargeIds);
+            });
+            
+            const { error: updateTollsError } = updateTollsResult;
             
             if (updateTollsError) {
                 throw new Error('Failed to mark toll charges as submitted: ' + updateTollsError.message);

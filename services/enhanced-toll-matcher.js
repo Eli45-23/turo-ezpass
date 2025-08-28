@@ -273,9 +273,20 @@ class EnhancedTollMatcher {
             // Use strict time window - toll must be within exact trip period
             if (tollDate >= adjustedStart && tollDate <= adjustedEnd) {
                 
-                // Method 1: Direct plate match
-                if (toll.plate_number && trip.vehicle_plate) {
-                    const tollPlate = this.normalizePlate(toll.plate_number);
+                let plateToMatch = toll.plate_number;
+                
+                // Method 1: Transponder resolution (NEW)
+                if (!plateToMatch && toll.transponder_id) {
+                    const resolution = this.resolveTransponderToPlate(toll, transponderMappings);
+                    if (resolution.resolvedPlate) {
+                        plateToMatch = resolution.resolvedPlate;
+                        console.log(`🔍 Using resolved plate ${plateToMatch} from transponder ${resolution.transponderNumber}`);
+                    }
+                }
+                
+                // Method 2: Direct plate match (enhanced with transponder resolution)
+                if (plateToMatch && trip.vehicle_plate) {
+                    const tollPlate = this.normalizePlate(plateToMatch);
                     const tripPlate = this.normalizePlate(trip.vehicle_plate);
                     
                     if (tollPlate === tripPlate) {
@@ -348,8 +359,19 @@ class EnhancedTollMatcher {
             const adjustedEnd = tripEnd;
             
             if (tollDate >= adjustedStart && tollDate <= adjustedEnd) {
-                if (toll.plate_number && trip.vehicle_plate) {
-                    const similarity = this.calculatePlateSimilarity(toll.plate_number, trip.vehicle_plate);
+                let plateToMatch = toll.plate_number;
+                
+                // Try transponder resolution if no plate
+                if (!plateToMatch && toll.transponder_id) {
+                    const resolution = this.resolveTransponderToPlate(toll, transponderMappings);
+                    if (resolution.resolvedPlate) {
+                        plateToMatch = resolution.resolvedPlate;
+                        console.log(`🔍 Fuzzy match using resolved plate ${plateToMatch} from transponder ${resolution.transponderNumber}`);
+                    }
+                }
+                
+                if (plateToMatch && trip.vehicle_plate) {
+                    const similarity = this.calculatePlateSimilarity(plateToMatch, trip.vehicle_plate);
                     
                     if (similarity > bestSimilarity && similarity >= 0.8) { // Higher threshold
                         bestSimilarity = similarity;
@@ -428,9 +450,20 @@ class EnhancedTollMatcher {
             if (tollDate >= adjustedStart && tollDate <= adjustedEnd) {
                 // Check vehicle matches with expanded time window
                 
-                // Method 1: Direct plate match
-                if (toll.plate_number && trip.vehicle_plate) {
-                    const tollPlate = this.normalizePlate(toll.plate_number);
+                let plateToMatch = toll.plate_number;
+                
+                // Method 1: Transponder resolution (NEW)
+                if (!plateToMatch && toll.transponder_id) {
+                    const resolution = this.resolveTransponderToPlate(toll, transponderMappings);
+                    if (resolution.resolvedPlate) {
+                        plateToMatch = resolution.resolvedPlate;
+                        console.log(`🔍 Expanded date match using resolved plate ${plateToMatch} from transponder ${resolution.transponderNumber}`);
+                    }
+                }
+                
+                // Method 2: Direct plate match (enhanced with transponder resolution)
+                if (plateToMatch && trip.vehicle_plate) {
+                    const tollPlate = this.normalizePlate(plateToMatch);
                     const tripPlate = this.normalizePlate(trip.vehicle_plate);
                     
                     if (tollPlate === tripPlate) {
@@ -483,18 +516,41 @@ class EnhancedTollMatcher {
             
             // Check if toll occurred during trip period (strict)
             if (tollDate >= tripStart && tollDate <= tripEnd) {
-                // Check time-of-day pattern
-                const tripStartHour = tripStart.getHours();
-                const tripEndHour = tripEnd.getHours();
                 
-                if (Math.abs(tollHour - tripStartHour) <= 2 || Math.abs(tollHour - tripEndHour) <= 2) {
-                    return {
-                        match: true,
-                        toll: toll,
-                        trip: trip,
-                        confidence: 0.45,
-                        reason: `Pattern match: Similar time of day (${tollHour}:00)`
-                    };
+                let plateToMatch = toll.plate_number;
+                
+                // Try transponder resolution if no plate
+                if (!plateToMatch && toll.transponder_id) {
+                    const resolution = this.resolveTransponderToPlate(toll, transponderMappings);
+                    if (resolution.resolvedPlate) {
+                        plateToMatch = resolution.resolvedPlate;
+                        console.log(`🔍 Pattern match using resolved plate ${plateToMatch} from transponder ${resolution.transponderNumber}`);
+                    }
+                }
+                
+                // Check if vehicle matches
+                if (plateToMatch && trip.vehicle_plate) {
+                    const tollPlate = this.normalizePlate(plateToMatch);
+                    const tripPlate = this.normalizePlate(trip.vehicle_plate);
+                    
+                    if (tollPlate === tripPlate) {
+                        // Check time-of-day pattern for additional confidence
+                        const tripStartHour = tripStart.getHours();
+                        const tripEndHour = tripEnd.getHours();
+                        
+                        let timeConfidence = 0;
+                        if (Math.abs(tollHour - tripStartHour) <= 2 || Math.abs(tollHour - tripEndHour) <= 2) {
+                            timeConfidence = 0.15; // Extra confidence for time pattern
+                        }
+                        
+                        return {
+                            match: true,
+                            toll: toll,
+                            trip: trip,
+                            confidence: 0.45 + timeConfidence,
+                            reason: `Pattern match: ${plateToMatch === toll.plate_number ? 'Direct plate' : 'Transponder resolved'} + time pattern`
+                        };
+                    }
                 }
             }
         }
@@ -744,6 +800,38 @@ class EnhancedTollMatcher {
         } catch (error) {
             console.error('❌ Error loading matching data:', error);
             throw error;
+        }
+    }
+    
+    /**
+     * Resolve transponder ID to vehicle plate using transponder mappings
+     * @param {Object} toll - Toll charge object
+     * @param {Array} transponderMappings - Array of transponder mappings
+     * @returns {Object} - { resolvedPlate: string|null, transponderNumber: string|null }
+     */
+    resolveTransponderToPlate(toll, transponderMappings) {
+        // Check if toll has a transponder_id
+        if (!toll.transponder_id) {
+            return { resolvedPlate: null, transponderNumber: null };
+        }
+        
+        const transponderNumber = toll.transponder_id;
+        console.log(`🔍 Resolving transponder ${transponderNumber} to vehicle plate...`);
+        
+        // Find matching transponder mapping
+        const mapping = transponderMappings.find(m => 
+            m.transponder_number === transponderNumber
+        );
+        
+        if (mapping) {
+            console.log(`✅ Transponder ${transponderNumber} → Vehicle plate ${mapping.vehicle_plate}`);
+            return { 
+                resolvedPlate: mapping.vehicle_plate, 
+                transponderNumber: transponderNumber 
+            };
+        } else {
+            console.log(`⚠️ No mapping found for transponder ${transponderNumber}`);
+            return { resolvedPlate: null, transponderNumber: transponderNumber };
         }
     }
     

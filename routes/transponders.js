@@ -440,41 +440,52 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 // Get toll charges by transponder (for analysis)
-router.get('/:transponderNumber/tolls', requireAuth, (req, res) => {
+router.get('/:transponderNumber/tolls', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const transponderNumber = req.params.transponderNumber.replace(/\s+/g, '').toUpperCase();
     
-    db.all(
-        `SELECT tc.*, tm.vehicle_plate, tm.vehicle_description
-         FROM toll_charges tc
-         JOIN toll_accounts ta ON tc.toll_account_id = ta.id
-         LEFT JOIN transponder_mappings tm ON tm.transponder_number = tc.plate_number AND tm.host_id = ta.host_id
-         WHERE ta.host_id = ? AND tc.plate_number = ?
-         ORDER BY tc.toll_date DESC`,
-        [hostId, transponderNumber],
-        (err, tolls) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to fetch toll charges'
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    transponderNumber,
-                    tollCount: tolls.length,
-                    totalAmount: tolls.reduce((sum, toll) => sum + toll.toll_amount, 0),
-                    tolls: tolls
-                }
+    try {
+        const { data: tolls, error } = await supabaseAdmin
+            .from('toll_charges')
+            .select(`
+                *,
+                toll_accounts!toll_account_id(id, host_id),
+                transponder_mappings!left(vehicle_plate, vehicle_description)
+            `)
+            .eq('toll_accounts.host_id', hostId)
+            .eq('plate_number', transponderNumber)
+            .order('toll_date', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Error fetching toll charges:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch toll charges'
             });
         }
-    );
+        
+        const totalAmount = tolls?.reduce((sum, toll) => sum + parseFloat(toll.toll_amount || 0), 0) || 0;
+        
+        res.json({
+            success: true,
+            data: {
+                transponderNumber,
+                tollCount: tolls?.length || 0,
+                totalAmount,
+                tolls: tolls || []
+            }
+        });
+    } catch (error) {
+        console.error('❌ Exception fetching toll charges:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch toll charges'
+        });
+    }
 });
 
 // Bulk import transponder mappings (CSV or JSON)
-router.post('/bulk-import', requireAuth, (req, res) => {
+router.post('/bulk-import', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const { mappings, replaceAll } = req.body;
     
@@ -485,80 +496,113 @@ router.post('/bulk-import', requireAuth, (req, res) => {
         });
     }
     
-    db.serialize(() => {
+    try {
         if (replaceAll) {
             // Clear existing mappings for this host
-            db.run(`DELETE FROM transponder_mappings WHERE host_id = ?`, [hostId]);
+            const { error: deleteError } = await supabaseAdmin
+                .from('transponder_mappings')
+                .delete()
+                .eq('host_id', hostId);
+                
+            if (deleteError) {
+                console.error('❌ Error clearing existing mappings:', deleteError);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to clear existing mappings'
+                });
+            }
         }
         
         let successCount = 0;
         let errors = [];
         
-        mappings.forEach((mapping, index) => {
+        // Process mappings in batches to avoid overwhelming the database
+        for (let i = 0; i < mappings.length; i++) {
+            const mapping = mappings[i];
             const { transponderNumber, vehiclePlate, vehicleDescription } = mapping;
             
             if (!transponderNumber || !vehiclePlate) {
-                errors.push(`Row ${index + 1}: Missing transponder number or vehicle plate`);
-                return;
+                errors.push(`Row ${i + 1}: Missing transponder number or vehicle plate`);
+                continue;
             }
             
             const cleanTransponder = transponderNumber.replace(/\s+/g, '').toUpperCase();
             const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
             
-            db.run(
-                `INSERT OR REPLACE INTO transponder_mappings 
-                 (host_id, transponder_number, vehicle_plate, vehicle_description) 
-                 VALUES (?, ?, ?, ?)`,
-                [hostId, cleanTransponder, cleanPlate, vehicleDescription || ''],
-                function(err) {
-                    if (err) {
-                        errors.push(`Row ${index + 1}: ${err.message}`);
-                    } else {
-                        successCount++;
-                    }
+            try {
+                const { error } = await supabaseAdmin
+                    .from('transponder_mappings')
+                    .upsert({
+                        host_id: hostId,
+                        transponder_number: cleanTransponder,
+                        vehicle_plate: cleanPlate,
+                        vehicle_description: vehicleDescription || '',
+                        is_active: true,
+                        updated_at: new Date().toISOString()
+                    }, {
+                        onConflict: 'host_id,transponder_number'
+                    });
+                    
+                if (error) {
+                    errors.push(`Row ${i + 1}: ${error.message}`);
+                } else {
+                    successCount++;
                 }
-            );
-        });
+            } catch (error) {
+                errors.push(`Row ${i + 1}: ${error.message}`);
+            }
+        }
         
-        // Allow time for async operations to complete
-        setTimeout(() => {
-            res.json({
-                success: true,
-                message: `Imported ${successCount} transponder mappings`,
-                data: {
-                    imported: successCount,
-                    errors: errors.length,
-                    errorDetails: errors
-                }
-            });
-        }, 500);
-    });
+        res.json({
+            success: true,
+            message: `Imported ${successCount} transponder mappings`,
+            data: {
+                imported: successCount,
+                errors: errors.length,
+                errorDetails: errors
+            }
+        });
+    } catch (error) {
+        console.error('❌ Exception during bulk import:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to import transponder mappings'
+        });
+    }
 });
 
 // Export transponder mappings as JSON
-router.get('/export', requireAuth, (req, res) => {
+router.get('/export', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     
-    db.all(
-        `SELECT transponder_number, vehicle_plate, vehicle_description 
-         FROM transponder_mappings 
-         WHERE host_id = ? AND is_active = 1
-         ORDER BY vehicle_description, transponder_number`,
-        [hostId],
-        (err, mappings) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to export transponder mappings'
-                });
-            }
+    try {
+        const { data: mappings, error } = await supabaseAdmin
+            .from('transponder_mappings')
+            .select('transponder_number, vehicle_plate, vehicle_description')
+            .eq('host_id', hostId)
+            .eq('is_active', true)
+            .order('vehicle_description', { ascending: true })
+            .order('transponder_number', { ascending: true });
             
-            res.json({
-                success: true,
-                data: mappings
+        if (error) {
+            console.error('❌ Error exporting transponder mappings:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to export transponder mappings'
             });
         }
-    );
+        
+        res.json({
+            success: true,
+            data: mappings || []
+        });
+    } catch (error) {
+        console.error('❌ Exception exporting transponder mappings:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to export transponder mappings'
+        });
+    }
 });
 
 module.exports = router;

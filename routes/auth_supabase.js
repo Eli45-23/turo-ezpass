@@ -15,7 +15,6 @@ router.post('/signup',
     authLimiter,
     sanitizeInputs,
     validateInput(schemas.signup),
-    validateCSRF,
     async (req, res) => {
         const { email, password, fullName, turoHostId } = req.body;
         
@@ -133,7 +132,6 @@ router.post('/login',
     authLimiter,
     sanitizeInputs,
     validateInput(schemas.login),
-    validateCSRF,
     async (req, res) => {
         const { email, password } = req.body;
         

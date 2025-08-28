@@ -7,7 +7,7 @@ const { db } = require('../config/database');
 // Rate limiting configurations
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 requests per windowMs for auth endpoints
+    max: process.env.NODE_ENV === 'production' ? 5 : 50, // Higher limit in development
     message: {
         success: false,
         error: 'Too many authentication attempts, please try again in 15 minutes',
