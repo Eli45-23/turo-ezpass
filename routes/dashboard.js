@@ -1790,6 +1790,18 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
             } else {
                 console.log(`✅ Proceeding to insert trip ${trip.turoTripId} - no existing invoices`);
                 
+                // Validate dates before insertion
+                if (!trip.startDate || !trip.endDate || 
+                    isNaN(trip.startDate.getTime()) || isNaN(trip.endDate.getTime())) {
+                    console.error(`❌ Skipping trip ${trip.turoTripId} - invalid dates:`, {
+                        startDate: trip.startDate,
+                        endDate: trip.endDate,
+                        originalStart: trip['Trip start'],
+                        originalEnd: trip['Trip end']
+                    });
+                    continue; // Skip this trip and continue with next one
+                }
+                
                 const tripData = {
                     host_id: hostId, // 🛡️ CRITICAL FIX: Explicitly set host_id for trigger
                     turo_trip_id: trip.turoTripId,
@@ -1804,29 +1816,30 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                 console.log(`🔍 DEBUG: Inserting trip data:`, tripData);
                 console.log(`🛡️ Using RLS context for host ${hostId} - host_id will be set automatically`);
                 
-                // 🛡️ SECURITY FIX: Use RLS context for trip insertion
-                const newTrip = await db.withHostContext(hostId, async () => {
-                    const { data, error } = await supabaseAdmin
-                        .from('trips')
-                        .upsert(tripData, {
-                            onConflict: 'host_id,turo_trip_id',
-                            ignoreDuplicates: false
-                        })
-                        .select()
-                        .single();
-                    
-                    if (error) {
-                        console.error(`❌ Failed to insert trip ${i + 1}:`, {
-                            error: error.message,
-                            code: error.code,
-                            hint: error.hint,
-                            details: error.details,
-                            tripData: tripData
-                        });
-                        throw error;
-                    }
-                    return data;
-                });
+                try {
+                    // 🛡️ SECURITY FIX: Use RLS context for trip insertion
+                    const newTrip = await db.withHostContext(hostId, async () => {
+                        const { data, error } = await supabaseAdmin
+                            .from('trips')
+                            .upsert(tripData, {
+                                onConflict: 'host_id,turo_trip_id',
+                                ignoreDuplicates: false
+                            })
+                            .select()
+                            .single();
+                        
+                        if (error) {
+                            console.error(`❌ Failed to insert trip ${i + 1}:`, {
+                                error: error.message,
+                                code: error.code,
+                                hint: error.hint,
+                                details: error.details,
+                                tripData: tripData
+                            });
+                            throw error;
+                        }
+                        return data;
+                    });
                 
                 if (!newTrip) {
                     console.error(`❌ Trip upsert returned no data for ${trip.turoTripId}`);
@@ -1853,6 +1866,18 @@ async function storeTollMatchingResults(matchingResults, hostId, turoTrips, ezpa
                     
                     console.log(`🔍 VERIFIED: Trip ${trip.turoTripId} saved with ID ${verifyTrip.id}, plate: ${verifyTrip.vehicle_plate}`);
                     dbUpdates.trips_updated++;
+                }
+                } catch (insertError) {
+                    console.error(`❌ CRITICAL ERROR: Failed to insert trip ${trip.turoTripId} (${trip.guest})`, {
+                        error: insertError.message,
+                        status: trip.status,
+                        startDate: trip.startDate,
+                        endDate: trip.endDate,
+                        vehiclePlate: trip.vehiclePlate,
+                        stack: insertError.stack
+                    });
+                    // Continue with next trip instead of failing entire import
+                    continue;
                 }
             }
         }
