@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { supabaseAdmin, db } = require('../config/supabase');
+const { formatEasternTime } = require('../utils/timezone-utils');
 
 // Middleware to check authentication
 const requireAuth = async (req, res, next) => {
@@ -140,13 +141,7 @@ router.get('/', requireAuth, async (req, res) => {
                     id: toll.id,
                     location: toll.toll_location || 'Unknown Location',
                     amount: parseFloat(toll.toll_amount || 0),
-                    time: new Date(toll.toll_date).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    }),
+                    time: formatEasternTime(toll.toll_date, true),
                     tollDate: new Date(toll.toll_date), // Store original date for sorting
                     provider: toll.toll_accounts?.provider || 'Unknown',
                     transponder: toll.transponder_id || toll.plate_number || 'Unknown',

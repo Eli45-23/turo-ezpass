@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { supabaseAdmin, db } = require('../config/supabase');
+const { parseTuroDateTime, parseEzPassDateTime, formatEasternTime, isWithinTripWindow } = require('../utils/timezone-utils');
 const { CacheManager, CacheKeys } = require('../services/cache-manager');
 const { createPerformanceMiddleware } = require('../services/performance-monitor');
 const EnhancedTollMatcher = require('../services/enhanced-toll-matcher');
@@ -1099,12 +1100,12 @@ function parseTuroCSV(csvData) {
             trip[header] = values[index] || '';
         });
         
-        // Parse dates - handle real Turo format: "2025-04-05 10:00 AM"
+        // Parse dates - handle real Turo format: "2025-04-05 10:00 AM" (Eastern Time)
         if (trip['Trip start']) {
-            trip.startDate = new Date(trip['Trip start']);
+            trip.startDate = parseTuroDateTime(trip['Trip start']);
         }
         if (trip['Trip end']) {
-            trip.endDate = new Date(trip['Trip end']);
+            trip.endDate = parseTuroDateTime(trip['Trip end']);
         }
         
         // Extract key identifiers
@@ -1234,38 +1235,13 @@ function parseEZPassCSV(csvData) {
             }
         }
         
-        // Parse transaction date and time (primary toll timestamp)
+        // Parse transaction date and time (Eastern Time) and convert to UTC
         if (toll['Date']) {
             const transDateStr = toll['Date'];
             const timeStr = toll['Time'] || '12:00 AM'; // Default time if missing
             
-            let transactionDate;
-            if (transDateStr.includes('/')) {
-                const [month, day, year] = transDateStr.split('/');
-                // Create timezone-neutral base date
-                transactionDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00.000Z`);
-            } else {
-                transactionDate = new Date(toll['Date']);
-            }
-            
-            // Parse time and add to date (handle formats like "08:05 PM")
-            if (timeStr && timeStr.includes(':')) {
-                const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-                if (timeMatch) {
-                    let hours = parseInt(timeMatch[1]);
-                    const minutes = parseInt(timeMatch[2]);
-                    const isPM = timeMatch[3] && timeMatch[3].toUpperCase() === 'PM';
-                    
-                    // Convert to 24-hour format
-                    if (isPM && hours !== 12) hours += 12;
-                    if (!isPM && hours === 12) hours = 0;
-                    
-                    // Use UTC methods to maintain timezone neutrality
-                    transactionDate.setUTCHours(hours, minutes, 0, 0);
-                }
-            }
-            
-            toll.transactionDate = transactionDate;
+            // Use timezone-aware parsing for E-ZPass data (Eastern Time)
+            toll.transactionDate = parseEzPassDateTime(transDateStr, timeStr);
         } else {
             toll.transactionDate = toll.postedDate;
         }
@@ -1555,15 +1531,12 @@ function calculateMatchScore(toll, trip, transponderMapping) {
         return score; // Exit if no plate data
     }
     
-    // EXACT time window matching - NO buffers, NO proximity
+    // EXACT time window matching using timezone-aware comparison
     if (toll.transactionDate && trip.startDate && trip.endDate) {
-        const tollTime = toll.transactionDate.getTime();
-        const tripStart = trip.startDate.getTime();
-        const tripEnd = trip.endDate.getTime();
+        console.log(`🕐 Time check (UTC): toll=${toll.transactionDate.toISOString()}, trip=${trip.startDate.toISOString()} to ${trip.endDate.toISOString()}`);
         
-        console.log(`🕐 Time check: ${tollTime} >= ${tripStart} && ${tollTime} <= ${tripEnd}`);
-        
-        if (tollTime >= tripStart && tollTime <= tripEnd) {
+        // Use timezone-aware window checking
+        if (isWithinTripWindow(toll.transactionDate, trip.startDate, trip.endDate, 0)) {
             // Toll occurred EXACTLY during trip window
             score.time = 1.0;
             score.exact_match = true;
