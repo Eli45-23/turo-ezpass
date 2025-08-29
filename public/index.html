@@ -1324,14 +1324,14 @@
         // Fetch CSRF token
         async function fetchCSRFToken() {
             try {
-                const response = await fetch('/api/csrf-token', {
+                const response = await fetch('/api/auth/csrf-token', {
                     method: 'GET',
                     credentials: 'include'
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    csrfToken = data.token;
+                    csrfToken = data.csrfToken;
                     
                     // Update both forms
                     const loginTokenInput = document.getElementById('login-csrf-token');
