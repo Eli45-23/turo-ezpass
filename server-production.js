@@ -116,9 +116,19 @@ app.use(authMiddleware.sessionCleanup);
 
 // Serve static files with caching
 app.use(express.static('public', {
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
-    etag: true,
-    lastModified: true
+    setHeaders: (res, path) => {
+        // Force no cache for HTML files to fix Safari caching issues
+        if (path.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            res.setHeader('ETag', Date.now().toString());
+        }
+        // Allow caching for other assets but with validation
+        else {
+            res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+        }
+    }
 }));
 
 // Health check endpoint (no authentication required)
