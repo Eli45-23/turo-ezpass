@@ -25,9 +25,10 @@ router.post('/signup',
         });
 
         try {
-            // Create user with Supabase Auth
+            // Create user with Supabase Auth (normalize email to lowercase)
+            const normalizedEmail = email.toLowerCase().trim();
             const { data: authData, error: authError } = await db.auth.signUp({
-                email,
+                email: normalizedEmail,
                 password,
                 options: {
                     data: {
@@ -62,7 +63,7 @@ router.post('/signup',
             // Create host record in database
             const { data: hostData, error: dbError } = await db.adminFrom('hosts').insert({
                 id: authData.user.id, // Use Supabase user UUID
-                email: email,
+                email: normalizedEmail,
                 full_name: fullName,
                 turo_host_id: turoHostId,
                 created_at: new Date().toISOString(),
@@ -103,7 +104,7 @@ router.post('/signup',
                     'Registration successful - please check your email for confirmation',
                 host: {
                     id: authData.user.id,
-                    email: email,
+                    email: normalizedEmail,
                     fullName: fullName
                 },
                 session: authData.session,
@@ -134,16 +135,17 @@ router.post('/login',
     validateInput(schemas.login),
     async (req, res) => {
         const { email, password } = req.body;
+        const normalizedEmail = email.toLowerCase().trim();
         
         logSecurityEvent('LOGIN_ATTEMPT', {
             ip: req.ip,
             userAgent: req.get('User-Agent'),
-            email: email
+            email: normalizedEmail
         });
 
         try {
             const { data, error } = await db.auth.signInWithPassword({
-                email,
+                email: normalizedEmail,
                 password
             });
 
@@ -161,13 +163,36 @@ router.post('/login',
                 });
             }
 
-            // Get host data from database
-            const { data: hostData, error: hostError } = await db.from('hosts')
+            // Get host data from database (case-insensitive email match)
+            let { data: hostData, error: hostError } = await db.from('hosts')
                 .select('*')
-                .eq('email', email)
+                .ilike('email', normalizedEmail)
                 .single();
 
-            if (hostError || !hostData) {
+            // If host record doesn't exist but Supabase auth succeeded, create it automatically
+            if (hostError && hostError.code === 'PGRST116') {
+                console.log('🔧 Auto-creating missing host record for authenticated user:', normalizedEmail);
+                
+                const { data: newHostData, error: createError } = await db.adminFrom('hosts').insert({
+                    id: data.user.id,
+                    email: normalizedEmail,
+                    full_name: data.user.user_metadata?.full_name || email,
+                    turo_host_id: data.user.user_metadata?.turo_host_id || null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }).select().single();
+
+                if (createError) {
+                    console.error('❌ Failed to auto-create host record:', createError);
+                    return res.status(500).json({ 
+                        success: false, 
+                        error: 'Account setup failed - please contact support' 
+                    });
+                }
+                
+                hostData = newHostData;
+                console.log('✅ Host record auto-created successfully');
+            } else if (hostError || !hostData) {
                 console.error('❌ Could not fetch host data:', hostError);
                 return res.status(500).json({ 
                     success: false, 
