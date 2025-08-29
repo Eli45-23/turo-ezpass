@@ -15,25 +15,8 @@
     
     <script src="/js/simple-icons.js"></script>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'mono': ['JetBrains Mono', 'monospace'],
-                        'sans': ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        gray: {
-                            850: '#1f2937',
-                            900: '#111827',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="stylesheet" href="/css/dist/style.css">
+    
     <!-- Using system fonts for maximum compatibility across all browsers and regions -->
     
     <!-- Charts not needed in dashboard, only in analytics -->
@@ -48,8 +31,8 @@
     <!-- Safari-specific cache busting (load first) -->
     <script src="/js/safari-fix.js?v=20250821"></script>
     
-    <!-- Theme enforcement (load early) -->
     <script src="/js/theme-enforcer.js?v=20250821"></script>
+</body>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');

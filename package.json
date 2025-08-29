@@ -9,7 +9,8 @@
     "test": "echo \"Tests coming soon\" && exit 0",
     "tunnel": "npx ngrok http 3000",
     "share": "npm run dev & npm run tunnel",
-    "build": "echo \"No build step required for Node.js app\"",
+    "build": "npm run build:css",
+    "build:css": "npx -p tailwindcss tailwindcss -i ./public/css/style.css -o ./public/css/dist/style.css",
     "prestart": "echo \"Starting Turo Toll Tracker...\"",
     "postinstall": "echo \"Installation complete. Run 'npm run dev' to start development server.\""
   },
@@ -59,7 +60,10 @@
     "ws": "^8.13.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "autoprefixer": "10.4.21",
+    "nodemon": "^3.0.1",
+    "postcss": "8.5.6",
+    "tailwindcss": "3.4.1"
   },
   "optionalDependencies": {
     "ngrok": "^5.0.0-beta.2"

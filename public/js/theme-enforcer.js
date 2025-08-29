@@ -20,16 +20,13 @@ class ThemeEnforcer {
     init() {
         console.log('🎨 Theme Enforcer: Initializing purple theme enforcement');
         
-        // Apply immediately
-        this.enforceTheme();
-        
         // Apply after DOM is ready (using arrow functions to preserve context)
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.enforceTheme());
+        } else {
+            // DOM is already ready
+            this.enforceTheme();
         }
-        
-        // Apply after all resources load (using arrow functions to preserve context)
-        window.addEventListener('load', () => this.enforceTheme());
         
         // Monitor for theme changes and reapply if needed
         this.startThemeMonitoring();
