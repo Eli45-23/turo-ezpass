@@ -363,7 +363,7 @@ const helmetConfig = helmet({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdn.tailwindcss.com", "https://unpkg.com"],
             scriptSrcAttr: ["'unsafe-inline'"],
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: ["'self'", "ws:", "wss:"],
@@ -739,7 +739,7 @@ function enhancedCSP(req, res, next) {
     
     res.setHeader('Content-Security-Policy', 
         `default-src 'self'; ` +
-        `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; ` +
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://unpkg.com; ` +
         `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ` +
         `img-src 'self' data: https:; ` +
         `connect-src 'self' ws: wss:; ` +

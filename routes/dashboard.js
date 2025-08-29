@@ -375,6 +375,7 @@ async function executeOptimizedSummaryQuery(hostId) {
         const summary = {
             // Main metrics for frontend (matching expected field names)
             totalTolls: totalTollCharges,
+            totalAmount: totalTollAmount.toFixed(2),
             matchedTolls: matchedChargesCount,
             personalTolls: pendingChargesCount,
             personalAmount: pendingChargesTotal.toFixed(2),

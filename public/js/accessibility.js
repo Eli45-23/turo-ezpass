@@ -84,17 +84,11 @@ class AccessibilityManager {
     }
 
     /**
-     * Add skip navigation links
+     * Add skip navigation links (disabled for dashboard)
      */
     addSkipLinks() {
-        const skipLinks = document.createElement('div');
-        skipLinks.innerHTML = `
-            <a href="#main-content" class="skip-link">Skip to main content</a>
-            <a href="#navigation" class="skip-link">Skip to navigation</a>
-        `;
-        document.body.insertBefore(skipLinks, document.body.firstChild);
-
-        // Ensure main content and navigation have proper IDs
+        // Skip links disabled for dashboard interface
+        // Ensure main content and navigation have proper IDs for other accessibility features
         const mainContent = document.querySelector('.main-content, main');
         if (mainContent && !mainContent.id) {
             mainContent.id = 'main-content';

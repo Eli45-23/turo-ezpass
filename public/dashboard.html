@@ -14,6 +14,26 @@
     <script src="/js/browser-compatibility.js"></script>
     
     <script src="/js/simple-icons.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'monospace'],
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <!-- Using system fonts for maximum compatibility across all browsers and regions -->
     
     <!-- Charts not needed in dashboard, only in analytics -->
@@ -32,13 +52,8 @@
     <script src="/js/theme-enforcer.js?v=20250821"></script>
     
     <style>
-        :root {
-            --space-cadet: #2D1B69;
-            --english-violet: #553C8B;
-            --sunglow: #FFC857;
-            --dark-cyan: #17A2B8;
-            --paynes-gray: #495057;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
         * {
             margin: 0;
@@ -46,946 +61,512 @@
             box-sizing: border-box;
         }
 
-        /* Force purple theme on html root */
-        html {
-            background: #2D1B69 !important;
-            min-height: 100vh !important;
-        }
-
+        .font-mono { font-family: 'JetBrains Mono', monospace !important; }
+        .font-inter { font-family: 'Inter', sans-serif !important; }
+        
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-            background: #2D1B69 !important; /* Fallback solid color */
-            background: 
-                -webkit-linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
-            background: 
-                linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
-            background-attachment: fixed !important;
-            min-height: 100vh !important;
-            color: white !important;
-            overflow-x: hidden !important;
-            position: relative !important;
-            -webkit-transform: translateZ(0) !important;
-            transform: translateZ(0) !important;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #4b5563 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .dashboard-bg {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #4b5563 100%);
+        }
+        
+        .sidebar-bg {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
         }
 
-        /* Quantum Matrix Background */
-        .quantum-background {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            z-index: -1 !important;
-            overflow: hidden !important;
+        /* Dynamic classes for JavaScript-added styles */
+        .positive {
+            color: #10b981 !important; /* Green for positive amounts */
         }
 
-        .hexagon-grid {
-            position: absolute !important;
-            width: 100% !important;
-            height: 100% !important;
-            background-image: 
-                repeating-linear-gradient(
-                    30deg,
-                    transparent,
-                    transparent 50px,
-                    rgba(255, 200, 87, 0.05) 52px,
-                    rgba(255, 200, 87, 0.05) 54px
-                ),
-                repeating-linear-gradient(
-                    150deg,
-                    transparent,
-                    transparent 50px,
-                    rgba(23, 162, 184, 0.05) 52px,
-                    rgba(23, 162, 184, 0.05) 54px
-                ),
-                repeating-linear-gradient(
-                    270deg,
-                    transparent,
-                    transparent 50px,
-                    rgba(255, 200, 87, 0.05) 52px,
-                    rgba(255, 200, 87, 0.05) 54px
-                ) !important;
-            -webkit-animation: quantumGrid 20s linear infinite !important;
-            animation: quantumGrid 20s linear infinite !important;
+        .zero {
+            color: #6b7280 !important; /* Gray for zero amounts */
         }
 
-        .data-node {
-            position: absolute !important;
-            width: 8px !important;
-            height: 8px !important;
-            background: var(--sunglow) !important;
-            border-radius: 50% !important;
-            box-shadow: 0 0 20px rgba(255, 200, 87, 0.6) !important;
-            -webkit-animation: dataFlow 4s ease-in-out infinite !important;
-            animation: dataFlow 4s ease-in-out infinite !important;
+        /* Table Row Animations */
+        .table-row {
+            transition: all 0.3s ease;
+            transform: translateX(0);
         }
-
-        .node-1 {
-            top: 20% !important;
-            left: 15% !important;
-            animation-delay: 0s !important;
+        
+        .table-row:hover {
+            background: rgba(99, 102, 241, 0.15);
+            transform: translateX(4px);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
         }
-
-        .node-2 {
-            top: 30% !important;
-            right: 25% !important;
-            animation-delay: 1s !important;
-        }
-
-        .node-3 {
-            bottom: 40% !important;
-            left: 35% !important;
-            animation-delay: 2s !important;
-        }
-
-        .node-4 {
-            bottom: 25% !important;
-            right: 20% !important;
-            animation-delay: 3s !important;
-        }
-
-        .node-5 {
-            top: 60% !important;
-            left: 60% !important;
-            animation-delay: 1.5s !important;
-        }
-
-        .quantum-line {
-            position: absolute !important;
-            height: 1px !important;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255, 200, 87, 0.3), 
-                rgba(23, 162, 184, 0.3), 
-                transparent) !important;
-            animation: quantumPulse 3s ease-in-out infinite !important;
-        }
-
-        .line-1 {
-            width: 200px !important;
-            top: 25% !important;
-            left: 20% !important;
-            transform: rotate(25deg) !important;
-        }
-
-        .line-2 {
-            width: 150px !important;
-            top: 65% !important;
-            right: 30% !important;
-            transform: rotate(-45deg) !important;
-            animation-delay: 1s !important;
-        }
-
-        .line-3 {
-            width: 180px !important;
-            bottom: 30% !important;
-            left: 40% !important;
-            transform: rotate(60deg) !important;
-            animation-delay: 2s !important;
-        }
-
-        /* Layout Structure */
-        .app-layout {
-            display: flex !important;
-            min-height: 100vh !important;
-            position: relative !important;
-            z-index: 10 !important;
-            background: transparent !important; /* Ensure layout doesn't block body background */
-        }
-
-        /* Quantum Sidebar Navigation */
-        .sidebar {
-            width: 280px !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            backdrop-filter: blur(30px) !important;
-            border-right: 1px solid rgba(255, 200, 87, 0.3) !important;
-            padding: 2rem 0 !important;
-            position: fixed !important;
-            height: 100vh !important;
-            left: 0 !important;
-            top: 0 !important;
-            overflow-y: auto !important;
-        }
-
-        .sidebar::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            background: 
-                repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 20px,
-                    rgba(255, 200, 87, 0.02) 22px,
-                    rgba(255, 200, 87, 0.02) 24px
-                ) !important;
-            z-index: -1 !important;
-        }
-
-        .sidebar-title {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 1.2rem !important;
-            font-weight: 700 !important;
-            color: var(--sunglow) !important;
-            padding: 0 2rem !important;
-            margin-bottom: 3rem !important;
-            letter-spacing: 2px !important;
-            text-transform: uppercase !important;
-        }
-
-        .nav-menu {
-            list-style: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
+        
+        /* Navigation Animations */
         .nav-item {
-            margin-bottom: 0.5rem !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(8px);
+        }
+        
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.3);
+            border-left: 3px solid #6366f1;
+            transform: translateX(4px);
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::before {
+            width: 3px;
+        }
+        
+        /* Colorful Navigation Icons */
+        .nav-item .icon-dashboard,
+        .nav-item .icon-dashboard svg {
+            color: #3b82f6 !important; /* Blue for Dashboard/Overview */
+            stroke: #3b82f6 !important;
+        }
+        
+        .nav-item .icon-map,
+        .nav-item .icon-map svg {
+            color: #10b981 !important; /* Green for Trips/Map */
+            stroke: #10b981 !important;
+        }
+        
+        .nav-item .icon-upload,
+        .nav-item .icon-upload svg {
+            color: #f59e0b !important; /* Amber for Upload */
+            stroke: #f59e0b !important;
+        }
+        
+        .nav-item .icon-analytics,
+        .nav-item .icon-analytics svg {
+            color: #8b5cf6 !important; /* Purple for Analytics */
+            stroke: #8b5cf6 !important;
+        }
+        
+        .nav-item .icon-transponders,
+        .nav-item .icon-transponders svg {
+            color: #ef4444 !important; /* Red for Transponders */
+            stroke: #ef4444 !important;
+        }
+        
+        .nav-item .icon-invoices,
+        .nav-item .icon-invoices svg {
+            color: #06b6d4 !important; /* Cyan for Invoices */
+            stroke: #06b6d4 !important;
+        }
+        
+        /* Button Animations */
+        .animated-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .animated-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .animated-button:active {
+            transform: translateY(0);
+        }
+        
+        .animated-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .animated-button:hover::before {
+            left: 100%;
+        }
+        
+        /* Progress Bar Animations */
+        .progress-bar {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Page Load Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.8s ease forwards;
+        }
+        
+        .fade-in-delay-1 { animation-delay: 0.2s; }
+        .fade-in-delay-2 { animation-delay: 0.4s; }
+        .fade-in-delay-3 { animation-delay: 0.6s; }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Status Badge Pulse */
+        .status-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Status Badge Classes */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: rgb(34, 197, 94);
+        }
+        
+        .status-matched {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: rgb(59, 130, 246);
+        }
+        
+        .status-personal {
+            background-color: rgba(251, 146, 60, 0.2);
+            color: rgb(251, 146, 60);
+        }
+        
+        .status-none {
+            background-color: rgba(107, 114, 128, 0.2);
+            color: rgb(107, 114, 128);
+        }
+        
+        /* Ripple Effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+        
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+        
+        /* Table Header Glow */
+        .table-header {
+            background: linear-gradient(135deg, rgba(75, 85, 99, 0.8) 0%, rgba(55, 65, 81, 0.8) 100%);
+            position: relative;
+        }
+        
+        .table-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #6366f1, transparent);
         }
 
-        .nav-link {
-            display: flex !important;
-            align-items: center !important;
-            gap: 1rem !important;
-            padding: 1rem 2rem !important;
-            color: rgba(255, 255, 255, 0.7) !important;
-            text-decoration: none !important;
-            transition: all 0.3s ease !important;
-            border-left: 2px solid transparent !important;
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-weight: 500 !important;
-            font-size: 0.9rem !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-            position: relative !important;
-        }
-
-        .nav-link::before {
-            content: '' !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            width: 0 !important;
-            background: rgba(255, 200, 87, 0.1) !important;
-            transition: width 0.3s ease !important;
-        }
-
-        .nav-link:hover::before {
-            width: 100% !important;
-        }
-
-        .nav-link:hover {
-            color: white !important;
-            border-left-color: var(--sunglow) !important;
-        }
-
-        .nav-link.active {
-            color: var(--sunglow) !important;
-            border-left-color: var(--sunglow) !important;
-        }
-
-        .nav-link.active::before {
-            width: 100% !important;
-            background: rgba(255, 200, 87, 0.15) !important;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1 !important;
-            margin-left: 280px !important;
-            position: relative !important;
-            background: transparent !important; /* Ensure content area doesn't block body background */
-        }
-
-        /* Dashboard Container */
-        .dashboard-container {
-            max-width: 1400px !important;
-            margin: 0 auto !important;
-            padding: 2rem !important;
-            position: relative !important;
-        }
-
-        /* Quantum Header */
-        .dashboard-header {
-            display: flex !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-            margin-bottom: 3rem !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            backdrop-filter: blur(30px) !important;
-            border: 1px solid rgba(255, 200, 87, 0.3) !important;
-            border-radius: 15px !important;
-            padding: 1.5rem 2rem !important;
-            box-shadow: 
-                0 0 50px rgba(255, 200, 87, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-            position: relative !important;
-            overflow: hidden !important;
-        }
-
-        .dashboard-header::before {
-            content: '' !important;
-            position: absolute !important;
-            top: -50% !important;
-            left: -50% !important;
-            width: 200% !important;
-            height: 200% !important;
-            background: 
-                repeating-conic-gradient(
-                    from 0deg,
-                    transparent 0deg,
-                    rgba(255, 200, 87, 0.03) 30deg,
-                    transparent 60deg
-                ) !important;
-            animation: quantumSpin 15s linear infinite !important;
-            z-index: -1 !important;
-        }
-
-        .dashboard-title {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 2rem !important;
-            font-weight: 700 !important;
-            background: linear-gradient(135deg, var(--sunglow), #ffdc7f, var(--dark-cyan)) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            background-clip: text !important;
-            text-shadow: 0 0 30px rgba(255, 200, 87, 0.4) !important;
-            letter-spacing: 2px !important;
-        }
-
-        .upload-btn {
-            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
-            color: var(--space-cadet) !important;
-            border: 1px solid rgba(255, 200, 87, 0.5) !important;
-            padding: 1rem 2rem !important;
-            border-radius: 8px !important;
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-weight: 600 !important;
-            cursor: pointer !important;
-            transition: all 0.3s ease !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.5rem !important;
-            position: relative !important;
-            overflow: hidden !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-        }
-
-        .upload-btn::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: -100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: linear-gradient(90deg, 
-                transparent,
-                rgba(255, 255, 255, 0.3),
-                transparent) !important;
-            transition: left 0.5s ease !important;
-        }
-
-        .upload-btn:hover::before {
-            left: 100% !important;
-        }
-
-        .upload-btn:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 10px 25px rgba(255, 200, 87, 0.4) !important;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
-        }
-
-        /* Quantum User Profile Avatar */
-        .user-profile {
-            position: relative !important;
-        }
-
-        .user-avatar {
-            width: 45px !important;
-            height: 45px !important;
-            border-radius: 8px !important;
-            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
-            color: var(--space-cadet) !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-weight: 700 !important;
-            font-size: 1.2rem !important;
-            cursor: pointer !important;
-            transition: all 0.3s ease !important;
-            border: 1px solid rgba(255, 200, 87, 0.5) !important;
-            box-shadow: 0 5px 15px rgba(255, 200, 87, 0.2) !important;
-            position: relative !important;
-            overflow: hidden !important;
-        }
-
-        .user-avatar::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: -100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: linear-gradient(90deg, 
-                transparent,
-                rgba(255, 255, 255, 0.3),
-                transparent) !important;
-            transition: left 0.5s ease !important;
-        }
-
-        .user-avatar:hover::before {
-            left: 100% !important;
-        }
-
-        .user-avatar:hover {
-            transform: translateY(-2px) scale(1.05) !important;
-            box-shadow: 0 8px 25px rgba(255, 200, 87, 0.4) !important;
-            border-color: var(--sunglow) !important;
-        }
-
+        /* Keep only essential custom styles */
         .dropdown-menu {
-            position: absolute !important;
-            top: 55px !important;
-            right: 0 !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            backdrop-filter: blur(30px) !important;
-            border: 1px solid rgba(255, 200, 87, 0.3) !important;
-            border-radius: 8px !important;
-            padding: 0.5rem 0 !important;
-            min-width: 160px !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            transform: translateY(-10px) !important;
-            transition: all 0.3s ease !important;
-            z-index: 1000 !important;
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
         }
 
         .dropdown-menu.show {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateY(0) !important;
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
 
-        .dropdown-item {
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.8rem !important;
-            padding: 0.75rem 1.5rem !important;
-            color: rgba(255, 255, 255, 0.8) !important;
-            text-decoration: none !important;
-            transition: all 0.3s ease !important;
-            cursor: pointer !important;
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 0.9rem !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-            position: relative !important;
+        /* Table animations */
+        .quantum-table-container {
+            backdrop-filter: blur(10px);
+            background: rgba(31, 41, 55, 0.8);
         }
 
-        .dropdown-item::before {
-            content: '' !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            width: 0 !important;
-            background: rgba(255, 200, 87, 0.1) !important;
-            transition: width 0.3s ease !important;
+        .table-row {
+            transition: all 0.3s ease;
         }
 
-        .dropdown-item:hover::before {
-            width: 100% !important;
+        .table-row:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
 
-        .dropdown-item:hover {
-            color: white !important;
+        /* Progress bar animation */
+        .progress-fill, .mini-progress-fill {
+            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .header-actions {
-            display: flex !important;
-            align-items: center !important;
-            gap: 1rem !important;
-        }
-
-        /* Quantum Stats Cards */
-        .stats-grid {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
-            gap: 2rem !important;
-            margin-bottom: 3rem !important;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.02) !important;
-            backdrop-filter: blur(30px) !important;
-            border: 1px solid rgba(255, 200, 87, 0.2) !important;
-            border-radius: 15px !important;
-            padding: 2rem !important;
-            transition: all 0.4s ease !important;
-            position: relative !important;
-            overflow: hidden !important;
-        }
-
-        .stat-card::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            height: 2px !important;
-            background: linear-gradient(90deg,
-                transparent,
-                var(--sunglow),
-                var(--dark-cyan),
-                transparent) !important;
-            animation: quantumScanner 3s ease-in-out infinite !important;
-        }
-
-        .stat-card::after {
-            content: '' !important;
-            position: absolute !important;
-            top: 10px !important;
-            right: 10px !important;
-            width: 6px !important;
-            height: 6px !important;
-            background: var(--sunglow) !important;
-            border-radius: 50% !important;
-            box-shadow: 0 0 10px rgba(255, 200, 87, 0.8) !important;
-            animation: dataFlow 2s ease-in-out infinite !important;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px) scale(1.02) !important;
-            box-shadow: 
-                0 20px 40px rgba(255, 200, 87, 0.15),
-                0 0 50px rgba(255, 200, 87, 0.1) !important;
-            border-color: rgba(255, 200, 87, 0.5) !important;
-        }
-
-        .stat-number {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 3rem !important;
-            font-weight: 700 !important;
-            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            background-clip: text !important;
-            margin-bottom: 0.5rem !important;
-            text-shadow: 0 0 20px rgba(255, 200, 87, 0.3) !important;
-            letter-spacing: 2px !important;
-        }
-
-        .stat-label {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 0.9rem !important;
-            color: rgba(255, 255, 255, 0.8) !important;
-            margin-bottom: 0.5rem !important;
-            font-weight: 500 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-        }
-
-        .stat-value {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 0.8rem !important;
-            color: rgba(255, 255, 255, 0.6) !important;
-            text-transform: uppercase !important;
-        }
-
-        /* Quantum Performance Matrix */
-        .performance-matrix {
-            background: rgba(255, 255, 255, 0.02) !important;
-            backdrop-filter: blur(30px) !important;
-            border: 1px solid rgba(255, 200, 87, 0.3) !important;
-            border-radius: 15px !important;
-            padding: 2.5rem !important;
-            margin-bottom: 3rem !important;
-            position: relative !important;
-            overflow: hidden !important;
-        }
-
-        .performance-matrix::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            background: 
-                radial-gradient(circle at 25% 25%, rgba(255, 200, 87, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(23, 162, 184, 0.05) 0%, transparent 50%) !important;
-            z-index: -1 !important;
-        }
-
-        .matrix-title {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 1.5rem !important;
-            font-weight: 600 !important;
-            margin-bottom: 2rem !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 1rem !important;
-            text-transform: uppercase !important;
-            letter-spacing: 2px !important;
-            color: var(--sunglow) !important;
-        }
-
-        .matrix-grid {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
-            gap: 2rem !important;
-        }
-
-        .matrix-item {
-            text-align: center !important;
-            position: relative !important;
-            padding: 1.5rem !important;
-            border: 1px solid rgba(255, 200, 87, 0.1) !important;
-            border-radius: 10px !important;
-            background: rgba(255, 255, 255, 0.01) !important;
-        }
-
-        .matrix-value {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 2.5rem !important;
-            font-weight: 700 !important;
-            background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            background-clip: text !important;
-            margin-bottom: 1rem !important;
-            letter-spacing: 2px !important;
-        }
-
-        .progress-bar {
-            width: 100% !important;
-            height: 8px !important;
-            background: rgba(255, 255, 255, 0.1) !important;
-            border-radius: 10px !important;
-            overflow: hidden !important;
-            margin-bottom: 0.5rem !important;
-            position: relative !important;
-            border: 1px solid rgba(255, 200, 87, 0.2) !important;
-        }
-
-        .progress-fill {
-            height: 100% !important;
-            background: linear-gradient(90deg, var(--sunglow), var(--dark-cyan)) !important;
-            border-radius: 10px !important;
-            transition: width 2s ease !important;
-            position: relative !important;
-            overflow: hidden !important;
-        }
-
-        .progress-fill::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: -100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: linear-gradient(90deg, 
-                transparent,
-                rgba(255, 255, 255, 0.5),
-                transparent) !important;
-            animation: quantumFlow 2s ease-in-out infinite !important;
-        }
-
-        .matrix-label {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-size: 0.8rem !important;
-            color: rgba(255, 255, 255, 0.7) !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-        }
-
-        /* Quantum Action Buttons */
-        .action-buttons {
-            display: flex !important;
-            gap: 1.5rem !important;
-            flex-wrap: wrap !important;
-            justify-content: center !important;
-        }
-
-        .action-btn {
-            background: rgba(255, 255, 255, 0.05) !important;
-            color: white !important;
-            border: 1px solid rgba(255, 200, 87, 0.3) !important;
-            padding: 1rem 2rem !important;
-            border-radius: 8px !important;
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
-            font-weight: 500 !important;
-            cursor: pointer !important;
-            transition: all 0.3s ease !important;
-            backdrop-filter: blur(20px) !important;
-            position: relative !important;
-            overflow: hidden !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-            text-decoration: none !important;
-        }
-
-        .action-btn::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: -100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: linear-gradient(90deg,
-                transparent,
-                rgba(255, 200, 87, 0.2),
-                transparent) !important;
-            transition: left 0.5s ease !important;
-        }
-
-        .action-btn:hover::before {
-            left: 100% !important;
-        }
-
-        .action-btn:hover {
-            background: rgba(255, 200, 87, 0.1) !important;
-            border-color: var(--sunglow) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 10px 20px rgba(255, 200, 87, 0.2) !important;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
-        }
-
-        /* Quantum Animations - Safari Webkit Support */
-        @-webkit-keyframes quantumGrid {
-            0% { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            100% { -webkit-transform: translate(50px, 50px); transform: translate(50px, 50px); }
-        }
-        @keyframes quantumGrid {
-            0% { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            100% { -webkit-transform: translate(50px, 50px); transform: translate(50px, 50px); }
-        }
-
-        @-webkit-keyframes dataFlow {
-            0%, 100% { 
-                -webkit-transform: scale(1); transform: scale(1); 
-                opacity: 0.6; 
-                box-shadow: 0 0 20px rgba(255, 200, 87, 0.6); 
+        /* Enhanced animations */
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
             }
-            50% { 
-                -webkit-transform: scale(1.5); transform: scale(1.5); 
+            to { 
                 opacity: 1; 
-                box-shadow: 0 0 30px rgba(255, 200, 87, 1); 
+                transform: translateY(0); 
             }
         }
-        @keyframes dataFlow {
-            0%, 100% { 
-                -webkit-transform: scale(1); transform: scale(1); 
-                opacity: 0.6; 
-                box-shadow: 0 0 20px rgba(255, 200, 87, 0.6); 
+
+        @keyframes slideInRight {
+            from { 
+                opacity: 0; 
+                transform: translateX(50px); 
             }
-            50% { 
-                -webkit-transform: scale(1.5); transform: scale(1.5); 
+            to { 
                 opacity: 1; 
-                box-shadow: 0 0 30px rgba(255, 200, 87, 1); 
+                transform: translateX(0); 
             }
         }
 
-        @-webkit-keyframes quantumPulse {
-            0%, 100% { opacity: 0.3; -webkit-transform: scaleX(1); transform: scaleX(1); }
-            50% { opacity: 0.8; -webkit-transform: scaleX(1.2); transform: scaleX(1.2); }
-        }
-        @keyframes quantumPulse {
-            0%, 100% { opacity: 0.3; -webkit-transform: scaleX(1); transform: scaleX(1); }
-            50% { opacity: 0.8; -webkit-transform: scaleX(1.2); transform: scaleX(1.2); }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
         }
 
-        @-webkit-keyframes quantumSpin {
-            from { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
-            to { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
-        }
-        @keyframes quantumSpin {
-            from { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
-            to { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+        .animate-slide-in-right {
+            animation: slideInRight 0.6s ease-out;
         }
 
-        @-webkit-keyframes quantumScanner {
-            0% { -webkit-transform: translateX(-100%); transform: translateX(-100%); }
-            100% { -webkit-transform: translateX(400px); transform: translateX(400px); }
-        }
-        @keyframes quantumScanner {
-            0% { -webkit-transform: translateX(-100%); transform: translateX(-100%); }
-            100% { -webkit-transform: translateX(400px); transform: translateX(400px); }
-        }
-
-        @-webkit-keyframes quantumFlow {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-        @keyframes quantumFlow {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        /* Responsive */
+        /* Responsive behavior for sidebar */
         @media (max-width: 1024px) {
-            .sidebar {
-                transform: translateX(-100%) !important;
-                transition: transform 0.3s ease !important;
+            .sidebar-mobile-hidden {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
             }
-            
-            .main-content {
-                margin-left: 0 !important;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-container { padding: 1rem !important; }
-            .dashboard-header { 
-                flex-direction: column !important; 
-                gap: 1rem !important; 
-                text-align: center !important; 
-            }
-            .header-actions {
-                flex-direction: column !important;
-                gap: 1rem !important;
-            }
-            .stats-grid { grid-template-columns: 1fr !important; }
-            .matrix-grid { grid-template-columns: 1fr !important; }
-            .quantum-line, .data-node { display: none !important; }
         }
     </style>
 </head>
-<body style="background: #2D1B69 !important; background: linear-gradient(135deg, #2D1B69 0%, #553C8B 50%, #1a0e3d 100%) !important; min-height: 100vh !important; color: white !important;">
-    <div class="quantum-background">
-        <div class="hexagon-grid"></div>
-        <div class="data-node node-1"></div>
-        <div class="data-node node-2"></div>
-        <div class="data-node node-3"></div>
-        <div class="data-node node-4"></div>
-        <div class="data-node node-5"></div>
-        <div class="quantum-line line-1"></div>
-        <div class="quantum-line line-2"></div>
-        <div class="quantum-line line-3"></div>
-    </div>
+<body class="min-h-screen dashboard-bg font-inter text-white">
 
-    <div class="app-layout">
-        <!-- Quantum Sidebar Navigation -->
-        <aside class="sidebar">
-            <h1 class="sidebar-title">TURO_TOLL_TRACKER</h1>
-            <nav>
-                <ul class="nav-menu">
-                    <li class="nav-item">
-                        <a href="/dashboard.html" class="nav-link active">
-                            <i data-lucide="bar-chart-3"></i>
-                            OVERVIEW
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/trips.html" class="nav-link">
-                            <i data-lucide="route"></i>
-                            TRIPS
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/upload.html" class="nav-link">
-                            <i data-lucide="upload"></i>
-                            UPLOAD_CSV
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/analytics.html" class="nav-link">
-                            <i data-lucide="activity"></i>
-                            ANALYTICS
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/transponders.html" class="nav-link">
-                            <i data-lucide="radio"></i>
-                            TRANSPONDERS
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/invoices.html" class="nav-link">
-                            <i data-lucide="file-text"></i>
-                            INVOICES
-                        </a>
-                    </li>
-                </ul>
+    <div class="flex h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 sidebar-bg border-r border-gray-600">
+            <div class="p-6">
+                <h1 class="text-white font-mono text-lg font-bold tracking-wide">TURO TOLL TRACKER</h1>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="px-4 space-y-1">
+                <a href="/dashboard.html" class="nav-item active flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white">
+                    <i data-lucide="layout-dashboard" class="icon-dashboard w-5 h-5"></i>
+                    <span class="font-medium">OVERVIEW</span>
+                </a>
+                <a href="/trips.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="map" class="icon-map w-5 h-5"></i>
+                    <span class="font-medium">TRIPS</span>
+                </a>
+                <a href="/upload.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="upload" class="icon-upload w-5 h-5"></i>
+                    <span class="font-medium">UPLOAD CSV</span>
+                </a>
+                <a href="/analytics.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="bar-chart-3" class="icon-analytics w-5 h-5"></i>
+                    <span class="font-medium">ANALYTICS</span>
+                </a>
+                <a href="/transponders.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="radio" class="icon-transponders w-5 h-5"></i>
+                    <span class="font-medium">TRANSPONDERS</span>
+                </a>
+                <a href="/invoices.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="file-text" class="icon-invoices w-5 h-5"></i>
+                    <span class="font-medium">INVOICES</span>
+                </a>
             </nav>
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
-            <div class="dashboard-container">
-                <header class="dashboard-header">
-                    <h1 class="dashboard-title">DASHBOARD_OVERVIEW</h1>
-                    <div class="header-actions">
-                        <button class="upload-btn" id="uploadCTA">
-                            <i data-lucide="database"></i>
-                            UPLOAD_CSV / RUN_FETCH
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="fade-in bg-black/20 border-b border-gray-600 p-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white font-mono">DASHBOARD OVERVIEW</h2>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button class="animated-button bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2" id="uploadCTA">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        <span>UPLOAD CSV</span>
+                    </button>
+                    <div class="relative">
+                        <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" id="userMenu">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
                         </button>
-                        <div class="user-profile">
-                            <div class="user-avatar" id="userMenu">E</div>
-                            <div class="dropdown-menu" id="userDropdown">
-                                <a href="#" class="dropdown-item" id="signOutBtn">
-                                    <i data-lucide="log-out"></i>
-                                    SIGN_OUT
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="total-tolls">0</div>
-                        <div class="stat-label">TOTAL_TOLLS</div>
-                        <div class="stat-value" id="total-tolls-subtitle">LOADING...</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="personal-tolls">0</div>
-                        <div class="stat-label">PERSONAL_TOLLS</div>
-                        <div class="stat-value" id="personal-tolls-subtitle">LOADING...</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="matched-tolls">0</div>
-                        <div class="stat-label">MATCHED_TOLLS</div>
-                        <div class="stat-value" id="matched-tolls-subtitle">LOADING...</div>
-                    </div>
-                </div>
-
-                <div class="performance-matrix">
-                    <h2 class="matrix-title">
-                        <i data-lucide="cpu"></i>
-                        PERFORMANCE_MATRIX
-                    </h2>
-                    <div class="matrix-grid">
-                        <div class="matrix-item">
-                            <div class="matrix-value" id="matching-accuracy">0%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="accuracy-progress" style="width: 0%"></div>
-                            </div>
-                            <div class="matrix-label">MATCH_ACCURACY</div>
-                        </div>
-                        <div class="matrix-item">
-                            <div class="matrix-value" id="performance-total-tolls">0</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="tolls-progress" style="width: 0%"></div>
-                            </div>
-                            <div class="matrix-label">TOTAL_COUNT</div>
+                        <div class="absolute top-12 right-0 bg-gray-700/90 backdrop-blur-lg border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg opacity-0 invisible -translate-y-2 transition-all duration-200 z-50 dropdown-menu" id="userDropdown">
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-white/5" id="signOutBtn">
+                                <i data-lucide="log-out"></i>
+                                Sign Out
+                            </a>
                         </div>
                     </div>
                 </div>
-
-                <div class="action-buttons">
-                    <a href="/trips.html?filter=matched" class="action-btn" id="view-matched-link">VIEW_MATCHED(0)</a>
-                    <a href="/trips.html?filter=personal" class="action-btn" id="view-personal-link">PERSONAL_DRIVING(0)</a>
+            </header>
+            
+            <!-- Dashboard Content -->
+            <main class="p-6 space-y-6">
+                
+                <!-- Performance Matrix Table -->
+                <div class="fade-in fade-in-delay-1 bg-gray-800/50 rounded-xl border border-gray-600">
+                    <div class="p-6 border-b border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white font-mono flex items-center space-x-2">
+                                <i data-lucide="table" class="w-5 h-5 text-indigo-400"></i>
+                                <span>PERFORMANCE MATRIX</span>
+                            </h3>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="table-header">
+                                <tr class="text-left font-mono text-xs">
+                                    <th class="px-6 py-4 text-gray-300 font-semibold">METRIC</th>
+                                    <th class="px-6 py-4 text-gray-300 font-semibold">COUNT</th>
+                                    <th class="px-6 py-4 text-gray-300 font-semibold">AMOUNT</th>
+                                    <th class="px-6 py-4 text-gray-300 font-semibold">ACCURACY</th>
+                                    <th class="px-6 py-4 text-gray-300 font-semibold">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody class="font-mono text-sm">
+                                <tr class="table-row border-b border-gray-700" data-metric="total-tolls">
+                                    <td class="px-6 py-4 text-white font-medium">TOTAL TOLLS</td>
+                                    <td class="px-6 py-4 text-white" id="table-total-tolls">137</td>
+                                    <td class="px-6 py-4 text-green-400" id="table-total-amount">$597.24</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="progress-bar w-16 h-2 bg-gray-600 rounded">
+                                                <div class="progress-fill h-full bg-green-400 rounded" style="width: 100%" id="table-total-progress"></div>
+                                            </div>
+                                            <span class="text-green-400 text-xs" id="table-total-accuracy">100%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="status-pulse inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-400/20 text-green-400" id="table-total-status">
+                                            ACTIVE
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="table-row border-b border-gray-700" data-metric="matched-tolls">
+                                    <td class="px-6 py-4 text-white font-medium">MATCHED TOLLS</td>
+                                    <td class="px-6 py-4 text-white" id="table-matched-tolls">92</td>
+                                    <td class="px-6 py-4 text-green-400" id="table-matched-amount">$398.32</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="progress-bar w-16 h-2 bg-gray-600 rounded">
+                                                <div class="progress-fill h-full bg-blue-400 rounded" style="width: 67%" id="table-matched-progress"></div>
+                                            </div>
+                                            <span class="text-blue-400 text-xs" id="table-matched-accuracy">67%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-400" id="table-matched-status">
+                                            MATCHED
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="table-row border-b border-gray-700" data-metric="personal-tolls">
+                                    <td class="px-6 py-4 text-white font-medium">PERSONAL TOLLS</td>
+                                    <td class="px-6 py-4 text-white" id="table-personal-tolls">45</td>
+                                    <td class="px-6 py-4 text-orange-400" id="table-personal-amount">$198.92</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="progress-bar w-16 h-2 bg-gray-600 rounded">
+                                                <div class="progress-fill h-full bg-orange-400 rounded" style="width: 33%" id="table-personal-progress"></div>
+                                            </div>
+                                            <span class="text-orange-400 text-xs" id="table-personal-accuracy">33%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-400/20 text-orange-400" id="table-personal-status">
+                                            PERSONAL
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr class="table-row" data-metric="unmatched-tolls">
+                                    <td class="px-6 py-4 text-white font-medium">UNMATCHED TOLLS</td>
+                                    <td class="px-6 py-4 text-white" id="table-unmatched-tolls">0</td>
+                                    <td class="px-6 py-4 text-gray-400" id="table-unmatched-amount">$0.00</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="progress-bar w-16 h-2 bg-gray-600 rounded">
+                                                <div class="progress-fill h-full bg-red-400 rounded" style="width: 0%" id="table-unmatched-progress"></div>
+                                            </div>
+                                            <span class="text-gray-400 text-xs" id="table-unmatched-accuracy">0%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-600/20 text-gray-400" id="table-unmatched-status">
+                                            NONE
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        </main>
+
+            </main>
+        </div>
     </div>
 
     <script>
@@ -1055,7 +636,17 @@
             
             initializeDashboard();
             setupEventListeners();
-            loadDashboardData();
+            
+            // Show loading state for table while data loads
+            setTableLoading(true);
+            
+            loadDashboardData().then(() => {
+                // Remove loading state after data is loaded
+                setTableLoading(false);
+            }).catch(() => {
+                // Remove loading state even on error
+                setTableLoading(false);
+            });
         });
 
         function initializeDashboard() {
@@ -1092,8 +683,8 @@
                 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
-                    const userProfile = document.querySelector('.user-profile');
-                    if (!userProfile.contains(e.target)) {
+                    // Check if click is outside both the user menu button and dropdown
+                    if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
                         userDropdown.classList.remove('show');
                     }
                 });
@@ -1115,6 +706,9 @@
                     card.style.transform = 'translateY(0)';
                 });
             });
+            
+            // Table row interactive effects
+            setupTableInteractions();
         }
 
         async function loadDashboardData() {
@@ -1198,42 +792,11 @@
                 }
             }
             
-            // Update Quantum Matrix stat cards with real data
-            safeUpdate('total-tolls', data.totalTolls || 0);
-            safeUpdate('total-tolls-subtitle', data.totalTolls > 0 ? 'ACTIVE_STATUS' : 'NO_TOLLS');
+            // Only update Performance Matrix Table - no stat cards in new design
+            console.log('📊 Updating Performance Matrix Table with data:', data);
             
-            safeUpdate('personal-tolls', data.personalTolls || 0);
-            safeUpdate('personal-tolls-subtitle', data.personalAmount ? `$${data.personalAmount}_USD` : '$0.00_USD');
-            
-            safeUpdate('matched-tolls', data.matchedTolls || 0);
-            safeUpdate('matched-tolls-subtitle', data.matchedAmount ? `$${data.matchedAmount}_USD` : '$0.00_USD');
-            
-            // Update Quantum Matrix performance metrics
-            const accuracy = parseFloat(data.matchingAccuracy) || 0;
-            safeUpdate('matching-accuracy', `${accuracy}%`);
-            
-            const accuracyProgress = document.getElementById('accuracy-progress');
-            if (accuracyProgress) {
-                accuracyProgress.style.width = `${accuracy}%`;
-            }
-            
-            safeUpdate('performance-total-tolls', data.totalTolls || 0);
-            const tollsProgress = data.totalTolls > 0 ? Math.min((data.matchedTolls || 0) / data.totalTolls * 100, 100) : 0;
-            const tollsProgressElement = document.getElementById('tolls-progress');
-            if (tollsProgressElement) {
-                tollsProgressElement.style.width = `${tollsProgress}%`;
-            }
-            
-            // Update view action links (safely)
-            const viewMatchedLink = document.getElementById('view-matched-link');
-            const viewPersonalLink = document.getElementById('view-personal-link');
-            
-            if (viewMatchedLink) {
-                viewMatchedLink.textContent = `VIEW_MATCHED(${data.matchedTolls || 0})`;
-            }
-            if (viewPersonalLink) {
-                viewPersonalLink.textContent = `PERSONAL_DRIVING(${data.personalTolls || 0})`;
-            }
+            // Update Performance Matrix Table
+            updatePerformanceTable(data);
             
             console.log('✅ Dashboard updated with real data');
         }
@@ -1241,60 +804,228 @@
         function updateDashboardWithErrorState() {
             console.log('⚠️ Updating dashboard with error state');
             
-            // Show error states
-            document.getElementById('total-tolls').textContent = 'Error';
-            document.getElementById('total-tolls-subtitle').textContent = 'Failed to load data';
-            
-            document.getElementById('personal-tolls').textContent = 'Error';
-            document.getElementById('personal-tolls-subtitle').textContent = 'Failed to load data';
-            
-            document.getElementById('matched-tolls').textContent = 'Error';
-            document.getElementById('matched-tolls-subtitle').textContent = 'Failed to load data';
-            
-            // Update performance metrics
-            document.getElementById('matching-accuracy').textContent = 'Error';
-            document.getElementById('performance-total-tolls').textContent = 'Error';
+            // Only update Performance Matrix Table with error state
+            updatePerformanceTable({
+                totalTolls: 0,
+                matchedTolls: 0,
+                personalTolls: 0,
+                unmatchedTolls: 0,
+                totalAmount: 0,
+                matchedAmount: 0,
+                personalAmount: 0,
+                unmatchedAmount: 0
+            });
         }
         
         function updateDashboardWithEmptyState() {
             console.log('ℹ️ Updating dashboard with empty state for new user');
             
-            // Helper function to safely update elements
-            function safeUpdate(elementId, textContent) {
+            // Only update Performance Matrix Table with empty state
+            updatePerformanceTable({
+                totalTolls: 0,
+                matchedTolls: 0,
+                personalTolls: 0,
+                unmatchedTolls: 0,
+                totalAmount: 0,
+                matchedAmount: 0,
+                personalAmount: 0,
+                unmatchedAmount: 0
+            });
+            
+            console.log('✅ Dashboard updated with empty state successfully');
+        }
+        
+        // Update Performance Matrix Table
+        function updatePerformanceTable(data) {
+            console.log('🔄 Updating performance table with data:', data);
+            
+            // Calculate unmatched tolls (tolls that are not matched and not personal)
+            const unmatchedTolls = (data.totalTolls || 0) - (data.matchedTolls || 0) - (data.personalTolls || 0);
+            const unmatchedAmount = (data.totalAmount || 0) - (data.matchedAmount || 0) - (data.personalAmount || 0);
+            
+            // Helper function to format currency
+            function formatCurrency(amount) {
+                const num = parseFloat(amount) || 0;
+                return `$${num.toFixed(2)}`;
+            }
+            
+            // Helper function to safely update table elements
+            function safeTableUpdate(elementId, content, additionalClass = '') {
                 const element = document.getElementById(elementId);
                 if (element) {
-                    element.textContent = textContent;
+                    element.textContent = content;
+                    if (additionalClass) {
+                        element.className = element.className.replace(/\b(positive|zero)\b/g, '').trim() + ' ' + additionalClass;
+                    }
                 } else {
-                    console.error(`❌ Element with ID '${elementId}' not found`);
+                    console.error(`❌ Table element with ID '${elementId}' not found`);
                 }
             }
             
-            // Show empty states with encouraging messages
-            safeUpdate('total-tolls', '0');
-            safeUpdate('total-tolls-subtitle', 'Import CSV to get started');
+            // Total Tolls Row
+            safeTableUpdate('table-total-tolls', data.totalTolls || 0);
+            safeTableUpdate('table-total-amount', formatCurrency(data.totalAmount), data.totalAmount > 0 ? 'positive' : 'zero');
+            safeTableUpdate('table-total-accuracy', '100%');
             
-            safeUpdate('personal-tolls', '0');
-            safeUpdate('personal-tolls-subtitle', '$0.00 USD');
+            // Matched Tolls Row
+            safeTableUpdate('table-matched-tolls', data.matchedTolls || 0);
+            safeTableUpdate('table-matched-amount', formatCurrency(data.matchedAmount), data.matchedAmount > 0 ? 'positive' : 'zero');
             
-            safeUpdate('matched-tolls', '0');
-            safeUpdate('matched-tolls-subtitle', '$0.00 USD');
+            // Personal Tolls Row
+            safeTableUpdate('table-personal-tolls', data.personalTolls || 0);
+            safeTableUpdate('table-personal-amount', formatCurrency(data.personalAmount), data.personalAmount > 0 ? 'positive' : 'zero');
             
-            // Update performance metrics
-            safeUpdate('matching-accuracy', '0%');
-            safeUpdate('performance-total-tolls', '0');
+            // Unmatched Tolls Row
+            safeTableUpdate('table-unmatched-tolls', Math.max(0, unmatchedTolls));
+            safeTableUpdate('table-unmatched-amount', formatCurrency(Math.max(0, unmatchedAmount)), unmatchedAmount > 0 ? 'positive' : 'zero');
             
-            // Update progress bars to 0
-            const accuracyProgress = document.getElementById('accuracy-progress');
-            if (accuracyProgress) {
-                accuracyProgress.style.width = '0%';
+            // Calculate accuracy percentages
+            const totalTolls = data.totalTolls || 0;
+            const matchedAccuracy = totalTolls > 0 ? Math.round((data.matchedTolls || 0) / totalTolls * 100) : 0;
+            const personalAccuracy = totalTolls > 0 ? Math.round((data.personalTolls || 0) / totalTolls * 100) : 0;
+            const unmatchedAccuracy = totalTolls > 0 ? Math.round(Math.max(0, unmatchedTolls) / totalTolls * 100) : 0;
+            
+            // Update accuracy displays
+            safeTableUpdate('table-matched-accuracy', `${matchedAccuracy}%`);
+            safeTableUpdate('table-personal-accuracy', `${personalAccuracy}%`);
+            safeTableUpdate('table-unmatched-accuracy', `${unmatchedAccuracy}%`);
+            
+            // Update progress bars with animation
+            animateProgressBar('table-total-progress', 100);
+            animateProgressBar('table-matched-progress', matchedAccuracy);
+            animateProgressBar('table-personal-progress', personalAccuracy);
+            animateProgressBar('table-unmatched-progress', unmatchedAccuracy);
+            
+            // Update status badges based on data
+            updateTableStatusBadges(data, unmatchedTolls);
+            
+            console.log('✅ Performance table updated successfully');
+        }
+        
+        // Animate progress bars
+        function animateProgressBar(progressId, targetPercentage) {
+            const progressElement = document.getElementById(progressId);
+            if (progressElement) {
+                // Start from 0 and animate to target
+                progressElement.style.width = '0%';
+                setTimeout(() => {
+                    progressElement.style.width = `${Math.min(100, Math.max(0, targetPercentage))}%`;
+                }, 300);
+            }
+        }
+        
+        // Update status badges based on data state
+        function updateTableStatusBadges(data, unmatchedTolls) {
+            const totalTolls = data.totalTolls || 0;
+            
+            // Total tolls status
+            const totalStatus = document.getElementById('table-total-status');
+            if (totalStatus) {
+                totalStatus.textContent = totalTolls > 0 ? 'ACTIVE' : 'NONE';
+                totalStatus.className = totalTolls > 0 ? 'status-badge status-active' : 'status-badge status-none';
             }
             
-            const tollsProgress = document.getElementById('tolls-progress');
-            if (tollsProgress) {
-                tollsProgress.style.width = '0%';
+            // Matched tolls status
+            const matchedStatus = document.getElementById('table-matched-status');
+            if (matchedStatus) {
+                const hasMatched = (data.matchedTolls || 0) > 0;
+                matchedStatus.textContent = hasMatched ? 'MATCHED' : 'NONE';
+                matchedStatus.className = hasMatched ? 'status-badge status-matched' : 'status-badge status-none';
             }
             
-            console.log('✅ Dashboard updated with empty state successfully');
+            // Personal tolls status
+            const personalStatus = document.getElementById('table-personal-status');
+            if (personalStatus) {
+                const hasPersonal = (data.personalTolls || 0) > 0;
+                personalStatus.textContent = hasPersonal ? 'PERSONAL' : 'NONE';
+                personalStatus.className = hasPersonal ? 'status-badge status-personal' : 'status-badge status-none';
+            }
+            
+            // Unmatched tolls status
+            const unmatchedStatus = document.getElementById('table-unmatched-status');
+            if (unmatchedStatus) {
+                const hasUnmatched = unmatchedTolls > 0;
+                unmatchedStatus.textContent = hasUnmatched ? 'UNMATCHED' : 'NONE';
+                unmatchedStatus.className = hasUnmatched ? 'status-badge status-none' : 'status-badge status-none';
+            }
+        }
+        
+        // Update empty state for table
+        function updatePerformanceTableEmptyState() {
+            console.log('ℹ️ Updating performance table with empty state');
+            
+            const emptyData = {
+                totalTolls: 0,
+                matchedTolls: 0,
+                personalTolls: 0,
+                totalAmount: 0,
+                matchedAmount: 0,
+                personalAmount: 0
+            };
+            
+            updatePerformanceTable(emptyData);
+        }
+        
+        // Setup table interactive effects
+        function setupTableInteractions() {
+            const tableRows = document.querySelectorAll('.table-row');
+            
+            tableRows.forEach(row => {
+                // Enhanced hover effects
+                row.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(8px)';
+                    this.style.backgroundColor = 'rgba(255, 200, 87, 0.08)';
+                });
+                
+                row.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                    this.style.backgroundColor = 'transparent';
+                });
+                
+                // Click ripple effect
+                row.addEventListener('click', function(e) {
+                    createRippleEffect(e, this);
+                    
+                    // Optional: Add some feedback for the click
+                    console.log(`📊 Table row clicked: ${this.dataset.metric}`);
+                });
+            });
+        }
+        
+        // Create ripple effect on table row click
+        function createRippleEffect(event, element) {
+            const ripple = document.createElement('div');
+            ripple.classList.add('ripple');
+            
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.height, rect.width);
+            const radius = size / 2;
+            
+            ripple.style.width = size + 'px';
+            ripple.style.height = size + 'px';
+            ripple.style.left = (event.clientX - rect.left - radius) + 'px';
+            ripple.style.top = (event.clientY - rect.top - radius) + 'px';
+            
+            element.appendChild(ripple);
+            
+            // Remove ripple after animation completes
+            setTimeout(() => {
+                if (ripple.parentNode) {
+                    ripple.parentNode.removeChild(ripple);
+                }
+            }, 600);
+        }
+        
+        // Add loading animation to table
+        function setTableLoading(isLoading) {
+            const tableContainer = document.querySelector('.quantum-table-container');
+            if (tableContainer) {
+                if (isLoading) {
+                    tableContainer.classList.add('table-loading');
+                } else {
+                    tableContainer.classList.remove('table-loading');
+                }
+            }
         }
 
         // Sign out functionality

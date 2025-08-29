@@ -733,11 +733,17 @@ function initializeUI() {
   // Set up global error handling
   window.addEventListener('error', (event) => {
     console.error('Global error:', event.error);
-    showNotification({
-      type: 'error',
-      title: 'Error',
-      message: 'An unexpected error occurred. Please refresh the page if issues persist.'
-    });
+    try {
+      if (window.showNotification && typeof window.showNotification === 'function') {
+        showNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'An unexpected error occurred. Please refresh the page if issues persist.'
+        });
+      }
+    } catch (e) {
+      console.error('Failed to show error notification:', e);
+    }
   });
   
   // Set up accessibility helpers
