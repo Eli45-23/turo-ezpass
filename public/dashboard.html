@@ -10,11 +10,13 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Browser Compatibility Layer - MUST load first -->
+    <script src="/js/browser-compatibility.js"></script>
     
-    <!-- Charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/simple-icons.js"></script>
+    <!-- Using system fonts for maximum compatibility across all browsers and regions -->
+    
+    <!-- Charts not needed in dashboard, only in analytics -->
     
     <!-- Scripts with cache busting -->
     <script src="/js/ui-utils.js?v=20250821"></script>
@@ -51,7 +53,7 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
             background: #2D1B69 !important; /* Fallback solid color */
             background: 
                 -webkit-linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%) !important;
@@ -224,7 +226,7 @@
         }
 
         .sidebar-title {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 1.2rem !important;
             font-weight: 700 !important;
             color: var(--sunglow) !important;
@@ -253,7 +255,7 @@
             text-decoration: none !important;
             transition: all 0.3s ease !important;
             border-left: 2px solid transparent !important;
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-weight: 500 !important;
             font-size: 0.9rem !important;
             text-transform: uppercase !important;
@@ -344,7 +346,7 @@
         }
 
         .dashboard-title {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 2rem !important;
             font-weight: 700 !important;
             background: linear-gradient(135deg, var(--sunglow), #ffdc7f, var(--dark-cyan)) !important;
@@ -361,7 +363,7 @@
             border: 1px solid rgba(255, 200, 87, 0.5) !important;
             padding: 1rem 2rem !important;
             border-radius: 8px !important;
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-weight: 600 !important;
             cursor: pointer !important;
             transition: all 0.3s ease !important;
@@ -412,7 +414,7 @@
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-weight: 700 !important;
             font-size: 1.2rem !important;
             cursor: pointer !important;
@@ -480,7 +482,7 @@
             text-decoration: none !important;
             transition: all 0.3s ease !important;
             cursor: pointer !important;
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 0.9rem !important;
             text-transform: uppercase !important;
             letter-spacing: 1px !important;
@@ -568,7 +570,7 @@
         }
 
         .stat-number {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 3rem !important;
             font-weight: 700 !important;
             background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
@@ -581,7 +583,7 @@
         }
 
         .stat-label {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 0.9rem !important;
             color: rgba(255, 255, 255, 0.8) !important;
             margin-bottom: 0.5rem !important;
@@ -591,7 +593,7 @@
         }
 
         .stat-value {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 0.8rem !important;
             color: rgba(255, 255, 255, 0.6) !important;
             text-transform: uppercase !important;
@@ -623,7 +625,7 @@
         }
 
         .matrix-title {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 1.5rem !important;
             font-weight: 600 !important;
             margin-bottom: 2rem !important;
@@ -651,7 +653,7 @@
         }
 
         .matrix-value {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 2.5rem !important;
             font-weight: 700 !important;
             background: linear-gradient(135deg, var(--sunglow), var(--dark-cyan)) !important;
@@ -697,7 +699,7 @@
         }
 
         .matrix-label {
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-size: 0.8rem !important;
             color: rgba(255, 255, 255, 0.7) !important;
             text-transform: uppercase !important;
@@ -718,7 +720,7 @@
             border: 1px solid rgba(255, 200, 87, 0.3) !important;
             padding: 1rem 2rem !important;
             border-radius: 8px !important;
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
             font-weight: 500 !important;
             cursor: pointer !important;
             transition: all 0.3s ease !important;
@@ -1137,7 +1139,14 @@
                 });
                 
                 if (!response.ok) {
-                    // Try to get error response body for debugging
+                    // Handle 404 as empty data for new users, not an error
+                    if (response.status === 404) {
+                        console.log('ℹ️ New user detected (404) - showing empty dashboard state');
+                        updateDashboardWithEmptyState();
+                        return;
+                    }
+                    
+                    // Try to get error response body for debugging other errors
                     let errorBody;
                     try {
                         errorBody = await response.text();
@@ -1245,6 +1254,47 @@
             // Update performance metrics
             document.getElementById('matching-accuracy').textContent = 'Error';
             document.getElementById('performance-total-tolls').textContent = 'Error';
+        }
+        
+        function updateDashboardWithEmptyState() {
+            console.log('ℹ️ Updating dashboard with empty state for new user');
+            
+            // Helper function to safely update elements
+            function safeUpdate(elementId, textContent) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = textContent;
+                } else {
+                    console.error(`❌ Element with ID '${elementId}' not found`);
+                }
+            }
+            
+            // Show empty states with encouraging messages
+            safeUpdate('total-tolls', '0');
+            safeUpdate('total-tolls-subtitle', 'Import CSV to get started');
+            
+            safeUpdate('personal-tolls', '0');
+            safeUpdate('personal-tolls-subtitle', '$0.00 USD');
+            
+            safeUpdate('matched-tolls', '0');
+            safeUpdate('matched-tolls-subtitle', '$0.00 USD');
+            
+            // Update performance metrics
+            safeUpdate('matching-accuracy', '0%');
+            safeUpdate('performance-total-tolls', '0');
+            
+            // Update progress bars to 0
+            const accuracyProgress = document.getElementById('accuracy-progress');
+            if (accuracyProgress) {
+                accuracyProgress.style.width = '0%';
+            }
+            
+            const tollsProgress = document.getElementById('tolls-progress');
+            if (tollsProgress) {
+                tollsProgress.style.width = '0%';
+            }
+            
+            console.log('✅ Dashboard updated with empty state successfully');
         }
 
         // Sign out functionality

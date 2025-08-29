@@ -107,10 +107,12 @@ class SafariFix {
     }
 
     /**
-     * Register service worker with force update for Safari
+     * Register service worker with force update for Safari - OPTIONAL
+     * This is now optional to prevent app breakage if service worker fails
      */
     async registerServiceWorkerWithForceUpdate() {
         if (!('serviceWorker' in navigator)) {
+            console.log('ℹ️ Service Worker not supported in this browser - continuing without it');
             return;
         }
 
@@ -153,7 +155,9 @@ class SafariFix {
             registration.update();
 
         } catch (error) {
-            console.error('❌ Safari: Service worker registration failed:', error);
+            console.warn('⚠️ Safari: Service worker registration failed - continuing without it:', error);
+            // DO NOT throw the error - let the app continue to work
+            // Service worker is optional functionality
         }
     }
 
@@ -197,28 +201,40 @@ class SafariFix {
     }
 
     /**
-     * Force clear all caches and reload
+     * Force clear all caches and reload - SAFE VERSION
      */
     async forceClearAndReload() {
         console.log('🔄 Safari: Manual cache clear initiated');
         
-        // Clear all storage
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Clear service worker cache
-        if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map(name => caches.delete(name)));
+        try {
+            // Clear all storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Clear service worker cache (if available)
+            if ('caches' in window) {
+                try {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                } catch (error) {
+                    console.warn('⚠️ Could not clear cache storage:', error);
+                }
+            }
+            
+            // Unregister service workers (if available)
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(reg => reg.unregister()));
+                } catch (error) {
+                    console.warn('⚠️ Could not unregister service workers:', error);
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Some cache clearing operations failed, but continuing:', error);
         }
         
-        // Unregister service workers
-        if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map(reg => reg.unregister()));
-        }
-        
-        // Force reload
+        // Force reload regardless of cache clearing success
         window.location.reload(true);
     }
 

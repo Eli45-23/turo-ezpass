@@ -6,6 +6,7 @@ const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
 const crypto = require('crypto');
+const cors = require('cors');
 
 // Security middleware imports
 const { 
@@ -297,6 +298,59 @@ app.use(sanitizeJSONResponse);
 
 // Trust proxy for accurate IP addresses (essential for production behind reverse proxy)
 app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
+
+// CORS configuration for global access
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        // In development, allow all origins
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+        
+        // In production, allow common secure origins and subdomains
+        const allowedDomains = [
+            'localhost',
+            '127.0.0.1',
+            '.render.com',
+            '.vercel.app',
+            '.netlify.app',
+            '.herokuapp.com'
+        ];
+        
+        // Check if origin is allowed
+        const isAllowed = allowedDomains.some(domain => {
+            return domain.startsWith('.') ? 
+                origin.includes(domain) || origin.endsWith(domain) :
+                origin.includes(domain);
+        });
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            // Log for monitoring but still allow - for global accessibility
+            console.warn('⚠️ CORS: Origin not in whitelist but allowing for global access:', origin);
+            callback(null, true); // Allow all origins for global accessibility
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+        'Origin',
+        'X-Requested-With', 
+        'Content-Type', 
+        'Accept',
+        'Authorization',
+        'Cache-Control',
+        'Pragma',
+        'Expires'
+    ],
+    credentials: true, // Allow cookies and sessions
+    maxAge: 86400 // Cache preflight for 24 hours
+};
+
+app.use(cors(corsOptions));
 
 // Body parsing middleware with size limits
 app.use(express.json({ limit: '10mb' }));

@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turo Toll Tracker - Dynamic Mesh</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <!-- Login Page Styles -->
+    <link rel="stylesheet" href="/login-style.css">
+    
+    <!-- Scripts -->
+    <script src="/js/ui-utils.js"></script>
+    <script src="/js/xss-utils.js"></script>
+    <script src="/js/accessibility.js"></script>
+    
+    <style>
+        /* Custom Color Variables */
+        :root {
+            --space-cadet: #1f2041;
+            --english-violet: #4b3f72;
+            --sunglow: #ffc857;
+            --dark-cyan: #119da4;
+            --paynes-gray: #19647e;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif !important;
+            margin: 0 !important;
+            overflow-x: hidden !important;
+        }
+        
+        .hero-container {
+            min-height: 100vh !important;
+            background: linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, var(--paynes-gray) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 2rem !important;
+        }
+        
+        .mesh-background {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-image: 
+                linear-gradient(rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 200, 87, 0.1) 1px, transparent 1px),
+                linear-gradient(rgba(17, 157, 164, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(17, 157, 164, 0.08) 1px, transparent 1px) !important;
+            background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+            animation: meshMove 30s linear infinite !important;
+            z-index: 1 !important;
+        }
+        
+        .floating-elements {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
+        }
+        
+        .floating-shape {
+            position: absolute !important;
+            background: transparent !important;
+            border: 2px solid !important;
+            animation-timing-function: ease-in-out !important;
+            animation-iteration-count: infinite !important;
+            animation-direction: alternate !important;
+        }
+        
+        .shape-1 {
+            top: 12% !important;
+            left: 8% !important;
+            width: 100px !important;
+            height: 100px !important;
+            border-color: var(--sunglow) !important;
+            border-radius: 10px !important;
+            background: linear-gradient(45deg, 
+                rgba(255, 200, 87, 0.1) 0%, 
+                transparent 50%, 
+                rgba(255, 200, 87, 0.1) 100%) !important;
+            animation: meshFloat1 12s, meshRotate 20s linear infinite !important;
+            box-shadow: 
+                0 0 30px rgba(255, 200, 87, 0.3),
+                inset 0 0 20px rgba(255, 200, 87, 0.1) !important;
+        }
+        
+        .shape-1::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 60% !important;
+            height: 60% !important;
+            background: linear-gradient(45deg, var(--sunglow), transparent) !important;
+            transform: translate(-50%, -50%) !important;
+            border-radius: inherit !important;
+            animation: innerPulse 4s infinite !important;
+        }
+        
+        .shape-2 {
+            top: 20% !important;
+            right: 12% !important;
+            width: 80px !important;
+            height: 80px !important;
+            border-color: var(--dark-cyan) !important;
+            border-radius: 50% !important;
+            background: radial-gradient(circle, 
+                rgba(17, 157, 164, 0.15) 0%, 
+                transparent 70%) !important;
+            animation: meshFloat2 15s, meshSpin 12s linear infinite !important;
+            box-shadow: 
+                0 0 25px rgba(17, 157, 164, 0.4),
+                inset 0 0 15px rgba(17, 157, 164, 0.2) !important;
+        }
+        
+        .shape-3 {
+            bottom: 15% !important;
+            left: 10% !important;
+            width: 50px !important;
+            height: 150px !important;
+            border-color: var(--english-violet) !important;
+            border-radius: 25px !important;
+            background: linear-gradient(90deg, 
+                rgba(75, 63, 114, 0.2) 0%, 
+                transparent 50%, 
+                rgba(75, 63, 114, 0.2) 100%) !important;
+            animation: meshFloat3 18s, meshRotate 25s linear infinite reverse !important;
+            box-shadow: 
+                0 0 35px rgba(75, 63, 114, 0.3),
+                inset 0 0 25px rgba(75, 63, 114, 0.15) !important;
+        }
+        
+        .shape-4 {
+            bottom: 25% !important;
+            right: 8% !important;
+            width: 120px !important;
+            height: 50px !important;
+            border-color: var(--paynes-gray) !important;
+            border-radius: 25px !important;
+            background: linear-gradient(135deg, 
+                rgba(25, 100, 126, 0.15) 0%, 
+                transparent 50%, 
+                rgba(25, 100, 126, 0.15) 100%) !important;
+            animation: meshFloat4 14s, meshStretch 8s infinite !important;
+            box-shadow: 
+                0 0 20px rgba(25, 100, 126, 0.4),
+                inset 0 0 10px rgba(25, 100, 126, 0.2) !important;
+        }
+        
+        .shape-5 {
+            top: 40% !important;
+            left: 4% !important;
+            width: 70px !important;
+            height: 70px !important;
+            border-color: var(--sunglow) !important;
+            background: conic-gradient(from 45deg, 
+                rgba(255, 200, 87, 0.2) 0%, 
+                transparent 50%, 
+                rgba(255, 200, 87, 0.2) 100%) !important;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
+            animation: meshFloat5 16s, meshSpin 10s linear infinite !important;
+            filter: drop-shadow(0 0 20px rgba(255, 200, 87, 0.4)) !important;
+        }
+        
+        .shape-6 {
+            top: 50% !important;
+            right: 15% !important;
+            width: 90px !important;
+            height: 90px !important;
+            border-color: var(--dark-cyan) !important;
+            background: linear-gradient(60deg, 
+                rgba(17, 157, 164, 0.15) 0%, 
+                transparent 40%, 
+                rgba(17, 157, 164, 0.15) 80%) !important;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%) !important;
+            animation: meshFloat6 20s, meshRotate 15s linear infinite !important;
+            filter: drop-shadow(0 0 25px rgba(17, 157, 164, 0.4)) !important;
+        }
+        
+        .connection-lines {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+        
+        .line {
+            position: absolute !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 200, 87, 0.3) 50%, 
+                transparent 100%) !important;
+            height: 1px !important;
+            animation: lineFlow 8s ease-in-out infinite !important;
+        }
+        
+        .line-1 { 
+            top: 20% !important; 
+            left: 15% !important; 
+            width: 70% !important; 
+            animation-delay: 0s !important; 
+        }
+        .line-2 { 
+            top: 45% !important; 
+            left: 10% !important; 
+            width: 60% !important; 
+            animation-delay: 2s !important; 
+        }
+        .line-3 { 
+            top: 70% !important; 
+            left: 20% !important; 
+            width: 65% !important; 
+            animation-delay: 4s !important; 
+        }
+        
+        .hero-content {
+            position: relative !important;
+            z-index: 10 !important;
+            text-align: center !important;
+            color: white !important;
+            max-width: 1200px !important;
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .hero-badge {
+            display: none !important;
+        }
+        
+        .hero-title {
+            font-size: clamp(2rem, 6vw, 3.5rem) !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 0.5rem !important;
+            background: linear-gradient(135deg, 
+                white 0%, 
+                var(--sunglow) 25%, 
+                var(--dark-cyan) 50%, 
+                var(--english-violet) 75%, 
+                white 100%) !important;
+            background-size: 300% 300% !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: slideInUp 1s ease-out 0.2s both, meshGradient 10s ease-in-out infinite !important;
+            text-shadow: 0 0 50px rgba(255, 200, 87, 0.3) !important;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.25rem) !important;
+            margin-bottom: 1.5rem !important;
+            opacity: 0.9 !important;
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.6 !important;
+            animation: slideInUp 1s ease-out 0.4s both !important;
+        }
+        
+        .login-card {
+            background: linear-gradient(135deg, 
+                rgba(75, 63, 114, 0.25) 0%, 
+                rgba(25, 100, 126, 0.2) 50%, 
+                rgba(31, 32, 65, 0.3) 100%) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 2px solid !important;
+            border-image: linear-gradient(45deg, 
+                var(--sunglow) 0%, 
+                var(--dark-cyan) 25%, 
+                var(--english-violet) 50%, 
+                var(--paynes-gray) 75%, 
+                var(--sunglow) 100%) 1 !important;
+            border-radius: 24px !important;
+            padding: 2.5rem !important;
+            width: 100% !important;
+            max-width: 420px !important;
+            margin: 0 auto !important;
+            box-shadow: 
+                0 25px 50px rgba(31, 32, 65, 0.4),
+                0 0 100px rgba(255, 200, 87, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            animation: floatingCard 1s ease-out 0.6s both, meshCardFloat 8s ease-in-out infinite 2s !important;
+            position: relative !important;
+        }
+        
+        .login-card::before {
+            content: '' !important;
+            position: absolute !important;
+            inset: -2px !important;
+            background: linear-gradient(45deg, 
+                var(--sunglow) 0%, 
+                var(--dark-cyan) 25%, 
+                var(--english-violet) 50%, 
+                var(--paynes-gray) 75%, 
+                var(--sunglow) 100%) !important;
+            background-size: 400% 400% !important;
+            border-radius: inherit !important;
+            z-index: -1 !important;
+            opacity: 0.8 !important;
+            animation: meshBorderFlow 12s linear infinite !important;
+        }
+        
+        .tab-container {
+            display: flex !important;
+            margin-bottom: 2rem !important;
+            border-radius: 12px !important;
+            background: rgba(25, 100, 126, 0.2) !important;
+            border: 1px solid rgba(255, 200, 87, 0.2) !important;
+            padding: 0.25rem !important;
+        }
+        
+        .tab-btn {
+            flex: 1 !important;
+            padding: 0.75rem 1rem !important;
+            background: transparent !important;
+            border: none !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            border-radius: 8px !important;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            box-shadow: 0 4px 15px rgba(255, 200, 87, 0.3) !important;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            color: white !important;
+            background: rgba(255, 200, 87, 0.1) !important;
+        }
+        
+        .form-content {
+            display: none !important;
+        }
+        
+        .form-content.active {
+            display: block !important;
+        }
+        
+        .form-title {
+            font-size: 2rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.5rem !important;
+            color: white !important;
+            text-align: center !important;
+        }
+        
+        .form-subtitle {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 1rem !important;
+            margin-bottom: 2rem !important;
+            text-align: center !important;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-input {
+            width: 85% !important;
+            margin: 0 auto !important;
+            display: block !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(25, 100, 126, 0.3) !important;
+            border: 1px solid rgba(255, 200, 87, 0.3) !important;
+            border-radius: 12px !important;
+            color: white !important;
+            font-size: 1rem !important;
+            transition: all 0.3s ease !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+        
+        .form-input:focus {
+            outline: none !important;
+            border-color: var(--sunglow) !important;
+            background: rgba(25, 100, 126, 0.4) !important;
+            box-shadow: 
+                0 0 20px rgba(255, 200, 87, 0.3),
+                inset 0 0 10px rgba(255, 200, 87, 0.1) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        .btn-primary, .signin-btn {
+            width: 100% !important;
+            background: linear-gradient(135deg, var(--sunglow), #ffdc7f) !important;
+            color: var(--space-cadet) !important;
+            border: none !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            font-size: 1.125rem !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            margin-bottom: 2rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .btn-primary::before, .signin-btn::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.3) 50%, 
+                transparent 100%) !important;
+            transition: left 0.6s ease !important;
+        }
+        
+        .btn-primary:hover::before, .signin-btn:hover::before {
+            left: 100% !important;
+        }
+        
+        .btn-primary:hover, .signin-btn:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 
+                0 15px 35px rgba(255, 200, 87, 0.4),
+                0 0 50px rgba(255, 200, 87, 0.2) !important;
+        }
+
+        /* Loading states */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+        
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid var(--space-cadet);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        /* Error states */
+        .form-group.error .form-input {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+        }
+        
+        .form-error {
+            color: #dc2626 !important;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Mesh Animations */
+        @keyframes meshMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(100px, 100px); }
+        }
+        
+        @keyframes meshFloat1 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            25% { transform: translate(-20px, -25px) rotate(5deg); }
+            50% { transform: translate(15px, -35px) rotate(-3deg); }
+            75% { transform: translate(-10px, -20px) rotate(7deg); }
+        }
+        
+        @keyframes meshFloat2 {
+            0%, 100% { transform: translate(0px, 0px); }
+            50% { transform: translate(25px, -30px); }
+        }
+        
+        @keyframes meshFloat3 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(18px, -30px) rotate(-8deg); }
+            66% { transform: translate(-12px, -40px) rotate(5deg); }
+        }
+        
+        @keyframes meshFloat4 {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(30px); }
+        }
+        
+        @keyframes meshFloat5 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(-25px, -20px) rotate(10deg); }
+            66% { transform: translate(20px, -35px) rotate(-7deg); }
+        }
+        
+        @keyframes meshFloat6 {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            50% { transform: translate(-30px, 25px) rotate(-12deg); }
+        }
+        
+        @keyframes meshRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes meshSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+        
+        @keyframes meshStretch {
+            0%, 100% { transform: scaleX(1); }
+            50% { transform: scaleX(1.2); }
+        }
+        
+        @keyframes innerPulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        @keyframes lineFlow {
+            0%, 100% { opacity: 0.3; transform: scaleX(1); }
+            50% { opacity: 0.8; transform: scaleX(1.1); }
+        }
+        
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes meshPulse {
+            0%, 100% { box-shadow: 0 8px 32px rgba(255, 200, 87, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+            50% { box-shadow: 0 12px 40px rgba(255, 200, 87, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        }
+        
+        @keyframes meshGradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes floatingCard {
+            from { opacity: 0; transform: scale(0.9) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes meshCardFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @keyframes meshBorderFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-container { padding: 1rem !important; }
+            .login-card { padding: 2rem !important; }
+            .floating-shape { transform: scale(0.7) !important; }
+            .mesh-background { background-size: 50px 50px, 50px 50px, 15px 15px, 15px 15px !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Skip to main content -->
+    <a href="#main-content" class="skip-link sr-only">Skip to main content</a>
+    
+    <div class="hero-container">
+        <div class="mesh-background"></div>
+        <div class="connection-lines">
+            <div class="line line-1"></div>
+            <div class="line line-2"></div>
+            <div class="line line-3"></div>
+        </div>
+        <div class="floating-elements">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="floating-shape shape-4"></div>
+            <div class="floating-shape shape-5"></div>
+            <div class="floating-shape shape-6"></div>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title" id="main-content">
+                ELEVATE YOUR TOLL GAME
+            </h1>
+            
+            <p class="hero-subtitle">
+                Your personal toll assistant
+            </p>
+            
+            <div class="login-card">
+                <div class="tab-container">
+                    <button class="tab-btn active" onclick="switchTab('login', this)" role="tab" aria-selected="true" aria-controls="login-panel" id="login-tab">Login</button>
+                    <button class="tab-btn" onclick="switchTab('signup', this)" role="tab" aria-selected="false" aria-controls="signup-panel" id="signup-tab">Sign Up</button>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-panel" class="form-content active" role="tabpanel" aria-labelledby="login-tab">
+                    <h2 class="form-title">Welcome Back</h2>
+                    <p class="form-subtitle">Access your dashboard</p>
+                    
+                    <form id="login-form" aria-label="Sign in form">
+                        <div class="form-group">
+                            <input type="email" 
+                                   id="login-email" 
+                                   name="email" 
+                                   class="form-input" 
+                                   placeholder="Email" 
+                                   required
+                                   autocomplete="email">
+                            <div class="form-error" id="login-email-error"></div>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" 
+                                   id="login-password" 
+                                   name="password" 
+                                   class="form-input" 
+                                   placeholder="Password" 
+                                   required
+                                   autocomplete="current-password">
+                            <div class="form-error" id="login-password-error"></div>
+                        </div>
+                        
+                        <button type="submit" id="login-btn" class="signin-btn">Login</button>
+                    </form>
+                </div>
+                
+                <!-- Sign Up Form -->
+                <div id="signup-panel" class="form-content" role="tabpanel" aria-labelledby="signup-tab">
+                    <h2 class="form-title">Create Account</h2>
+                    <p class="form-subtitle">Join the toll revolution</p>
+                    
+                    <form id="signup-form" aria-label="Create account form">
+                        <div class="form-group">
+                            <input type="text" 
+                                   id="signup-name" 
+                                   name="fullName" 
+                                   class="form-input" 
+                                   placeholder="Full Name" 
+                                   required
+                                   autocomplete="name">
+                            <div class="form-error" id="signup-name-error"></div>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" 
+                                   id="signup-email" 
+                                   name="email" 
+                                   class="form-input" 
+                                   placeholder="Email" 
+                                   required
+                                   autocomplete="email">
+                            <div class="form-error" id="signup-email-error"></div>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" 
+                                   id="signup-password" 
+                                   name="password" 
+                                   class="form-input" 
+                                   placeholder="Password" 
+                                   required
+                                   autocomplete="new-password"
+                                   minlength="8">
+                            <div class="form-error" id="signup-password-error"></div>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" 
+                                   id="signup-turo-id" 
+                                   name="turoHostId"
+                                   class="form-input" 
+                                   placeholder="Turo Host ID (Optional)">
+                        </div>
+                        
+                        <button type="submit" id="signup-btn" class="signin-btn">Create Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+    
+    <script>
+        let csrfToken = null;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            await fetchCSRFToken();
+            setupFormValidation();
+            setupAccessibility();
+        });
+        
+        // Fetch CSRF token
+        async function fetchCSRFToken() {
+            try {
+                const response = await fetch('/api/auth/csrf-token', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    csrfToken = data.csrfToken;
+                }
+            } catch (error) {
+                console.warn('Could not fetch CSRF token:', error);
+            }
+        }
+        
+        // Tab switching for Dynamic Mesh design
+        function switchTab(tabName, clickedButton) {
+            // Remove active class from all tabs and forms
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const formContents = document.querySelectorAll('.form-content');
+            
+            tabBtns.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+            formContents.forEach(form => form.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding form
+            const targetForm = document.getElementById(`${tabName}-panel`);
+            
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+                clickedButton.setAttribute('aria-selected', 'true');
+            }
+            
+            if (targetForm) {
+                targetForm.classList.add('active');
+            }
+            
+            // Clear any existing errors
+            clearFormErrors();
+        }
+        
+        // Form validation setup
+        function setupFormValidation() {
+            const loginForm = getEl('login-form');
+            const signupForm = getEl('signup-form');
+            
+            if (loginForm) {
+                loginForm.addEventListener('submit', handleLogin);
+                
+                // Real-time validation
+                addListener('login-email', 'blur', () => validateEmail('login-email'));
+                addListener('login-password', 'blur', () => validateRequired('login-password'));
+            }
+            
+            if (signupForm) {
+                signupForm.addEventListener('submit', handleSignup);
+                
+                // Real-time validation
+                addListener('signup-name', 'blur', () => validateRequired('signup-name'));
+                addListener('signup-email', 'blur', () => validateEmail('signup-email'));
+                addListener('signup-password', 'blur', () => validatePassword('signup-password'));
+            }
+        }
+        
+        // Login handler
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            if (!validateLoginForm()) return;
+            
+            const loginBtn = getEl('login-btn');
+            setLoadingState(loginBtn, true);
+            
+            try {
+                if (!csrfToken) await fetchCSRFToken();
+                
+                const formData = getFormData('login-form');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(formData),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                console.log('🔍 Login response data:', data);
+                
+                if (data.success) {
+                    // Store Supabase session/token if present
+                    console.log('🎫 Checking for tokens:', {
+                        access_token: !!data.access_token,
+                        session: !!data.session,
+                        session_access_token: data.session?.access_token
+                    });
+                    
+                    if (data.access_token) {
+                        localStorage.setItem('supabase_token', data.access_token);
+                        console.log('✅ Stored access_token from response');
+                    } else if (data.session?.access_token) {
+                        localStorage.setItem('supabase_token', data.session.access_token);
+                        console.log('✅ Stored access_token from session');
+                    } else {
+                        console.warn('⚠️ No access_token found in response');
+                    }
+                    
+                    if (data.session) {
+                        localStorage.setItem('supabase_session', JSON.stringify(data.session));
+                        console.log('✅ Stored session object');
+                    }
+                    
+                    showNotification({
+                        type: 'success',
+                        title: 'Success!',
+                        message: 'Redirecting to dashboard...'
+                    });
+                    setTimeout(() => window.location.href = '/dashboard.html', 1000);
+                } else {
+                    handleAuthError(data.error);
+                    if (data.error?.includes('CSRF')) await fetchCSRFToken();
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Network Error',
+                    message: 'Please check your connection and try again.'
+                });
+            } finally {
+                setLoadingState(loginBtn, false);
+            }
+        }
+        
+        // Signup handler
+        async function handleSignup(e) {
+            e.preventDefault();
+            
+            if (!validateSignupForm()) return;
+            
+            const signupBtn = getEl('signup-btn');
+            setLoadingState(signupBtn, true);
+            
+            try {
+                if (!csrfToken) await fetchCSRFToken();
+                
+                const formData = getFormData('signup-form');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+                
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(formData),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                console.log('🔍 Signup response data:', data);
+                
+                if (data.success) {
+                    // Store Supabase session/token if present
+                    console.log('🎫 Checking for tokens:', {
+                        access_token: !!data.access_token,
+                        session: !!data.session,
+                        session_access_token: data.session?.access_token
+                    });
+                    
+                    if (data.access_token) {
+                        localStorage.setItem('supabase_token', data.access_token);
+                        console.log('✅ Stored access_token from response');
+                    } else if (data.session?.access_token) {
+                        localStorage.setItem('supabase_token', data.session.access_token);
+                        console.log('✅ Stored access_token from session');
+                    } else {
+                        console.warn('⚠️ No access_token found in response');
+                    }
+                    
+                    if (data.session) {
+                        localStorage.setItem('supabase_session', JSON.stringify(data.session));
+                        console.log('✅ Stored session object');
+                    }
+                    
+                    showNotification({
+                        type: 'success',
+                        title: 'Account Created!',
+                        message: 'Welcome to Turo Toll Tracker. Redirecting...'
+                    });
+                    setTimeout(() => window.location.href = '/dashboard.html', 1500);
+                } else {
+                    handleAuthError(data.error);
+                    if (data.error?.includes('CSRF')) await fetchCSRFToken();
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Network Error',
+                    message: 'Please check your connection and try again.'
+                });
+            } finally {
+                setLoadingState(signupBtn, false);
+            }
+        }
+        
+        // SSO handlers (placeholder for future implementation)
+        function handleSSO(provider) {
+            showNotification({
+                type: 'info',
+                title: 'Coming Soon',
+                message: `${provider} authentication will be available soon!`
+            });
+        }
+        
+        // Form validation functions
+        function validateLoginForm() {
+            const emailValid = validateEmail('login-email');
+            const passwordValid = validateRequired('login-password');
+            return emailValid && passwordValid;
+        }
+        
+        function validateSignupForm() {
+            const nameValid = validateRequired('signup-name');
+            const emailValid = validateEmail('signup-email');
+            const passwordValid = validatePassword('signup-password');
+            return nameValid && emailValid && passwordValid;
+        }
+        
+        function validateEmail(fieldId) {
+            const field = getEl(fieldId);
+            if (!field) return false;
+            
+            const email = field.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!email) {
+                showFieldError(fieldId, 'Email is required');
+                return false;
+            }
+            
+            if (!emailRegex.test(email)) {
+                showFieldError(fieldId, 'Please enter a valid email address');
+                return false;
+            }
+            
+            clearFieldError(fieldId);
+            return true;
+        }
+        
+        function validatePassword(fieldId) {
+            const field = getEl(fieldId);
+            if (!field) return false;
+            
+            const password = field.value;
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+            
+            if (!password) {
+                showFieldError(fieldId, 'Password is required');
+                return false;
+            }
+            
+            const failedRequirements = Object.entries(requirements)
+                .filter(([, passed]) => !passed)
+                .map(([req]) => req);
+            
+            if (failedRequirements.length > 0) {
+                const messages = {
+                    length: 'at least 8 characters',
+                    uppercase: 'uppercase letter',
+                    lowercase: 'lowercase letter',
+                    number: 'number',
+                    special: 'special character'
+                };
+                
+                const missing = failedRequirements.map(req => messages[req]).join(', ');
+                showFieldError(fieldId, `Password must include: ${missing}`);
+                return false;
+            }
+            
+            clearFieldError(fieldId);
+            return true;
+        }
+        
+        function validateRequired(fieldId) {
+            const field = getEl(fieldId);
+            if (!field) return false;
+            
+            const value = field.value.trim();
+            
+            if (!value) {
+                const label = field.parentNode.querySelector('label')?.textContent || 'This field';
+                showFieldError(fieldId, `${label} is required`);
+                return false;
+            }
+            
+            clearFieldError(fieldId);
+            return true;
+        }
+        
+        // Error handling
+        function showFieldError(fieldId, message) {
+            const field = getEl(fieldId);
+            const group = field?.closest('.form-group');
+            const errorEl = group?.querySelector('.form-error');
+            
+            if (group && errorEl) {
+                group.classList.add('error');
+                errorEl.textContent = message;
+            }
+        }
+        
+        function clearFieldError(fieldId) {
+            const field = getEl(fieldId);
+            const group = field?.closest('.form-group');
+            const errorEl = group?.querySelector('.form-error');
+            
+            if (group && errorEl) {
+                group.classList.remove('error');
+                errorEl.textContent = '';
+            }
+        }
+        
+        function clearFormErrors() {
+            document.querySelectorAll('.form-group.error').forEach(group => {
+                group.classList.remove('error');
+                const errorEl = group.querySelector('.form-error');
+                if (errorEl) errorEl.textContent = '';
+            });
+        }
+        
+        function handleAuthError(error) {
+            const errorMap = {
+                'Invalid credentials': 'Email or password is incorrect',
+                'User not found': 'No account found with this email',
+                'Email already exists': 'An account with this email already exists',
+                'Invalid email': 'Please enter a valid email address',
+                'Password too weak': 'Password does not meet security requirements'
+            };
+            
+            const message = errorMap[error] || error || 'Authentication failed';
+            showNotification({
+                type: 'error',
+                title: 'Authentication Error',
+                message
+            });
+        }
+        
+        // UI helpers
+        function setLoadingState(button, loading) {
+            if (!button) return;
+            
+            if (loading) {
+                button.classList.add('btn-loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+            }
+        }
+        
+        // Accessibility setup
+        function setupAccessibility() {
+            // Keyboard navigation for tabs
+            document.addEventListener('keydown', (e) => {
+                if (e.target.classList.contains('auth-tab')) {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        const tabs = Array.from(document.querySelectorAll('.auth-tab'));
+                        const currentIndex = tabs.indexOf(e.target);
+                        const nextIndex = e.key === 'ArrowLeft' 
+                            ? (currentIndex - 1 + tabs.length) % tabs.length 
+                            : (currentIndex + 1) % tabs.length;
+                        
+                        tabs[nextIndex].click();
+                        tabs[nextIndex].focus();
+                    }
+                }
+            });
+            
+            // Announce tab changes to screen readers
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'aria-selected') {
+                        const tab = mutation.target;
+                        if (tab.getAttribute('aria-selected') === 'true') {
+                            // Announce the active tab
+                            const announcement = `${tab.textContent} tab selected`;
+                            const announcer = document.createElement('div');
+                            announcer.setAttribute('aria-live', 'polite');
+                            announcer.setAttribute('aria-atomic', 'true');
+                            announcer.className = 'sr-only';
+                            announcer.textContent = announcement;
+                            document.body.appendChild(announcer);
+                            setTimeout(() => document.body.removeChild(announcer), 1000);
+                        }
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                observer.observe(tab, { attributes: true });
+            });
+        }
+    </script>
+</body>
+</html>

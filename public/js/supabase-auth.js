@@ -31,9 +31,33 @@ class AuthManager {
     }
     
     async restoreSession() {
-        // Try to get session from localStorage (Supabase) or cookies (SQLite)
-        const storedSession = localStorage.getItem('supabase_session');
-        const storedToken = localStorage.getItem('supabase_token');
+        // Try to get session from storage with universal compatibility
+        let storedSession = null;
+        let storedToken = null;
+        
+        try {
+            // Try localStorage first
+            if (typeof localStorage !== 'undefined' && localStorage.getItem) {
+                storedSession = localStorage.getItem('supabase_session');
+            }
+            
+            // If no session found, try sessionStorage
+            if (!storedSession && typeof sessionStorage !== 'undefined' && sessionStorage.getItem) {
+                storedSession = sessionStorage.getItem('supabase_session');
+            }
+            
+            // Get token using universal storage
+            if (window.apiHelper && window.apiHelper.tokenStorage) {
+                storedToken = window.apiHelper.tokenStorage.getToken();
+            } else {
+                // Fallback to direct localStorage
+                if (typeof localStorage !== 'undefined' && localStorage.getItem) {
+                    storedToken = localStorage.getItem('supabase_token');
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Session restoration failed:', error);
+        }
         
         if (storedSession) {
             try {
@@ -191,10 +215,31 @@ class AuthManager {
     
     saveSession() {
         if (this.session) {
-            localStorage.setItem('supabase_session', JSON.stringify(this.session));
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+                    localStorage.setItem('supabase_session', JSON.stringify(this.session));
+                }
+                if (typeof sessionStorage !== 'undefined' && sessionStorage.setItem) {
+                    sessionStorage.setItem('supabase_session', JSON.stringify(this.session));
+                }
+            } catch (error) {
+                console.warn('⚠️ Session storage failed:', error);
+            }
         }
         if (this.token) {
-            localStorage.setItem('supabase_token', this.token);
+            // Use universal token storage from api-helper if available
+            if (window.apiHelper && window.apiHelper.tokenStorage) {
+                window.apiHelper.tokenStorage.setToken(this.token);
+            } else {
+                // Fallback to direct localStorage
+                try {
+                    if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+                        localStorage.setItem('supabase_token', this.token);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Token storage fallback failed:', error);
+                }
+            }
         }
     }
     
@@ -203,9 +248,22 @@ class AuthManager {
         this.session = null;
         this.token = null;
         
+        // Use universal token storage clearing if available
+        if (window.apiHelper && window.apiHelper.tokenStorage) {
+            window.apiHelper.tokenStorage.clearToken();
+        }
+        
         // Clear ALL localStorage/sessionStorage to prevent data leakage
-        localStorage.clear();
-        sessionStorage.clear();
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage.clear) {
+                localStorage.clear();
+            }
+            if (typeof sessionStorage !== 'undefined' && sessionStorage.clear) {
+                sessionStorage.clear();
+            }
+        } catch (error) {
+            console.warn('⚠️ Storage clearing failed:', error);
+        }
         
         // Clear any cached data
         if (window.caches) {
