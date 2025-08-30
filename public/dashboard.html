@@ -378,6 +378,131 @@
                 transition: transform 0.3s ease;
             }
         }
+
+        /* How To Guide Styles */
+        .guide-step {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .guide-step:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .guide-step-header {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .guide-step-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .guide-step-content.expanded {
+            max-height: 1000px;
+            display: block;
+        }
+
+        .guide-chevron {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .guide-step-header[aria-expanded="true"] .guide-chevron {
+            transform: rotate(180deg);
+        }
+
+        .step-badge {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .guide-step:hover .step-badge {
+            transform: scale(1.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .email-copy-btn {
+            position: relative;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .email-copy-btn:hover {
+            transform: translateY(-1px);
+            text-shadow: 0 0 8px currentColor;
+        }
+
+        .email-copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .email-copied-msg {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .email-copied-msg.show {
+            display: inline-block !important;
+            animation: fadeInOut 2s ease-out forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% { 
+                opacity: 0;
+                transform: translateY(10px) scale(0.8);
+            }
+            20%, 80% { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% { 
+                opacity: 0;
+                transform: translateY(-5px) scale(0.9);
+            }
+        }
+
+        /* Guide specific animations */
+        .guide-step-content ol li,
+        .guide-step-content ul li {
+            opacity: 0;
+            transform: translateX(-10px);
+            animation: slideInLeft 0.4s ease-out forwards;
+        }
+
+        .guide-step-content.expanded ol li:nth-child(1),
+        .guide-step-content.expanded ul li:nth-child(1) { animation-delay: 0.1s; }
+        .guide-step-content.expanded ol li:nth-child(2),
+        .guide-step-content.expanded ul li:nth-child(2) { animation-delay: 0.2s; }
+        .guide-step-content.expanded ol li:nth-child(3),
+        .guide-step-content.expanded ul li:nth-child(3) { animation-delay: 0.3s; }
+        .guide-step-content.expanded ol li:nth-child(4),
+        .guide-step-content.expanded ul li:nth-child(4) { animation-delay: 0.4s; }
+        .guide-step-content.expanded ol li:nth-child(5),
+        .guide-step-content.expanded ul li:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes slideInLeft {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive guide styles */
+        @media (max-width: 768px) {
+            .guide-step-content .ml-11 {
+                margin-left: 1rem;
+            }
+            
+            .guide-step-header {
+                padding: 1rem;
+            }
+            
+            .step-badge {
+                width: 2rem;
+                height: 2rem;
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -548,6 +673,149 @@
                     </div>
                 </div>
 
+                <!-- How To Use Guide -->
+                <div class="fade-in fade-in-delay-2 bg-gray-800/50 rounded-xl border border-gray-600">
+                    <div class="p-6 border-b border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white font-mono flex items-center space-x-2">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-green-400"></i>
+                                <span>HOW TO USE</span>
+                            </h3>
+                        </div>
+                        <p class="text-gray-300 text-sm mt-2 font-inter">Steps on how to use our software</p>
+                    </div>
+                    
+                    <!-- Guide Content -->
+                    <div class="p-6 space-y-4">
+                        
+                        <!-- Step 1 -->
+                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="1">
+                                <div class="flex items-center space-x-3">
+                                    <div class="step-badge w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">1</div>
+                                    <span class="text-white font-semibold font-mono">Get your CSV files</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
+                            </button>
+                            <div class="guide-step-content hidden p-4 pt-0 space-y-4">
+                                <div class="ml-11 space-y-4">
+                                    <div class="bg-gray-600/20 rounded-lg p-4">
+                                        <h4 class="text-yellow-400 font-semibold font-mono text-sm mb-3">A) Turo Trips CSV</h4>
+                                        <ol class="text-gray-300 text-sm space-y-1 font-inter">
+                                            <li>1. Log in to your Turo host account (desktop).</li>
+                                            <li>2. Go to Business → Earnings.</li>
+                                            <li>3. Click Download CSV (top-right).</li>
+                                        </ol>
+                                    </div>
+                                    <div class="bg-gray-600/20 rounded-lg p-4">
+                                        <h4 class="text-yellow-400 font-semibold font-mono text-sm mb-3">B) NY E-ZPass CSV</h4>
+                                        <ol class="text-gray-300 text-sm space-y-1 font-inter">
+                                            <li>1. Log in to your E-ZPass NY account (desktop).</li>
+                                            <li>2. In Recent Transactions, click View all.</li>
+                                            <li>3. Switch to Posted Dates.</li>
+                                            <li>4. Click Export (upper-right) → choose CSV.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="2">
+                                <div class="flex items-center space-x-3">
+                                    <div class="step-badge w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">2</div>
+                                    <span class="text-white font-semibold font-mono">Add your Plate & Transponder info</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
+                            </button>
+                            <div class="guide-step-content hidden p-4 pt-0">
+                                <div class="ml-11">
+                                    <div class="bg-gray-600/20 rounded-lg p-4">
+                                        <ol class="text-gray-300 text-sm space-y-1 font-inter">
+                                            <li>1. Go to the <a href="/transponders.html" class="text-red-400 hover:text-red-300 underline transition-colors">Transponders page</a> (Tags)</li>
+                                            <li>2. Click Add Mapping (top right of the page)</li>
+                                            <li>3. Add as many vehicles you have rented with the corresponding Tag/Transponder that goes with that vehicle if any.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="step-badge w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">3</div>
+                                    <span class="text-white font-semibold font-mono">Upload your CSV files</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
+                            </button>
+                            <div class="guide-step-content hidden p-4 pt-0">
+                                <div class="ml-11">
+                                    <div class="bg-gray-600/20 rounded-lg p-4">
+                                        <ol class="text-gray-300 text-sm space-y-2 font-inter">
+                                            <li>1. Go to the <a href="/upload.html" class="text-amber-400 hover:text-amber-300 underline transition-colors">Uploads CSV page</a>.</li>
+                                            <li>2. Upload files
+                                                <ul class="ml-4 mt-1 space-y-1 text-xs text-gray-400">
+                                                    <li>• <span class="text-white">Turo CSV</span> this file should start with <code class="bg-gray-800 px-1 rounded text-blue-300">trip_earnings_export</code></li>
+                                                    <li>• <span class="text-white">E-ZPass CSV</span> this file should start with <code class="bg-gray-800 px-1 rounded text-blue-300">Transaction_Report</code></li>
+                                                </ul>
+                                            </li>
+                                            <li>3. Press Run Matcher</li>
+                                            <li>4. Wait till the Matcher is done Matching before leaving that page.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="step-badge w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">4</div>
+                                    <span class="text-white font-semibold font-mono">Review matched results</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
+                            </button>
+                            <div class="guide-step-content hidden p-4 pt-0">
+                                <div class="ml-11">
+                                    <div class="bg-gray-600/20 rounded-lg p-4 space-y-3">
+                                        <p class="text-gray-300 text-sm font-inter">Here is where you can take a screen shot of the trips with the matched tolls to submit to Turo for your toll reimbursement. All matched tolls to trips are in the "Completed" tab.</p>
+                                        <div>
+                                            <p class="text-white text-sm font-semibold mb-2">1. Go to <a href="/trips.html" class="text-green-400 hover:text-green-300 underline transition-colors">Trips</a>. You'll see trips organized into tabs:</p>
+                                            <ul class="text-gray-300 text-sm space-y-1 ml-4 font-inter">
+                                                <li>• <span class="text-green-400 font-semibold">Completed</span> — Past trips with all matched tolls. Shows total toll amount and match count per trip.</li>
+                                                <li>• <span class="text-blue-400 font-semibold">In Progress</span> — Active trips; toll totals update as new transactions post.</li>
+                                                <li>• <span class="text-yellow-400 font-semibold">Upcoming</span> — Future trips scheduled; matching begins once the trip starts.</li>
+                                                <li>• <span class="text-orange-400 font-semibold">Your Tolls</span> — Personal/unmatched tolls that didn't fit any trip window.</li>
+                                                <li>• <span class="text-red-400 font-semibold">Late Tolls</span> — Newly detected tolls that fall inside a trip window that was already submitted/invoiced.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer Message -->
+                        <div class="mt-8 p-6 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg border border-indigo-500/30">
+                            <div class="text-center space-y-3">
+                                <p class="text-gray-300 text-sm font-inter">That's it! Don't be afraid to explore the rest of your workspace and get familiar with it.</p>
+                                <p class="text-gray-300 text-sm font-inter">This software was built/designed/developed by a real Turo Host in NYC so all hosts were in mind during the process.</p>
+                                <div class="flex items-center justify-center space-x-2 mt-4">
+                                    <span class="text-gray-400 text-sm font-inter">Questions, issues, or recommendations?</span>
+                                    <button class="email-copy-btn text-indigo-400 hover:text-indigo-300 underline text-sm font-semibold transition-colors cursor-pointer" data-email="turoezpassNY@gmail.com">
+                                        turoezpassNY@gmail.com
+                                    </button>
+                                    <span class="email-copied-msg hidden text-green-400 text-xs font-medium">Copied!</span>
+                                </div>
+                                <p class="text-gray-400 text-xs font-inter mt-2">Thank you.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -692,6 +960,9 @@
             
             // Table row interactive effects
             setupTableInteractions();
+            
+            // Initialize How To Guide
+            setupHowToGuide();
         }
 
         async function loadDashboardData() {
@@ -1008,6 +1279,175 @@
                 } else {
                     tableContainer.classList.remove('table-loading');
                 }
+            }
+        }
+
+        // How To Guide Functionality
+        function setupHowToGuide() {
+            console.log('🔧 Setting up How To Guide functionality...');
+            
+            // Setup step expansion/collapse
+            const stepHeaders = document.querySelectorAll('.guide-step-header');
+            stepHeaders.forEach(header => {
+                header.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleGuideStep(this);
+                });
+            });
+            
+            // Setup email copy functionality
+            const emailCopyBtn = document.querySelector('.email-copy-btn');
+            if (emailCopyBtn) {
+                emailCopyBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    copyEmailToClipboard(this.dataset.email);
+                });
+            }
+            
+            console.log('✅ How To Guide setup complete');
+        }
+        
+        function toggleGuideStep(header) {
+            const step = header.closest('.guide-step');
+            const content = step.querySelector('.guide-step-content');
+            const chevron = header.querySelector('.guide-chevron');
+            const isExpanded = header.getAttribute('aria-expanded') === 'true';
+            
+            // Toggle aria-expanded attribute
+            header.setAttribute('aria-expanded', !isExpanded);
+            
+            // Animate the expansion/collapse
+            if (!isExpanded) {
+                // Expanding
+                content.classList.remove('hidden');
+                content.classList.add('expanded');
+                
+                // Add staggered animation to list items
+                setTimeout(() => {
+                    const listItems = content.querySelectorAll('li');
+                    listItems.forEach((item, index) => {
+                        item.style.animationDelay = `${(index + 1) * 0.1}s`;
+                    });
+                }, 50);
+                
+                console.log(`📖 Guide step expanded: Step ${header.dataset.step}`);
+            } else {
+                // Collapsing
+                content.classList.remove('expanded');
+                
+                // Hide after animation completes
+                setTimeout(() => {
+                    if (!content.classList.contains('expanded')) {
+                        content.classList.add('hidden');
+                    }
+                }, 400);
+                
+                console.log(`📖 Guide step collapsed: Step ${header.dataset.step}`);
+            }
+            
+            // Add ripple effect
+            createGuideRippleEffect(header);
+        }
+        
+        function createGuideRippleEffect(element) {
+            const ripple = document.createElement('div');
+            ripple.style.cssText = `
+                position: absolute;
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.1);
+                transform: scale(0);
+                animation: guideRipple 0.6s linear;
+                pointer-events: none;
+                z-index: 1;
+            `;
+            
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.height, rect.width);
+            const radius = size / 2;
+            
+            ripple.style.width = size + 'px';
+            ripple.style.height = size + 'px';
+            ripple.style.left = '50%';
+            ripple.style.top = '50%';
+            ripple.style.marginLeft = -radius + 'px';
+            ripple.style.marginTop = -radius + 'px';
+            
+            // Add keyframe animation
+            if (!document.querySelector('#guideRippleStyles')) {
+                const style = document.createElement('style');
+                style.id = 'guideRippleStyles';
+                style.textContent = `
+                    @keyframes guideRipple {
+                        to {
+                            transform: scale(2);
+                            opacity: 0;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            element.style.position = 'relative';
+            element.appendChild(ripple);
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                if (ripple.parentNode) {
+                    ripple.parentNode.removeChild(ripple);
+                }
+            }, 600);
+        }
+        
+        async function copyEmailToClipboard(email) {
+            const copyBtn = document.querySelector('.email-copy-btn');
+            const copiedMsg = document.querySelector('.email-copied-msg');
+            
+            try {
+                // Use the Clipboard API if available
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(email);
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = email;
+                    textArea.style.cssText = 'position: fixed; left: -999999px; top: -999999px;';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        textArea.remove();
+                    } catch (err) {
+                        textArea.remove();
+                        throw err;
+                    }
+                }
+                
+                // Show success feedback
+                copyBtn.style.opacity = '0.7';
+                copiedMsg.classList.add('show');
+                
+                // Reset after animation
+                setTimeout(() => {
+                    copyBtn.style.opacity = '1';
+                    copiedMsg.classList.remove('show');
+                }, 2000);
+                
+                console.log(`📋 Email copied to clipboard: ${email}`);
+                
+            } catch (err) {
+                console.error('❌ Failed to copy email to clipboard:', err);
+                
+                // Show fallback message
+                copyBtn.textContent = email;
+                copyBtn.style.color = '#fbbf24'; // yellow-400
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    copyBtn.textContent = 'turoezpassNY@gmail.com';
+                    copyBtn.style.color = '';
+                }, 3000);
             }
         }
 
