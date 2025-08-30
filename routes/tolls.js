@@ -310,6 +310,7 @@ router.post('/import-csv-smart', requireAuth, ...tollCSVUpload, async (req, res)
     }
 });
 
+
 // NOTE: Scraper functionality removed - tolls now imported via CSV upload
 // This endpoint is deprecated and will be replaced with CSV upload functionality
 router.post('/sync/:accountId', requireAuth, (req, res) => {
@@ -657,7 +658,8 @@ async function importTollsFromCSV(csvData, hostId) {
                         toll_location: tollData.location,
                         toll_amount: tollData.amount,
                         plate_number: tollData.plate,
-                        is_matched: false
+                        is_matched: false,
+                        is_personal: false
                     };
                     
                     // Add transaction_id if available

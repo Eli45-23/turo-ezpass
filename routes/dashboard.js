@@ -255,10 +255,19 @@ router.get('/summary', requireAuth, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error getting dashboard summary:', error);
+        console.error('❌ Error getting dashboard summary:', {
+            error: error.message,
+            stack: error.stack,
+            hostId: hostId,
+            endpoint: '/summary'
+        });
         res.status(500).json({
             success: false,
-            error: 'Failed to get dashboard summary'
+            error: error.message || 'Failed to get dashboard summary',
+            details: {
+                hostId: hostId,
+                timestamp: new Date().toISOString()
+            }
         });
     }
 });
@@ -327,13 +336,16 @@ async function executeOptimizedSummaryQuery(hostId) {
         const totalTrips = trips?.length || 0;
         const activeTollAccounts = tollAccounts?.length || 0;
         
-        const pendingCharges = tollCharges?.filter(tc => !tc.is_matched) || [];
-        const matchedCharges = tollCharges?.filter(tc => tc.is_matched) || [];
+        const personalCharges = tollCharges?.filter(tc => tc.is_personal === true) || [];
+        const matchedCharges = tollCharges?.filter(tc => tc.is_matched === true) || [];
+        const unmatchedCharges = tollCharges?.filter(tc => tc.is_matched === false && tc.is_personal === false) || [];
         
-        const pendingChargesCount = pendingCharges.length;
-        const pendingChargesTotal = pendingCharges.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0);
+        const personalChargesCount = personalCharges.length;
+        const personalChargesTotal = personalCharges.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0);
         const matchedChargesCount = matchedCharges.length;
         const matchedChargesTotal = matchedCharges.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0);
+        const unmatchedChargesCount = unmatchedCharges.length;
+        const unmatchedChargesTotal = unmatchedCharges.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0);
         
         const totalTollCharges = tollCharges?.length || 0;
         const totalTollAmount = tollCharges?.reduce((sum, tc) => sum + (tc.toll_amount || 0), 0) || 0;
@@ -367,7 +379,7 @@ async function executeOptimizedSummaryQuery(hostId) {
             }) || [];
 
         // Calculate rates
-        const tripTolls = totalTollCharges - pendingChargesCount;
+        const tripTolls = totalTollCharges - personalChargesCount - unmatchedChargesCount;
         const matchRate = tripTolls > 0 ? (matchedChargesCount / tripTolls * 100) : 0;
         const collectionRate = totalRevenue > 0 ? (collectedRevenue / totalRevenue * 100) : 0;
         const avgTollPerTrip = totalTrips > 0 ? (totalTollAmount / totalTrips) : 0;
@@ -377,17 +389,19 @@ async function executeOptimizedSummaryQuery(hostId) {
             totalTolls: totalTollCharges,
             totalAmount: totalTollAmount.toFixed(2),
             matchedTolls: matchedChargesCount,
-            personalTolls: pendingChargesCount,
-            personalAmount: pendingChargesTotal.toFixed(2),
+            personalTolls: personalChargesCount,
+            personalAmount: personalChargesTotal.toFixed(2),
             matchedAmount: matchedChargesTotal.toFixed(2),
+            unmatchedTolls: unmatchedChargesCount,
+            unmatchedAmount: unmatchedChargesTotal.toFixed(2),
             monthlyRevenue: totalRevenue.toFixed(2),
             matchingAccuracy: matchRate.toFixed(1),
             
             // Detailed metrics (keeping existing names for backward compatibility)
             totalTrips: totalTrips,
             activeTollAccounts: activeTollAccounts,
-            pendingCharges: pendingChargesCount,
-            pendingChargesTotal: pendingChargesTotal,
+            pendingCharges: unmatchedChargesCount, // Updated to reflect unmatched instead of personal
+            pendingChargesTotal: unmatchedChargesTotal, // Updated to reflect unmatched instead of personal
             matchedCharges: matchedChargesCount,
             matchedChargesTotal: matchedChargesTotal,
             totalRevenue: totalRevenue,
@@ -415,14 +429,21 @@ async function executeOptimizedSummaryQuery(hostId) {
         console.log('✅ Dashboard summary calculated:', {
             trips: totalTrips,
             tollCharges: totalTollCharges,
-            pending: pendingChargesCount,
+            pending: unmatchedChargesCount,
             matched: matchedChargesCount
         });
         
         return summary;
     } catch (error) {
-        console.error('❌ Error in executeOptimizedSummaryQuery:', error);
-        throw error;
+        console.error('❌ Error in executeOptimizedSummaryQuery:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            hostId: hostId,
+            stack: error.stack
+        });
+        throw new Error(`Dashboard query failed: ${error.message}`);
     }
 }
 
@@ -526,11 +547,32 @@ router.get('/trips', requireAuth, async (req, res) => {
                 throw error;
             }
             
-            // Calculate toll counts and totals
+            // Get vehicle mappings for this host
+            const { data: vehicleMappings, error: mappingsError } = await supabaseAdmin
+                .from('transponder_mappings')
+                .select('vehicle_plate, vehicle_description')
+                .eq('host_id', hostId)
+                .eq('is_active', true);
+            
+            if (mappingsError) {
+                console.warn('Could not fetch vehicle mappings:', mappingsError);
+            }
+            
+            // Create a mapping from plate to vehicle description
+            const plateToVehicle = {};
+            (vehicleMappings || []).forEach(mapping => {
+                if (mapping.vehicle_plate && mapping.vehicle_description) {
+                    plateToVehicle[mapping.vehicle_plate] = mapping.vehicle_description;
+                }
+            });
+            
+            // Calculate toll counts and totals, and add vehicle descriptions
             return (data || []).map(trip => ({
                 ...trip,
                 toll_count: trip.toll_charges?.length || 0,
-                total_tolls: trip.toll_charges?.reduce((sum, toll) => sum + parseFloat(toll.toll_amount || 0), 0) || 0
+                total_tolls: trip.toll_charges?.reduce((sum, toll) => sum + parseFloat(toll.toll_amount || 0), 0) || 0,
+                vehicle: plateToVehicle[trip.vehicle_plate] || trip.vehicle_plate || 'Unknown Vehicle',
+                vehicle_description: plateToVehicle[trip.vehicle_plate] || trip.vehicle_plate || 'Unknown Vehicle'
             }));
         });
         

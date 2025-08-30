@@ -108,6 +108,53 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /personal-tolls/mark-unmatched
+ * Mark all current unmatched tolls as personal (one-time migration)
+ */
+router.post('/mark-unmatched', requireAuth, async (req, res) => {
+    const hostId = req.session.hostId;
+    
+    try {
+        console.log(`🔄 Marking all unmatched tolls as personal for host: ${hostId}`);
+        
+        // Update all unmatched tolls to be personal for this host
+        const { data, error: updateError } = await supabaseAdmin
+            .from('toll_charges')
+            .update({ is_personal: true })
+            .eq('toll_accounts.host_id', hostId)
+            .eq('is_matched', false)
+            .eq('is_personal', false)
+            .select('id');
+        
+        if (updateError) {
+            console.error('❌ Failed to mark unmatched tolls as personal:', updateError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to mark unmatched tolls as personal'
+            });
+        }
+        
+        const updatedCount = data ? data.length : 0;
+        console.log(`✅ Marked ${updatedCount} unmatched tolls as personal`);
+        
+        res.json({
+            success: true,
+            data: {
+                updatedCount,
+                message: `Successfully marked ${updatedCount} unmatched tolls as personal`
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error marking unmatched tolls as personal:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
  * POST /personal-tolls/unmark/:tollId
  * Remove personal marking from a toll (make it available for trip matching again)
  */

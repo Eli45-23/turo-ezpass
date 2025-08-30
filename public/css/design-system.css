@@ -18,7 +18,7 @@
   --paynes-gray: #495057;
   
   /* Colors - Quantum Dark Theme */
-  --bg: linear-gradient(135deg, var(--space-cadet) 0%, var(--english-violet) 50%, #1a0e3d 100%);
+  --bg: #1f2937;
   --panel: rgba(255, 255, 255, 0.02);        /* Glassmorphism panels */
   --hover: rgba(255, 200, 87, 0.1);        /* Quantum hover states */
   --hairline: rgba(255, 200, 87, 0.3);     /* Quantum borders */
@@ -373,7 +373,7 @@ body {
   overflow-x: hidden !important;
 }
 
-/* Dynamic Mesh Background */
+/* Dynamic Mesh Background - REMOVED FOR CLEAN BACKGROUND
 body::before {
   content: '' !important;
   position: fixed !important;
@@ -391,8 +391,9 @@ body::before {
   z-index: -2 !important;
   pointer-events: none !important;
 }
+*/
 
-/* Dynamic Mesh Floating Shapes and Connection Lines */
+/* Dynamic Mesh Floating Shapes and Connection Lines - REMOVED FOR CLEAN BACKGROUND
 body::after {
   content: '' !important;
   position: fixed !important;
@@ -416,6 +417,7 @@ body::after {
   z-index: -1 !important;
   pointer-events: none !important;
 }
+*/
 
 /* Dynamic Mesh Animations */
 @keyframes meshMove {

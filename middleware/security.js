@@ -15,6 +15,23 @@ const authLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting in development for localhost
+        if (process.env.NODE_ENV !== 'production') {
+            const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress;
+            console.log('🔍 Auth limiter IP check:', ip);
+            if (ip === '127.0.0.1' || 
+                ip === '::1' || 
+                ip === '::ffff:127.0.0.1' ||
+                ip?.includes('127.0.0.1') || 
+                ip?.includes('localhost') ||
+                ip?.startsWith('::ffff:127.')) {
+                console.log('✅ Skipping rate limit for localhost IP:', ip);
+                return true;
+            }
+        }
+        return false;
+    },
     handler: (req, res) => {
         // Log security event
         logSecurityEvent('RATE_LIMIT_EXCEEDED', {
