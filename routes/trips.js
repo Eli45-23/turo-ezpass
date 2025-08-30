@@ -3,14 +3,8 @@ const router = express.Router();
 const { supabaseAdmin, db } = require('../config/supabase');
 const { formatEasternTime } = require('../utils/timezone-utils');
 
-// Middleware to check authentication
+// Custom auth middleware for trips route that doesn't destroy session aggressively
 const requireAuth = async (req, res, next) => {
-    console.log('🔐 Auth check - Session:', {
-        hostId: req.session.hostId,
-        sessionId: req.session.id,
-        path: req.path
-    });
-    
     try {
         // Check for Authorization header (Supabase JWT)
         const authHeader = req.headers.authorization;
@@ -20,39 +14,63 @@ const requireAuth = async (req, res, next) => {
             // Using Supabase authentication
             const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
             
-            if (error || !user) {
-                console.log('❌ Invalid Supabase token');
-                return res.status(401).json({ success: false, error: 'Authentication required' });
-            }
-            
-            // Get host data from database
-            const { data: hostData, error: hostError } = await supabaseAdmin
-                .from('hosts')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-            
-            if (hostError || !hostData) {
-                console.log('❌ Host not found for authenticated user');
-                return res.status(401).json({ success: false, error: 'User profile not found' });
-            }
-            
-            req.session.hostId = hostData.id;
-            req.session.email = hostData.email;
-            req.session.fullName = hostData.full_name;
-        } else {
-            // Fallback to session-based auth - must have both hostId and email
-            if (!req.session.hostId || !req.session.email) {
-                console.log('❌ No valid session found');
-                return res.status(401).json({ success: false, error: 'Authentication required' });
+            if (!error && user) {
+                // Get host data from database
+                const { data: hostData, error: hostError } = await supabaseAdmin
+                    .from('hosts')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!hostError && hostData) {
+                    // Set session data for backward compatibility
+                    req.session = req.session || {};
+                    req.session.hostId = hostData.id;
+                    req.session.email = hostData.email;
+                    req.session.fullName = hostData.full_name;
+                    
+                    // Store host info for route handlers
+                    req.host = hostData;
+                    req.user = user;
+                    
+                    return next();
+                }
             }
         }
         
-        console.log('✅ Authentication passed for host:', req.session.hostId);
+        // Fallback to session-based authentication
+        if (!req.session || !req.session.hostId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
+        // Verify session is still valid in database using Supabase
+        const { data: hostData, error: hostError } = await supabaseAdmin
+            .from('hosts')
+            .select('*')
+            .eq('id', req.session.hostId)
+            .single();
+        
+        if (hostError || !hostData) {
+            // Don't destroy session - just return 401
+            return res.status(401).json({
+                success: false,
+                error: 'Session expired'
+            });
+        }
+        
+        // Store host info for use in route handlers
+        req.host = hostData;
         next();
+        
     } catch (error) {
         console.error('❌ Authentication error:', error);
-        return res.status(500).json({ success: false, error: 'Authentication failed' });
+        return res.status(500).json({
+            success: false,
+            error: 'Authentication failed'
+        });
     }
 };
 
@@ -161,6 +179,7 @@ router.get('/', requireAuth, async (req, res) => {
             inProgress: [],
             upcoming: [],
             yourTolls: [],
+            unmatchedTolls: [],
             lateTolls: []
         };
         
@@ -242,7 +261,7 @@ router.get('/', requireAuth, async (req, res) => {
             });
         }
         
-        // Get personal tolls (unmatched toll charges) using explicit host filtering
+        // Get personal tolls (explicitly marked as personal) using explicit host filtering
         const personalTollsResult = await db.withHostContext(hostId, async () => {
             return await supabaseAdmin
                 .from('toll_charges')
@@ -251,7 +270,7 @@ router.get('/', requireAuth, async (req, res) => {
                     toll_accounts!inner(provider, account_number, host_id)
                 `)
                 .eq('toll_accounts.host_id', hostId)
-                .eq('is_matched', false)
+                .eq('is_personal', true)
                 .order('toll_date', { ascending: false });
         });
         
@@ -267,6 +286,49 @@ router.get('/', requireAuth, async (req, res) => {
                 return {
                     id: toll.id,
                     type: 'Personal Driving',
+                    date: toll.toll_date,
+                    time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true 
+                    }),
+                    location: toll.toll_location || 'Unknown Location',
+                    amount: parseFloat(toll.toll_amount || 0),
+                    vehicle: vehicleInfo ? 
+                        `${vehicleInfo} (${toll.plate_number})` : 
+                        `${toll.toll_accounts.provider} (${toll.toll_accounts.account_number})`,
+                    transponder: toll.transponder_id || toll.plate_number || 'Unknown',
+                    vehicle_plate: toll.plate_number || null
+                };
+            });
+        }
+        
+        // Get unmatched tolls (not matched to trips and not marked as personal) using explicit host filtering
+        const unmatchedTollsResult = await db.withHostContext(hostId, async () => {
+            return await supabaseAdmin
+                .from('toll_charges')
+                .select(`
+                    *,
+                    toll_accounts!inner(provider, account_number, host_id)
+                `)
+                .eq('toll_accounts.host_id', hostId)
+                .eq('is_matched', false)
+                .eq('is_personal', false)
+                .order('toll_date', { ascending: false });
+        });
+        
+        const { data: unmatchedTolls, error: unmatchedTollsError } = unmatchedTollsResult;
+        
+        if (unmatchedTollsError) {
+            console.error('❌ Failed to fetch unmatched tolls:', unmatchedTollsError);
+            transformedTrips.unmatchedTolls = [];
+        } else {
+            transformedTrips.unmatchedTolls = (unmatchedTolls || []).map(toll => {
+                const vehicleInfo = vehicleDescriptions[toll.plate_number] || null;
+                
+                return {
+                    id: toll.id,
+                    type: 'Unmatched Toll',
                     date: toll.toll_date,
                     time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
                         hour: 'numeric', 
@@ -774,7 +836,7 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             return await supabaseAdmin
                 .from('invoices')
                 .select('id, created_at')
-                .eq('trip_id', tripId)
+                .eq('trip_id', trip.id)
                 .single();
             // Note: tripId was already verified to belong to host above
         });
@@ -852,22 +914,21 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             // Note: Skip trip table update for now since submitted_to_turo/submitted_date fields don't exist yet
             // We'll track submission status through the invoices table instead
             
-            // 2. Create invoice with snapshot data using RLS-aware context
-            const invoiceResult = await db.withHostContext(hostId, async () => {
-                return await supabaseAdmin
-                    .from('invoices')
-                    .insert({
-                        trip_id: tripId,
-                        invoice_number: invoiceNumber,
-                        total_amount: totalAmount,
-                        processing_fee: processingFee,
-                        status: 'sent',
-                        toll_charge_ids: tollChargeIds,
-                        snapshot_data: snapshotData
-                    })
-                    .select()
-                    .single();
-            });
+            // 2. Create invoice with snapshot data using service role (bypasses RLS)
+            const invoiceResult = await supabaseAdmin
+                .from('invoices')
+                .insert({
+                    trip_id: trip.id,
+                    host_id: hostId,
+                    invoice_number: invoiceNumber,
+                    total_amount: totalAmount,
+                    processing_fee: processingFee,
+                    status: 'sent',
+                    toll_charge_ids: JSON.stringify(tollChargeIds),
+                    snapshot_data: JSON.stringify(snapshotData)
+                })
+                .select()
+                .single();
             
             const { data: invoice, error: invoiceError } = invoiceResult;
             
@@ -881,16 +942,15 @@ router.post('/:tripId/submit', requireAuth, async (req, res) => {
             // 3. Create invoice line items
             const invoiceItems = charges.map(charge => ({
                 invoice_id: invoiceId,
+                host_id: hostId,
                 toll_charge_id: charge.id,
                 description: `${charge.toll_location} - ${new Date(charge.toll_date).toLocaleDateString()}`,
                 amount: charge.toll_amount
             }));
             
-            const itemsResult = await db.withHostContext(hostId, async () => {
-                return await supabaseAdmin
-                    .from('invoice_items')
-                    .insert(invoiceItems);
-            });
+            const itemsResult = await supabaseAdmin
+                .from('invoice_items')
+                .insert(invoiceItems);
             
             const { error: itemsError } = itemsResult;
             

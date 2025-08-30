@@ -2,14 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
 
-// Middleware to check authentication
+// Custom auth middleware for invoices route that doesn't destroy session aggressively
 const requireAuth = async (req, res, next) => {
-    console.log('🔐 Auth check - Session:', {
-        hostId: req.session.hostId,
-        sessionId: req.session.id,
-        path: req.path
-    });
-    
     try {
         // Check for Authorization header (Supabase JWT)
         const authHeader = req.headers.authorization;
@@ -19,39 +13,63 @@ const requireAuth = async (req, res, next) => {
             // Using Supabase authentication
             const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
             
-            if (error || !user) {
-                console.log('❌ Invalid Supabase token');
-                return res.status(401).json({ success: false, error: 'Authentication required' });
-            }
-            
-            // Get host data from database
-            const { data: hostData, error: hostError } = await supabaseAdmin
-                .from('hosts')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-            
-            if (hostError || !hostData) {
-                console.log('❌ Host not found for authenticated user');
-                return res.status(401).json({ success: false, error: 'User profile not found' });
-            }
-            
-            req.session.hostId = hostData.id;
-            req.session.email = hostData.email;
-            req.session.fullName = hostData.full_name;
-        } else {
-            // Fallback to session-based auth - must have both hostId and email
-            if (!req.session.hostId || !req.session.email) {
-                console.log('❌ No valid session found');
-                return res.status(401).json({ success: false, error: 'Authentication required' });
+            if (!error && user) {
+                // Get host data from database
+                const { data: hostData, error: hostError } = await supabaseAdmin
+                    .from('hosts')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!hostError && hostData) {
+                    // Set session data for backward compatibility
+                    req.session = req.session || {};
+                    req.session.hostId = hostData.id;
+                    req.session.email = hostData.email;
+                    req.session.fullName = hostData.full_name;
+                    
+                    // Store host info for route handlers
+                    req.host = hostData;
+                    req.user = user;
+                    
+                    return next();
+                }
             }
         }
         
-        console.log('✅ Authentication passed for host:', req.session.hostId);
+        // Fallback to session-based authentication
+        if (!req.session || !req.session.hostId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
+        // Verify session is still valid in database using Supabase
+        const { data: hostData, error: hostError } = await supabaseAdmin
+            .from('hosts')
+            .select('*')
+            .eq('id', req.session.hostId)
+            .single();
+        
+        if (hostError || !hostData) {
+            // Don't destroy session - just return 401
+            return res.status(401).json({
+                success: false,
+                error: 'Session expired'
+            });
+        }
+        
+        // Store host info for use in route handlers
+        req.host = hostData;
         next();
+        
     } catch (error) {
         console.error('❌ Authentication error:', error);
-        return res.status(500).json({ success: false, error: 'Authentication failed' });
+        return res.status(500).json({
+            success: false,
+            error: 'Authentication failed'
+        });
     }
 };
 

@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trips - Turo Toll Tracker</title>
     
-    <!-- Design System -->
-    <link rel="stylesheet" href="/css/design-system.css">
+    <!-- Tailwind CSS -->
+    <!-- DEV ONLY: Tailwind CDN - Replace with build process for production -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Files -->
     <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/design-system.css">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <!-- Scripts -->
     <script src="/js/ui-utils.js"></script>
@@ -17,2350 +27,1080 @@
     <script src="/js/auth-check.js"></script>
     
     <style>
-        /* Trips Page Specific Styles */
-        :root {
-            --header-height: 72px;
-            --sidebar-width: 280px;
+        .font-mono { font-family: 'JetBrains Mono', monospace !important; }
+        .font-inter { font-family: 'Inter', sans-serif !important; }
+        
+        .dashboard-bg {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #4b5563 100%);
         }
         
-        .trips-layout {
-            min-height: 100vh;
-            background: var(--bg);
-            color: var(--ink);
-            display: grid;
-            grid-template-rows: var(--header-height) auto;
-            grid-template-columns: var(--sidebar-width) 1fr;
-            grid-template-areas: 
-                "sidebar header"
-                "sidebar main";
+        .sidebar-bg {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
         }
         
-        .trips-header {
-            grid-area: header;
-            background: var(--panel);
-            border-bottom: 1px solid var(--hairline);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2rem;
-            position: sticky;
-            top: 0;
-            z-index: var(--z-sticky);
+        .stats-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+            transform: translateY(20px);
         }
         
-        .trips-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .trips-title {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .trips-main {
-            grid-area: main;
-            padding: 2rem;
-            background: var(--bg);
-            height: auto;
-            min-height: auto;
-            overflow: visible;
-        }
-        
-        .trips-content {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        /* Late Tolls Widget Styles */
-        .late-tolls-widget {
-            background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%);
-            border: 1px solid #f59e0b;
-            border-radius: var(--radius-lg);
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            box-shadow: var(--card-shadow);
-        }
-
-        .late-tolls-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .late-tolls-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .late-tolls-content {
-            flex: 1;
-        }
-
-        .late-tolls-content h3 {
-            margin: 0 0 0.25rem 0;
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-            color: #92400e;
-        }
-
-        .late-tolls-content p {
-            margin: 0;
-            color: #78350f;
-            font-size: var(--text-sm);
-        }
-
-        .late-tolls-close {
-            background: none;
-            border: none;
-            color: #78350f;
-            font-size: 1.25rem;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: var(--radius-sm);
-            transition: all 0.15s ease;
-        }
-
-        .late-tolls-close:hover {
-            background: rgba(120, 53, 15, 0.1);
-        }
-
-        .late-tolls-actions {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
-        .late-tolls-actions .btn {
-            font-size: var(--text-sm);
-            padding: 0.375rem 0.75rem;
-        }
-        
-        /* Sidebar */
-        .trips-sidebar {
-            grid-area: sidebar;
-            background: var(--panel);
-            border-right: 1px solid var(--hairline);
-            display: flex;
-            flex-direction: column;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--hairline);
-            font-family: var(--font-heading);
-            font-size: var(--text-xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-        }
-
-        .sidebar-nav {
-            flex: 1;
-            padding: 1.5rem 0;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            color: var(--muted);
-            text-decoration: none;
-            font-size: var(--text-sm);
-            font-weight: var(--font-medium);
-            transition: all var(--transition-fast);
-            position: relative;
-        }
-
-        .nav-item:hover {
-            background: var(--hover);
-            color: var(--ink);
-        }
-
-        .nav-item.active {
-            background: var(--hover);
-            color: var(--accentB);
-            font-weight: var(--font-semibold);
-        }
-
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
-        }
-
-        .nav-icon {
-            font-size: var(--text-lg);
-        }
-        
-        .trips-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: var(--gap-lg);
-            margin-bottom: 2rem;
-        }
-        
-        .overview-card {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            padding: var(--gap-lg);
-            position: relative;
-            overflow: hidden;
-            transition: all var(--transition-fast);
-            cursor: pointer;
-        }
-        
-        .overview-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-            pointer-events: none;
-        }
-        
-        .overview-card:hover {
-            border-color: var(--accentB);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-base);
-        }
-        
-        .overview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .overview-icon {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: var(--text-lg);
-            color: white;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .overview-value {
-            font-size: var(--text-3xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-            margin-bottom: 0.5rem;
-        }
-        
-        .overview-label {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            margin-bottom: 0.5rem;
-        }
-        
-        .overview-change {
-            font-size: var(--text-xs);
-            font-weight: var(--font-medium);
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .overview-change.positive {
-            color: #10B981;
-        }
-        
-        .overview-change.negative {
-            color: #EF4444;
-        }
-        
-        .trips-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        
-        .search-filters {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex: 1;
-        }
-        
-        .search-input {
-            min-width: 300px;
-            position: relative;
-        }
-        
-        .search-input input {
-            padding-left: 2.5rem;
-        }
-        
-        .search-icon {
-            position: absolute;
-            left: 0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--muted);
-            pointer-events: none;
-        }
-        
-        .trips-content {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            height: auto;
-            overflow: visible;
-        }
-        
-        .trips-tabs {
-            background: var(--hover);
-            border-bottom: 1px solid var(--hairline);
-            padding: 0.5rem;
-        }
-        
-        .tab-button {
-            background: none;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            font-size: var(--text-sm);
-            font-weight: var(--font-medium);
-            color: var(--muted);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            position: relative;
-        }
-        
-        .tab-button:hover {
-            color: var(--ink);
-            background: var(--panel);
-        }
-        
-        .tab-button.active {
-            color: var(--ink);
-            background: var(--panel);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .tab-badge {
-            background: var(--accentB);
-            color: white;
-            font-size: var(--text-xs);
-            padding: 0.25rem 0.5rem;
-            border-radius: 999px;
-            margin-left: 0.5rem;
-            font-weight: var(--font-semibold);
-        }
-        
-        .tab-content {
-            display: none;
-            padding: var(--gap-lg);
-            height: auto;
-            overflow: visible;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .trips-grid {
-            display: grid;
-            gap: var(--gap-lg);
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
         .trip-card {
-            background: var(--hover);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius-sm);
-            padding: var(--gap-lg);
-            transition: all var(--transition-fast);
-            position: relative;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            animation: slideInLeft 0.6s ease forwards;
+            opacity: 0;
+            transform: translateX(-30px);
         }
         
         .trip-card:hover {
-            border-color: var(--accentB);
-            box-shadow: var(--shadow-base);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.3);
+            border-color: rgba(99, 102, 241, 0.4);
         }
         
-        .trip-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
+        .nav-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        .trip-info {
-            flex: 1;
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(8px);
         }
         
-        .trip-id {
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            margin-bottom: 0.25rem;
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.3);
+            border-left: 3px solid #6366f1;
         }
         
-        .trip-vehicle {
-            color: var(--muted);
-            font-size: var(--text-sm);
-            margin-bottom: 0.25rem;
+        /* Enhanced Button Animations */
+        .animated-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
         
-        .trip-guest {
-            color: var(--muted);
-            font-size: var(--text-sm);
-            margin-bottom: 0.5rem;
-        }
-
-        .submitted-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            background: #10b981;
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: var(--radius-sm);
-            font-size: var(--text-xs);
-            font-weight: var(--font-semibold);
-            margin-top: 0.5rem;
-        }
-
-        .submitted-badge small {
-            opacity: 0.8;
-            margin-left: 0.25rem;
+        .animated-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
         
-        .trip-dates {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--ink);
-            font-size: var(--text-sm);
+        .animated-button:active {
+            transform: translateY(0);
         }
         
-        .trip-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: var(--text-xs);
-            font-weight: var(--font-medium);
-        }
-        
-        .status-badge.completed {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10B981;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-        
-        .status-badge.in-progress {
-            background: rgba(34, 211, 238, 0.1);
-            color: var(--accentB);
-            border: 1px solid rgba(34, 211, 238, 0.2);
-        }
-        
-        .status-badge.upcoming {
-            background: rgba(245, 158, 11, 0.1);
-            color: #F59E0B;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-        
-        .trip-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0;
-            padding: 1rem;
-            background: var(--panel);
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--hairline);
-        }
-        
-        .trip-stat {
-            text-align: center;
-        }
-        
-        .trip-stat-value {
-            font-size: var(--text-lg);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-            margin-bottom: 0.25rem;
-        }
-        
-        .trip-stat-label {
-            font-size: var(--text-xs);
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .trip-tolls {
-            margin-top: 1rem;
-        }
-        
-        .tolls-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-        
-        .tolls-title {
-            font-size: var(--text-sm);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-        }
-        
-        .toll-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--hairline);
-        }
-        
-        .toll-item:last-child {
-            border-bottom: none;
-        }
-        
-        .toll-info {
-            flex: 1;
-        }
-        
-        .toll-location {
-            font-size: var(--text-sm);
-            color: var(--ink);
-            margin-bottom: 0.25rem;
-        }
-        
-        .toll-time {
-            font-size: var(--text-xs);
-            color: var(--muted);
-        }
-        
-        .toll-txn-id {
-            font-size: var(--text-xs);
-            color: var(--muted);
-            font-family: monospace;
-            margin-top: 2px;
-            letter-spacing: 0.5px;
-        }
-        
-        .toll-amount {
-            font-size: var(--text-sm);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-        }
-        
-        .trip-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--hairline);
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--muted);
-        }
-        
-        .empty-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        .empty-title {
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            margin-bottom: 0.5rem;
-        }
-        
-        .empty-text {
-            font-size: var(--text-sm);
-            line-height: 1.6;
-        }
-        
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
+        .animated-button::before {
+            content: '';
+            position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 2rem;
-        }
-        
-        .modal-content {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
+            left: -100%;
             width: 100%;
-            max-width: 900px;
-            max-height: 90vh;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
         }
         
-        .modal-header {
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--hairline);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--hover);
+        .animated-button:hover::before {
+            left: 100%;
         }
         
-        .modal-header h2 {
-            margin: 0;
-            color: var(--ink);
-            font-size: var(--text-xl);
+        /* Stats Card Animations */
+        .stats-card:nth-child(1) { animation-delay: 0.1s; }
+        .stats-card:nth-child(2) { animation-delay: 0.2s; }
+        .stats-card:nth-child(3) { animation-delay: 0.3s; }
+        .stats-card:nth-child(4) { animation-delay: 0.4s; }
+        .stats-card:nth-child(5) { animation-delay: 0.5s; }
+        
+        /* Trip Card Animations */
+        .trip-card:nth-child(1) { animation-delay: 0.3s; }
+        .trip-card:nth-child(2) { animation-delay: 0.4s; }
+        .trip-card:nth-child(3) { animation-delay: 0.5s; }
+        
+        /* Filter Tab Animations */
+        .filter-tab {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
         
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: var(--text-2xl);
-            color: var(--muted);
-            cursor: pointer;
-            padding: 0.25rem;
-            line-height: 1;
-            transition: color var(--transition-fast);
+        .filter-tab:hover {
+            transform: translateY(-2px);
         }
         
-        .modal-close:hover {
-            color: var(--ink);
-        }
-        
-        .modal-body {
-            padding: 2rem;
-            overflow-y: auto;
-            max-height: calc(90vh - 140px);
-        }
-        
-        .trip-details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        .detail-section {
-            background: var(--hover);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius-sm);
-            padding: 1.5rem;
-        }
-        
-        .detail-section.full-width {
-            grid-column: 1 / -1;
-        }
-        
-        .detail-section h3 {
-            margin: 0 0 1rem 0;
-            color: var(--ink);
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-        }
-        
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--hairline);
-        }
-        
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        
-        .detail-row .label {
-            font-weight: var(--font-medium);
-            color: var(--muted);
-            flex: 1;
-        }
-        
-        .detail-row .value {
-            color: var(--ink);
-            font-weight: var(--font-medium);
-            text-align: right;
-        }
-        
-        .amount-positive {
-            color: #10B981;
-        }
-        
-        .amount-negative {
-            color: #EF4444;
-        }
-        
-        .status-completed {
-            color: #10B981;
-        }
-        
-        .status-in-progress {
-            color: var(--accentB);
-        }
-        
-        .status-upcoming {
-            color: #F59E0B;
-        }
-        
-        .tolls-table {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-        }
-        
-        .table-header,
-        .table-row,
-        .table-footer {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-            gap: 1rem;
-            padding: 1rem;
-            align-items: center;
-        }
-        
-        .table-header {
-            background: var(--hover);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            border-bottom: 1px solid var(--hairline);
-        }
-        
-        .table-row {
-            border-bottom: 1px solid var(--hairline);
-        }
-        
-        .table-row:last-child {
-            border-bottom: none;
-        }
-        
-        .table-footer {
-            background: var(--hover);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            border-top: 1px solid var(--hairline);
-        }
-        
-        .table-row .amount,
-        .table-footer .amount-total {
-            text-align: right;
-            font-weight: var(--font-semibold);
-        }
-        
-        .table-footer .amount-total {
-            color: var(--accentB);
-        }
-        
-        .modal-footer {
-            padding: 1.5rem 2rem;
-            border-top: 1px solid var(--hairline);
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            background: var(--hover);
-        }
-        
-        /* Personal Toll Card Styles */
-        .personal-toll-card {
-            border-left: 4px solid #F59E0B;
-        }
-        
-        .status-badge.personal-use {
-            background: rgba(245, 158, 11, 0.1);
-            color: #F59E0B;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-        
-        .toll-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--hairline);
-        }
-        
-        .action-group {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        
-        .action-group.secondary {
-            opacity: 0.8;
-        }
-        
-        .text-danger {
-            color: #EF4444 !important;
-        }
-        
-        .text-danger:hover {
-            background-color: rgba(239, 68, 68, 0.1) !important;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .trips-layout {
-                grid-template-columns: 1fr;
-                grid-template-areas: 
-                    "header"
-                    "main";
-            }
-
-            .trips-sidebar {
-                display: none;
-            }
-        }
-        
-        /* Loading and Error States */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(2px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-        
-        .loading-spinner {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            background: var(--panel);
-            padding: 2rem;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--hairline);
-            border-top: 4px solid var(--accentB);
+        .filter-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #6366f1;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: pulse 2s infinite;
         }
         
-        .loading-text {
-            color: var(--ink);
-            font-weight: var(--font-medium);
+        /* Toll Card Grid Animation */
+        .toll-card {
+            transition: all 0.3s ease;
+            animation: scaleIn 0.4s ease forwards;
+            opacity: 0;
+            transform: scale(0.9);
         }
         
-        .loading-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 3rem 2rem;
-            color: var(--muted);
-            min-height: 200px;
+        .toll-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
         }
         
-        .loading-spinner-small {
-            margin-bottom: 1rem;
+        /* Dropdown Animations */
+        .dropdown-select {
+            transition: all 0.3s ease;
         }
         
-        .spinner-small {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--hairline);
-            border-top: 2px solid var(--accentB);
+        .dropdown-select:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Late Tolls Widget */
+        .late-tolls-widget {
+            background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%);
+            border: 1px solid #f59e0b;
+            color: #000;
+        }
+        
+        /* Keyframes */
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideInLeft {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes scaleIn {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.7; transform: translateX(-50%) scale(1.2); }
+        }
+        
+        /* Ripple Effect */
+        .ripple {
+            position: absolute;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            animation: rippleEffect 0.6s linear;
+            pointer-events: none;
         }
         
-        .loading-message {
-            font-size: var(--text-sm);
-            color: var(--muted);
-        }
-        
-        .error-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 3rem 2rem;
-            text-align: center;
-            min-height: 200px;
-        }
-        
-        .error-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        .error-title {
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            margin-bottom: 0.5rem;
-        }
-        
-        .error-message {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            margin-bottom: 1.5rem;
-            max-width: 400px;
-            line-height: 1.5;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
-            .trips-main {
-                padding: 1rem;
-            }
-            
-            .trips-header {
-                padding: 1rem;
-            }
-            
-            .trips-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .search-filters {
-                flex-direction: column;
-            }
-            
-            .search-input {
-                min-width: auto;
-            }
-            
-            .trip-details {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .modal-overlay {
-                padding: 1rem;
-            }
-            
-            .trip-details-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .table-header,
-            .table-row,
-            .table-footer {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
-            }
-            
-            .table-header > div,
-            .table-row > div,
-            .table-footer > div {
-                padding: 0.25rem 0;
-            }
-            
-            .modal-footer {
-                flex-direction: column;
+        @keyframes rippleEffect {
+            to {
+                transform: scale(2);
+                opacity: 0;
             }
         }
     </style>
 </head>
-<body>
-    <div class="trips-layout">
-        <!-- Sidebar Navigation -->
-        <nav class="trips-sidebar">
-            <div class="sidebar-brand">
-                <span class="nav-icon">🚗</span>
-                Turo Toll Tracker
+<body class="min-h-screen dashboard-bg font-inter text-white">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 sidebar-bg border-r border-gray-600">
+            <div class="p-6">
+                <h1 class="text-white font-mono text-lg font-bold tracking-wide">TURO TOLL TRACKER</h1>
             </div>
             
-            <div class="sidebar-nav">
-                <a href="/dashboard.html" class="nav-item">
-                    <span class="nav-icon">📊</span>
-                    Overview
+            <!-- Navigation -->
+            <nav class="px-4 space-y-1">
+                <a href="/dashboard.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span class="font-medium">OVERVIEW</span>
                 </a>
-                <a href="/trips.html" class="nav-item active">
-                    <span class="nav-icon">🛣️</span>
-                    Trips
+                <a href="/trips.html" class="nav-item active flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white">
+                    <i data-lucide="map" class="w-5 h-5"></i>
+                    <span class="font-medium">TRIPS</span>
                 </a>
-                <a href="/upload.html" class="nav-item">
-                    <span class="nav-icon">📤</span>
-                    Upload CSV Files
+                <a href="/upload.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
+                    <span class="font-medium">UPLOAD CSV</span>
                 </a>
-                <a href="/analytics.html" class="nav-item">
-                    <span class="nav-icon">📈</span>
-                    Analytics
+                <a href="/analytics.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <span class="font-medium">ANALYTICS</span>
                 </a>
-                <a href="/transponders.html" class="nav-item">
-                    <span class="nav-icon">📡</span>
-                    Transponders
+                <a href="/transponders.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="radio" class="w-5 h-5"></i>
+                    <span class="font-medium">TRANSPONDERS</span>
                 </a>
-                <a href="/invoices.html" class="nav-item">
-                    <span class="nav-icon">🧾</span>
-                    Invoices
+                <a href="/invoices.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    <span class="font-medium">INVOICES</span>
                 </a>
-            </div>
-        </nav>
-
-        <!-- Header -->
-        <header class="trips-header">
-            <h1 class="h2">🚗 Trip Management</h1>
-            
-            <div class="nav-actions">
-                <button class="btn btn-secondary btn-sm" onclick="exportTrips()">
-                    <span>📤</span>
-                    Export
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="refreshTrips()">
-                    <span>🔄</span>
-                    Refresh
-                </button>
-            </div>
-        </header>
+            </nav>
+        </div>
         
         <!-- Main Content -->
-        <main class="trips-main">
-            <div class="trips-content">
-                <!-- Late Tolls Alert Widget -->
-            <!-- Late tolls widget replaced by dedicated tab -->
-            <div id="late-tolls-widget" class="late-tolls-widget" style="display: none !important;">
-                <div class="late-tolls-header">
-                    <div class="late-tolls-icon">⚠️</div>
-                    <div class="late-tolls-content">
-                        <h3>Late Tolls Detected</h3>
-                        <p id="late-tolls-message">New tolls found for already-submitted trips</p>
-                    </div>
-                    <button class="late-tolls-close" onclick="dismissLateTolls()">✕</button>
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="bg-black/20 border-b border-gray-600 p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i data-lucide="map" class="w-6 h-6 text-blue-400"></i>
+                    <h2 class="text-xl font-bold text-white font-mono">TRIP MANAGEMENT</h2>
                 </div>
-                <div class="late-tolls-actions">
-                    <button class="btn btn-primary btn-sm" onclick="viewLateTolls()">
+                <div class="flex items-center space-x-3">
+                    <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" onclick="window.location.href='/login'">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Late Tolls Widget -->
+            <div id="late-tolls-widget" class="late-tolls-widget m-6 p-4 rounded-xl" style="display: none;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="text-2xl">⚠️</div>
+                        <div>
+                            <h3 class="font-bold text-lg">Late Tolls Detected</h3>
+                            <p id="late-tolls-message">New tolls found for already-submitted trips</p>
+                        </div>
+                    </div>
+                    <button onclick="dismissLateTolls()" class="text-2xl hover:bg-yellow-200 p-1 rounded">✕</button>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="viewLateTolls()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2">
                         <span>📋</span>
-                        View Details
+                        <span>View Details</span>
                     </button>
-                    <button class="btn btn-secondary btn-sm" onclick="dismissLateTolls()">
+                    <button onclick="dismissLateTolls()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2">
                         <span>✓</span>
-                        Acknowledge
-                    </button>
-                </div>
-            </div>
-
-            <!-- Overview Cards -->
-            <div class="trips-overview">
-                <div class="overview-card" onclick="showTab('completed')">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #10B981;">✅</div>
-                    </div>
-                    <div class="overview-value" id="completed-count">0</div>
-                    <div class="overview-label">Completed Trips</div>
-                    <div class="overview-change positive">
-                        <span>↗</span>
-                        Loading...
-                    </div>
-                </div>
-                
-                <div class="overview-card" onclick="showTab('in-progress')">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: var(--accentB);">🚗</div>
-                    </div>
-                    <div class="overview-value" id="in-progress-count">0</div>
-                    <div class="overview-label">In Progress</div>
-                    <div class="overview-change positive">
-                        <span>↗</span>
-                        Loading...
-                    </div>
-                </div>
-                
-                <div class="overview-card" onclick="showTab('upcoming')">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #F59E0B;">📅</div>
-                    </div>
-                    <div class="overview-value" id="upcoming-count">0</div>
-                    <div class="overview-label">Upcoming</div>
-                    <div class="overview-change positive">
-                        <span>↗</span>
-                        Loading...
-                    </div>
-                </div>
-                
-                <div class="overview-card" onclick="showTab('your-tolls')">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: linear-gradient(135deg, var(--accentA), var(--accentB));">🛣️</div>
-                    </div>
-                    <div class="overview-value" id="personal-tolls-count">0</div>
-                    <div class="overview-label">Personal Tolls</div>
-                    <div class="overview-change negative">
-                        <span>↘</span>
-                        Loading...
-                    </div>
-                </div>
-                
-                <div class="overview-card" onclick="showTab('late-tolls')">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #f59e0b;">⚠️</div>
-                    </div>
-                    <div class="overview-value" id="late-tolls-count">0</div>
-                    <div class="overview-label">Late Tolls</div>
-                    <div class="overview-change warning">
-                        <span>⚠️</span>
-                        <span id="late-tolls-amount">$0.00</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Controls -->
-            <div class="trips-controls">
-                <div class="search-filters">
-                    <div class="search-input">
-                        <input type="text" class="form-input" placeholder="Search trips..." id="search-trips">
-                        <div class="search-icon">🔍</div>
-                    </div>
-                    
-                    <select class="form-select" id="date-filter">
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="quarter">This Quarter</option>
-                    </select>
-                    
-                    <select class="form-select" id="vehicle-filter">
-                        <option value="all">All Vehicles</option>
-                    </select>
-                </div>
-                
-                <div class="table-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="bulkActions()">
-                        <span>☑️</span>
-                        Bulk Actions
+                        <span>Acknowledge</span>
                     </button>
                 </div>
             </div>
             
-            <!-- Trips Content -->
-            <div class="trips-content">
-                <!-- Tabs -->
-                <div class="trips-tabs">
-                    <button class="tab-button active" onclick="showTab('completed')" id="completed-tab">
-                        Completed
-                        <span class="tab-badge" id="completed-badge">0</span>
-                    </button>
-                    <button class="tab-button" onclick="showTab('in-progress')" id="in-progress-tab">
-                        In Progress
-                        <span class="tab-badge" id="in-progress-badge">0</span>
-                    </button>
-                    <button class="tab-button" onclick="showTab('upcoming')" id="upcoming-tab">
-                        Upcoming
-                        <span class="tab-badge" id="upcoming-badge">0</span>
-                    </button>
-                    <button class="tab-button" onclick="showTab('your-tolls')" id="your-tolls-tab">
-                        Your Tolls
-                        <span class="tab-badge" id="your-tolls-badge">0</span>
-                    </button>
-                    <button class="tab-button" onclick="showTab('late-tolls')" id="late-tolls-tab">
-                        Late Tolls
-                        <span class="tab-badge" id="late-tolls-badge">0</span>
-                    </button>
-                </div>
-                
-                <!-- Tab Content: Completed -->
-                <div class="tab-content active" id="completed-content">
-                    <div class="trips-grid" id="completed-trips">
-                        <!-- Trips will be populated here -->
+            <!-- Stats Cards Grid & Content -->
+            <div class="p-6 space-y-6">
+                <!-- Stats Cards Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-6xl mx-auto">
+                    <!-- Completed Trips -->
+                    <div class="stats-card p-6 rounded-xl text-center cursor-pointer" onclick="showTab('completed')">
+                        <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-blue-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono mb-2" id="completed-count">0</div>
+                        <div class="text-sm text-gray-400 font-medium uppercase tracking-wide">Completed Trips</div>
+                    </div>
+                    
+                    <!-- In Progress -->
+                    <div class="stats-card p-6 rounded-xl text-center cursor-pointer" onclick="showTab('progress')">
+                        <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="clock" class="w-6 h-6 text-green-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono mb-2" id="in-progress-count">0</div>
+                        <div class="text-sm text-gray-400 font-medium uppercase tracking-wide">In Progress</div>
+                    </div>
+                    
+                    <!-- Upcoming -->
+                    <div class="stats-card p-6 rounded-xl text-center cursor-pointer" onclick="showTab('upcoming')">
+                        <div class="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="calendar" class="w-6 h-6 text-orange-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono mb-2" id="upcoming-count">0</div>
+                        <div class="text-sm text-gray-400 font-medium uppercase tracking-wide">Upcoming</div>
+                    </div>
+                    
+                    <!-- Personal Tolls -->
+                    <div class="stats-card p-6 rounded-xl text-center cursor-pointer" onclick="showTab('personal')">
+                        <div class="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="user" class="w-6 h-6 text-purple-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono mb-2" id="personal-tolls-count">0</div>
+                        <div class="text-sm text-gray-400 font-medium uppercase tracking-wide">Personal Tolls</div>
+                    </div>
+                    
+                    <!-- Late Tolls -->
+                    <div class="stats-card p-6 rounded-xl text-center cursor-pointer" onclick="showTab('late')">
+                        <div class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="alert-circle" class="w-6 h-6 text-red-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono mb-2" id="late-tolls-count">0</div>
+                        <div class="text-sm text-gray-400 font-medium uppercase tracking-wide">Late Tolls</div>
                     </div>
                 </div>
                 
-                <!-- Tab Content: In Progress -->
-                <div class="tab-content" id="in-progress-content">
-                    <div class="trips-grid" id="in-progress-trips">
-                        <!-- Trips will be populated here -->
+                <!-- Filter Controls -->
+                <div class="flex items-center justify-between p-4 rounded-xl border border-gray-600">
+                    <div class="flex items-center space-x-4">
+                        <input type="text" placeholder="Search trips..." id="search-trips" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none">
+                        
+                        <select id="date-filter" class="dropdown-select bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none min-w-32">
+                            <option value="all">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="3months">Last 3 Months</option>
+                        </select>
+                        
+                        <select id="vehicle-filter" class="dropdown-select bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none min-w-36">
+                            <option value="all">All Vehicles</option>
+                        </select>
                     </div>
+                    
+                    <button onclick="exportTrips()" class="animated-button bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2 whitespace-nowrap">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>EXPORT</span>
+                    </button>
                 </div>
                 
-                <!-- Tab Content: Upcoming -->
-                <div class="tab-content" id="upcoming-content">
-                    <div class="trips-grid" id="upcoming-trips">
-                        <!-- Trips will be populated here -->
-                    </div>
+                <!-- Filter Tabs -->
+                <div class="flex items-center space-x-2 bg-gray-800/40 p-2 rounded-xl mt-4">
+                    <button class="filter-tab active px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center space-x-2 transition-all shadow-lg" data-tab="completed">
+                        <span>Completed</span>
+                        <span class="bg-blue-700/50 px-2 py-0.5 rounded-full text-xs font-mono" id="completedTabCount">0</span>
+                    </button>
+                    <button class="filter-tab px-4 py-2.5 text-gray-300 hover:text-white hover:bg-gray-700/80 rounded-lg font-medium flex items-center space-x-2 transition-all" data-tab="progress">
+                        <span>In Progress</span>
+                        <span class="bg-gray-600/50 px-2 py-0.5 rounded-full text-xs font-mono text-gray-300" id="progressTabCount">0</span>
+                    </button>
+                    <button class="filter-tab px-4 py-2.5 text-gray-300 hover:text-white hover:bg-gray-700/80 rounded-lg font-medium flex items-center space-x-2 transition-all" data-tab="upcoming">
+                        <span>Upcoming</span>
+                        <span class="bg-gray-600/50 px-2 py-0.5 rounded-full text-xs font-mono text-gray-300" id="upcomingTabCount">0</span>
+                    </button>
+                    <button class="filter-tab px-4 py-2.5 text-gray-300 hover:text-white hover:bg-gray-700/80 rounded-lg font-medium flex items-center space-x-2 transition-all" data-tab="personal">
+                        <span>Your Tolls</span>
+                        <span class="bg-gray-600/50 px-2 py-0.5 rounded-full text-xs font-mono text-gray-300" id="personalTabCount">0</span>
+                    </button>
+                    <button class="filter-tab px-4 py-2.5 text-gray-300 hover:text-white hover:bg-gray-700/80 rounded-lg font-medium flex items-center space-x-2 transition-all" data-tab="late">
+                        <span>Late Tolls</span>
+                        <span class="bg-gray-600/50 px-2 py-0.5 rounded-full text-xs font-mono text-gray-300" id="lateTabCount">0</span>
+                    </button>
                 </div>
                 
-                <!-- Tab Content: Your Tolls -->
-                <div class="tab-content" id="your-tolls-content">
-                    <div class="trips-grid" id="your-tolls-trips">
-                        <!-- Personal driving tolls will be populated here -->
-                    </div>
-                </div>
-                
-                <!-- Tab Content: Late Tolls -->
-                <div class="tab-content" id="late-tolls-content">
-                    <div class="trips-grid" id="late-tolls-trips">
-                        <!-- Late tolls will be populated here -->
-                    </div>
+                <!-- Trip Cards -->
+                <div id="trips-container" class="space-y-4">
+                    <!-- Trip cards will be dynamically added here -->
                 </div>
             </div>
-            </div>
-        </main>
+        </div>
     </div>
     
-    <!-- Notification Container -->
-    <div id="notification-container"></div>
-    
     <script>
-        // Trip data loaded from API
+        // Add filter tab click handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize icons
+            lucide.createIcons();
+            
+            // Add filter tab functionality
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    filterTabs.forEach(t => {
+                        t.classList.remove('active', 'bg-blue-600', 'hover:bg-blue-700', 'text-white', 'shadow-lg');
+                        t.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-700/80');
+                    });
+                    
+                    // Add active class to clicked tab
+                    this.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-gray-700/80');
+                    this.classList.add('active', 'bg-blue-600', 'hover:bg-blue-700', 'text-white', 'shadow-lg');
+                    
+                    // Add a subtle bounce animation
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    // Update currentTab variable
+                    const tabName = this.getAttribute('data-tab');
+                    if (tabName) {
+                        currentTab = tabName;
+                        filterTrips(); // Apply filter
+                    }
+                });
+            });
+            
+            // Add button click animations
+            const animatedButtons = document.querySelectorAll('.animated-button');
+            animatedButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Create ripple effect
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.height, rect.width);
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+                    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+                    ripple.classList.add('ripple');
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+            
+            // Wait for authentication before loading data
+            setTimeout(async () => {
+                try {
+                    // Ensure auth check has completed
+                    if (window.authCheck) {
+                        const isAuthenticated = await window.authCheck();
+                        if (isAuthenticated) {
+                            loadTrips();
+                        }
+                    } else {
+                        // Fallback: auth-check.js not loaded yet, try again
+                        setTimeout(() => {
+                            if (window.currentUser) {
+                                loadTrips();
+                            }
+                        }, 500);
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    // Don't load trips if auth fails
+                }
+            }, 100);
+            
+            setupEventListeners();
+        });
+        
+        // Data structure to hold filtered trips and tolls
         let tripsData = {
             completed: [],
             inProgress: [],
             upcoming: [],
-            yourTolls: []
+            yourTolls: [],
+            unmatchedTolls: []
         };
         
-        let originalTripsData = {
-            completed: [],
-            inProgress: [],
-            upcoming: [],
-            yourTolls: []
-        };
+        let originalTripsData = [];
         
-        let transponderVehicles = [];
-        
+        // Global variables
         let currentTab = 'completed';
         
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTrips();
-            setupEventListeners();
-        });
-        
-        function setupEventListeners() {
-            // Use debounced search for better performance
-            const debouncedFilter = performanceOptimizer.debounce(filterTrips, 300, 'trips-search');
-            document.getElementById('search-trips').addEventListener('input', debouncedFilter);
-            document.getElementById('date-filter').addEventListener('change', filterTrips);
-            document.getElementById('vehicle-filter').addEventListener('change', filterTrips);
+        // Authentication helper function
+        function getAuthHeaders() {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Get stored token
+            let storedToken = null;
+            try {
+                if (window.apiHelper && window.apiHelper.tokenStorage) {
+                    storedToken = window.apiHelper.tokenStorage.getToken();
+                } else if (typeof localStorage !== 'undefined') {
+                    storedToken = localStorage.getItem('supabase_token');
+                }
+            } catch (error) {
+                console.warn('Failed to get auth token:', error);
+            }
+            
+            // Add Authorization header if we have a token
+            if (storedToken) {
+                headers['Authorization'] = `Bearer ${storedToken}`;
+            }
+            
+            return headers;
         }
         
+        function setupEventListeners() {
+            // Setup search functionality
+            const searchInput = document.getElementById('search-trips');
+            const dateFilter = document.getElementById('date-filter');
+            const vehicleFilter = document.getElementById('vehicle-filter');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', filterTrips);
+            }
+            if (dateFilter) {
+                dateFilter.addEventListener('change', filterTrips);
+            }
+            if (vehicleFilter) {
+                vehicleFilter.addEventListener('change', filterTrips);
+            }
+        }
+
         async function loadTrips() {
             try {
-                showLoading();
+                showNotification({ message: 'Loading trips...', type: 'info', duration: 2000 });
                 
-                // Fetch transponder vehicles first
-                await fetchTransponderVehicles();
-                
-                // Fetch trips data from API
-                console.log('📡 Fetching trips data from API...');
-                
-                const response = await apiHelper.getAuth('/api/trips');
+                const response = await fetch('/api/trips', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: getAuthHeaders()
+                });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const data = await response.json();
-                console.log('📊 Trips data received:', data);
+                console.log('📊 API Response:', data);
                 
-                if (data.success) {
-                    // API already returns categorized data
-                    tripsData = data.data || {
-                        completed: [],
-                        inProgress: [],
-                        upcoming: [],
-                        yourTolls: []
-                    };
-                    
-                    // Store original data for filtering
-                    originalTripsData = JSON.parse(JSON.stringify(tripsData));
-                    
-                    // Populate vehicle filter with unique vehicles
-                    populateVehicleFilter();
-                } else {
-                    throw new Error(data.error || 'Failed to load trips data');
-                }
+                // Store trip categories separately 
+                tripsData = {
+                    completed: data.data?.completed || [],
+                    inProgress: data.data?.inProgress || [],
+                    upcoming: data.data?.upcoming || [],
+                    yourTolls: data.data?.yourTolls || [],
+                    unmatchedTolls: data.data?.unmatchedTolls || []
+                };
                 
-                renderTrips('completed', tripsData.completed);
-                renderTrips('in-progress', tripsData.inProgress);
-                renderTrips('upcoming', tripsData.upcoming);
-                renderPersonalTolls(tripsData.yourTolls);
-                renderLateTolls(tripsData.lateTolls || []);
-                updateCounts();
+                // Flatten only trip categories (not toll charges) into a single array
+                originalTripsData = [
+                    ...tripsData.completed,
+                    ...tripsData.inProgress,
+                    ...tripsData.upcoming
+                ];
                 
-                hideLoading();
+                console.log('📊 Trips data:', originalTripsData.length, 'trips');
+                console.log('📊 Personal tolls:', tripsData.yourTolls.length, 'toll charges');
+                console.log('📊 Unmatched tolls:', tripsData.unmatchedTolls.length, 'toll charges');
                 
-                showNotification({
-                    type: 'success',
-                    title: 'Data Loaded',
-                    message: 'Trips data updated successfully'
-                });
+                // Populate vehicle filter
+                await fetchTransponderVehicles();
+                
+                // Apply initial filters
+                filterTrips();
+                
+                // Load late tolls
+                await loadLateTolls();
+                
+                showNotification({ message: `Loaded ${originalTripsData.length} trips`, type: 'success', duration: 2000 });
+                console.log(`📊 Loaded ${originalTripsData.length} trips`);
                 
             } catch (error) {
-                console.error('❌ Failed to load trips data:', error);
-                hideLoading();
-                
-                // Show error states in each container
-                showErrorState('completed-trips', 'Unable to load completed trips. Please check your connection and try again.');
-                showErrorState('in-progress-trips', 'Unable to load active trips. Please check your connection and try again.');
-                showErrorState('upcoming-trips', 'Unable to load upcoming trips. Please check your connection and try again.');
-                showErrorState('your-tolls-trips', 'Unable to load personal tolls. Please check your connection and try again.');
-                
-                // Reset counts to 0
-                updateEl('completed-count', '0');
-                updateEl('in-progress-count', '0');
-                updateEl('upcoming-count', '0');
-                updateEl('personal-tolls-count', '0');
-                updateEl('completed-badge', '0');
-                updateEl('in-progress-badge', '0');
-                updateEl('upcoming-badge', '0');
-                updateEl('your-tolls-badge', '0');
-                
-                showNotification({
-                    type: 'error',
-                    title: 'Connection Error',
-                    message: 'Failed to load trip data. Please check your internet connection and try again.'
-                });
+                console.error('Error loading trips:', error);
+                showNotification({ message: `Failed to load trips: ${error.message}`, type: 'error' });
             }
         }
-        
+
         function renderTrips(category, trips) {
-            const container = document.getElementById(`${category}-trips`);
+            const container = document.getElementById('trips-container');
+            if (!container) return;
             
-            // Show all trips regardless of toll amount
-            let filteredTrips = trips;
+            // Clear existing content
+            container.innerHTML = '';
             
-            if (filteredTrips.length === 0) {
-                container.innerHTML = createEmptyState(category);
+            // Handle personal tolls differently (they are toll charges, not trips)
+            if (category === 'personal') {
+                renderPersonalTolls(container);
                 return;
             }
             
-            container.innerHTML = filteredTrips.map(trip => createTripCard(trip)).join('');
-        }
-        
-        function createTripCard(trip) {
-            const statusClass = trip.status.replace('-', '-');
-            const statusText = trip.status.charAt(0).toUpperCase() + trip.status.slice(1).replace('-', ' ');
+            if (!trips || trips.length === 0) {
+                container.innerHTML = `<div class="trip-card p-6 rounded-xl text-center text-gray-400">
+                    <p>No ${category} trips found.</p>
+                </div>`;
+                return;
+            }
             
-            return `
-                <div class="trip-card">
-                    <div class="trip-header">
-                        <div class="trip-info">
-                            <div class="trip-id">Trip #${trip.id}</div>
-                            <div class="trip-vehicle">Vehicle: ${trip.vehicle_description || trip.vehicle}</div>
-                            <div class="trip-guest">Guest: ${trip.guest}</div>
-                            <div class="trip-dates">
-                                <span>📅</span>
-                                ${formatEasternDateTime(trip.startDate)} - ${formatEasternDateTime(trip.endDate)} ET
-                            </div>
+            // Create trip cards
+            trips.forEach((trip, index) => {
+                const tripCard = document.createElement('div');
+                tripCard.className = 'trip-card p-6 rounded-xl';
+                tripCard.style.animationDelay = `${0.3 + (index * 0.1)}s`;
+                
+                // Calculate duration
+                const startDate = new Date(trip.startDate);
+                const endDate = new Date(trip.endDate);
+                const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                
+                tripCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <h3 class="text-lg font-bold text-white font-mono">Trip #${trip.id}</h3>
+                            <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                                trip.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
+                                trip.status === 'Booked' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-blue-500/20 text-blue-400'
+                            }">${trip.status}</span>
                         </div>
-                        <div class="trip-status">
-                            <div class="status-badge ${statusClass}">
-                                ${getStatusIcon(trip.status)} ${statusText}
-                            </div>
+                        <div class="text-right">
+                            <div class="text-xl font-bold text-white font-mono">$${(trip.tollTotal || 0).toFixed(2)}</div>
+                            <div class="text-sm text-gray-400">TOTAL</div>
                         </div>
                     </div>
                     
-                    <div class="trip-details">
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">${trip.duration}</div>
-                            <div class="trip-stat-label">Duration</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="space-y-2">
+                            <div class="text-sm text-gray-400">VEHICLE</div>
+                            <div class="text-white font-medium">${trip.vehicle_description || trip.vehicle}</div>
                         </div>
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">$${trip.tollTotal.toFixed(2)}</div>
-                            <div class="trip-stat-label">Tolls</div>
+                        <div class="space-y-2">
+                            <div class="text-sm text-gray-400">GUEST</div>
+                            <div class="text-white font-medium">${trip.guest}</div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="text-sm text-gray-400">DURATION</div>
+                            <div class="text-white font-medium">${duration} day${duration !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-sm text-gray-400 mb-6">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            <span>${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDate.toLocaleDateString()} ${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ET</span>
                         </div>
                     </div>
                     
                     ${trip.tolls && trip.tolls.length > 0 ? `
-                        <div class="trip-tolls">
-                            <div class="tolls-header">
-                                <div class="tolls-title">Toll Charges (${trip.tolls.length})</div>
-                                <button class="btn btn-ghost btn-sm" onclick="expandTolls('${trip.id}')">
-                                    <span>📋</span>
-                                    View Details
-                                </button>
-                            </div>
-                            <div class="tolls-list">
-                                ${trip.tolls.map(toll => `
-                                    <div class="toll-item">
-                                        <div class="toll-info">
-                                            <div class="toll-location">${toll.location}</div>
-                                            <div class="toll-time">${toll.time}</div>
-                                            ${toll.transactionId ? `<div class="toll-txn-id">Txn ID: ${toll.transactionId}</div>` : ''}
+                    <div class="bg-gray-700/50 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-white font-medium">Toll Charges (${trip.tolls.length})</h4>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${trip.tolls.map((toll, tollIndex) => `
+                                <div class="toll-card bg-gray-600/50 p-3 rounded-lg" style="animation-delay: ${0.1 + (tollIndex * 0.05)}s;">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="text-white font-medium">${toll.location}</div>
+                                            <div class="text-xs text-gray-400">${toll.time}</div>
+                                            ${toll.transactionId ? `<div class="text-xs text-gray-500">Txn ID: ${toll.transactionId}</div>` : ''}
                                         </div>
-                                        <div class="toll-amount">$${toll.amount.toFixed(2)}</div>
+                                        <div class="text-green-400 font-bold">$${toll.amount}</div>
                                     </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="trip-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="viewTrip('${trip.id}')">
-                            <span>👁️</span>
-                            View Details
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="generateInvoice('${trip.internalId}')">
-                            <span>📄</span>
-                            Invoice
-                        </button>
-                        ${trip.status === 'completed' ? `
-                            <button class="btn btn-primary btn-sm" onclick="submitTrip('${trip.internalId}')">
-                                <span>✅</span>
-                                Submit
-                            </button>
-                            <button class="btn btn-secondary btn-sm" onclick="sendToGuest('${trip.internalId}')">
-                                <span>📧</span>
-                                Send to Guest
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        function renderPersonalTolls(tolls) {
-            const container = document.getElementById('your-tolls-trips');
-            
-            if (tolls.length === 0) {
-                container.innerHTML = createEmptyState('your-tolls');
-                return;
-            }
-            
-            container.innerHTML = tolls.map(toll => createPersonalTollCard(toll)).join('');
-        }
-        
-        function createPersonalTollCard(toll) {
-            const formattedDate = new Date(toll.date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-            });
-            
-            const formattedTime = new Date(toll.date).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-            
-            // Clean up vehicle display - extract meaningful info
-            let vehicleDisplay = toll.vehicle;
-            let providerInfo = 'Unknown Provider';
-            
-            if (toll.vehicle && toll.vehicle.includes('(')) {
-                const parts = toll.vehicle.split('(');
-                providerInfo = parts[0].trim();
-                if (parts[1]) {
-                    vehicleDisplay = parts[1].replace(')', '').trim();
-                }
-            }
-            
-            // Clean up transponder display
-            let transponderDisplay = toll.transponder;
-            if (transponderDisplay && transponderDisplay.length > 12) {
-                // If it looks like a long ID, show last 4 digits
-                transponderDisplay = `...${transponderDisplay.slice(-4)}`;
-            }
-            
-            return `
-                <div class="trip-card personal-toll-card">
-                    <div class="trip-header">
-                        <div class="trip-info">
-                            <div class="trip-id">Personal Toll #${toll.id}</div>
-                            <div class="trip-guest">${providerInfo} • Personal Driving</div>
-                            <div class="trip-dates">
-                                <span>📅</span>
-                                ${formattedDate} at ${formattedTime}
-                            </div>
-                        </div>
-                        <div class="trip-status">
-                            <div class="status-badge personal-use">
-                                🛣️ Personal Use
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="trip-details">
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">${toll.location}</div>
-                            <div class="trip-stat-label">Toll Location</div>
-                        </div>
-                        <div class="trip-stat">
-                            <div class="trip-stat-value amount-negative">$${toll.amount.toFixed(2)}</div>
-                            <div class="trip-stat-label">Amount Charged</div>
-                        </div>
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">${transponderDisplay}</div>
-                            <div class="trip-stat-label">Transponder ID</div>
-                        </div>
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">${vehicleDisplay}</div>
-                            <div class="trip-stat-label">Account/Vehicle</div>
-                        </div>
-                    </div>
-                    
-                    <div class="toll-actions">
-                        <div class="action-group">
-                            <button class="btn btn-primary btn-sm" onclick="matchTollToTrip('${toll.id}')">
-                                <span>🎯</span>
-                                Auto-Match to Trip
-                            </button>
-                            <button class="btn btn-secondary btn-sm" onclick="manualMatchToll('${toll.id}')">
-                                <span>🔗</span>
-                                Manual Match
-                            </button>
-                        </div>
-                        <div class="action-group secondary">
-                            <button class="btn btn-ghost btn-sm" onclick="editPersonalToll('${toll.id}')">
-                                <span>✏️</span>
-                                Edit Details
-                            </button>
-                            <button class="btn btn-ghost btn-sm text-danger" onclick="deletePersonalToll('${toll.id}')">
-                                <span>🗑️</span>
-                                Remove
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function renderLateTolls(lateTollTrips) {
-            const container = document.getElementById('late-tolls-trips');
-            
-            if (lateTollTrips.length === 0) {
-                container.innerHTML = createEmptyState('late-tolls');
-                return;
-            }
-            
-            // Sort trips by start date (most recent first) as a safety net
-            const sortedTrips = [...lateTollTrips].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
-            
-            container.innerHTML = sortedTrips.map(trip => createLateTollCard(trip)).join('');
-        }
-        
-        function createLateTollCard(trip) {
-            const statusClass = 'late-toll';
-            const statusText = 'Late Toll';
-            
-            const detectionDate = new Date(trip.detectionDate).toLocaleDateString();
-            
-            return `
-                <div class="trip-card late-toll-card" style="border-left: 4px solid #f59e0b;">
-                    <div class="trip-header">
-                        <div class="trip-info">
-                            <div class="trip-id">Trip #${trip.id}</div>
-                            <div class="trip-vehicle">Vehicle: ${trip.vehicle_description || trip.vehicle}</div>
-                            <div class="trip-guest">Guest: ${trip.guest}</div>
-                            <div class="trip-dates">
-                                <span>📅</span>
-                                ${formatEasternDateTime(trip.startDate)} - ${formatEasternDateTime(trip.endDate)} ET
-                            </div>
-                            <div class="late-toll-info" style="color: #d97706; font-weight: 600; margin-top: 0.5rem;">
-                                ⚠️ Late tolls detected on ${detectionDate}
-                            </div>
-                        </div>
-                        <div class="trip-status">
-                            <div class="status-badge late-toll" style="background: #f59e0b; color: white;">
-                                ⚠️ ${statusText}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="trip-details">
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">${trip.duration}</div>
-                            <div class="trip-stat-label">Duration</div>
-                        </div>
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">$${trip.lateTollTotal.toFixed(2)}</div>
-                            <div class="trip-stat-label">Late Tolls</div>
-                        </div>
-                        <div class="trip-stat">
-                            <div class="trip-stat-value">${trip.status}</div>
-                            <div class="trip-stat-label">Status</div>
-                        </div>
-                    </div>
-                    
-                    <div class="trip-tolls" style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: var(--radius-md); margin: 1rem 0;">
-                        <div class="tolls-header" style="background: #fef3c7; padding: 0.75rem; border-radius: var(--radius-md) var(--radius-md) 0 0;">
-                            <div class="tolls-title" style="font-weight: 600; color: #92400e;">⚠️ Late Toll Charges (${trip.lateTolls.length})</div>
-                            <div style="font-size: var(--text-sm); color: #b45309; margin-top: 0.25rem;">
-                                These charges were detected after the trip was submitted to Turo
-                            </div>
-                        </div>
-                        <div class="tolls-list" style="padding: 0.75rem;">
-                            ${trip.lateTolls.map(toll => `
-                                <div class="toll-item" style="background: white; border: 1px solid #fed7aa; border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; min-height: 60px;">
-                                    <div class="toll-info" style="flex: 1; margin-right: 1rem;">
-                                        <div class="toll-location" style="font-weight: 600; color: #1f2937; font-size: 0.875rem; margin-bottom: 0.25rem; line-height: 1.4;">
-                                            📍 ${toll.location || 'Location Unknown'}
-                                        </div>
-                                        <div class="toll-time" style="font-size: 0.8125rem; color: #6b7280; margin-bottom: 0.25rem; line-height: 1.3;">
-                                            🕒 ${toll.time || 'Date Unknown'}
-                                        </div>
-                                        <div class="toll-posted" style="font-size: 0.8125rem; color: #f59e0b; margin-bottom: 0.25rem; line-height: 1.3; font-weight: 500;">
-                                            📮 Posted: ${toll.postedDate ? new Date(toll.postedDate).toLocaleDateString() : (toll.detectionDate ? new Date(toll.detectionDate).toLocaleDateString() + ' (detected)' : 'Unknown')}
-                                        </div>
-                                        ${toll.transactionId ? `<div class="toll-txn-id" style="font-size: 0.75rem; color: #9ca3af; font-family: monospace; letter-spacing: 0.025em;">ID: ${toll.transactionId}</div>` : '<div style="font-size: 0.75rem; color: #9ca3af;">No Transaction ID</div>'}
-                                    </div>
-                                    <div class="toll-amount" style="font-weight: 700; color: #dc2626; font-size: 1.25rem; flex-shrink: 0; text-align: right; min-width: 80px;">$${(toll.amount || 0).toFixed(2)}</div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
+                    ` : ''}
                     
-                    <div class="trip-actions">
-                        <button class="btn btn-primary btn-sm" onclick="acknowledgeLateToll('${trip.internalId}')">
-                            <span>✅</span>
-                            Acknowledge
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="createSupplementalInvoice('${trip.internalId}')">
-                            <span>📄</span>
-                            Create Invoice
-                        </button>
-                        <button class="btn btn-ghost btn-sm" onclick="viewLateTollDetails('${trip.internalId}')">
-                            <span>👁️</span>
-                            View Details
+                    <div class="flex justify-center">
+                        ${(trip.tolls && trip.tolls.length > 0) || (trip.tollTotal && trip.tollTotal > 0) ? 
+                            `<button onclick="submitTrip('${trip.internalId}')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>Submit</span>
+                            </button>` : 
+                            `<span class="text-gray-500 text-sm">No tolls to submit</span>`}
+                    </div>
+                `;
+                
+                container.appendChild(tripCard);
+            });
+            
+            // Re-initialize icons for new content
+            lucide.createIcons();
+        }
+        
+        function renderPersonalTolls(container) {
+            const personalTolls = tripsData.yourTolls || [];
+            
+            if (personalTolls.length === 0) {
+                container.innerHTML = `<div class="trip-card p-6 rounded-xl text-center text-gray-400">
+                    <p>No personal tolls found.</p>
+                    <p class="text-sm mt-2">Personal tolls are tolls for your own driving, not during rental trips.</p>
+                </div>`;
+                return;
+            }
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'trip-card p-6 rounded-xl mb-4 bg-purple-500/10 border-purple-500/20';
+            header.innerHTML = `
+                <h3 class="text-lg font-medium text-white mb-2">
+                    <i data-lucide="user" class="w-5 h-5 inline mr-2"></i>
+                    Personal Tolls (${personalTolls.length})
+                </h3>
+                <p class="text-gray-400 text-sm">These are tolls from your personal driving, not during rental trips.</p>
+            `;
+            container.appendChild(header);
+            
+            // Create toll cards
+            personalTolls.forEach((toll, index) => {
+                const tollCard = document.createElement('div');
+                tollCard.className = 'trip-card p-6 rounded-xl';
+                tollCard.style.animationDelay = `${0.3 + (index * 0.1)}s`;
+                
+                tollCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-white">${toll.location}</h3>
+                            <p class="text-gray-400 text-sm">
+                                ${new Date(toll.date).toLocaleDateString()} at ${toll.time}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-purple-400">$${toll.amount.toFixed(2)}</div>
+                            <div class="text-xs text-gray-400">${toll.type}</div>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Vehicle:</span>
+                            <span class="text-white">${toll.vehicle}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Transponder:</span>
+                            <span class="text-white">${toll.transponder}</span>
+                        </div>
+                        ${toll.transactionId ? `
+                        <div class="flex justify-between">
+                            <span>Transaction ID:</span>
+                            <span class="text-white font-mono text-xs">${toll.transactionId}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-end">
+                        <button onclick="unmarkPersonalToll('${toll.id}')" class="btn-secondary text-xs">
+                            <i data-lucide="x-circle" class="w-4 h-4 mr-1"></i>
+                            Unmark as Personal
                         </button>
                     </div>
-                </div>
-            `;
-        }
-        
-        function createEmptyState(category) {
-            const states = {
-                completed: {
-                    icon: '✅',
-                    title: 'No Completed Trips',
-                    text: 'Completed trips will appear here once your guests return their rentals.'
-                },
-                'in-progress': {
-                    icon: '🚗',
-                    title: 'No Active Trips',
-                    text: 'Current rental trips will be shown here while guests are using your vehicles.'
-                },
-                upcoming: {
-                    icon: '📅',
-                    title: 'No Upcoming Trips',
-                    text: 'Future bookings and reservations will be displayed here.'
-                },
-                'your-tolls': {
-                    icon: '🛣️',
-                    title: 'No Personal Tolls',
-                    text: 'Toll charges from your personal driving will appear here for tracking.'
-                },
-                'late-tolls': {
-                    icon: '⚠️',
-                    title: 'No Late Tolls',
-                    text: 'Late tolls detected after trip submission will appear here for review and action.'
-                }
-            };
+                `;
+                
+                container.appendChild(tollCard);
+            });
             
-            const state = states[category] || states.completed;
-            
-            return `
-                <div class="empty-state">
-                    <div class="empty-icon">${state.icon}</div>
-                    <div class="empty-title">${state.title}</div>
-                    <div class="empty-text">${state.text}</div>
-                </div>
-            `;
+            // Initialize Lucide icons
         }
-        
-        // Timezone utility functions
-        function formatEasternDateTime(utcDateString) {
-            if (!utcDateString) return '';
-            try {
-                const date = new Date(utcDateString);
-                // Convert UTC to Eastern Time for display
-                return date.toLocaleDateString('en-US', { 
-                    timeZone: 'America/New_York',
-                    month: 'numeric', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                }) + ' ' + date.toLocaleTimeString('en-US', { 
-                    timeZone: 'America/New_York',
-                    hour: 'numeric', 
-                    minute: '2-digit', 
-                    hour12: true 
-                });
-            } catch (error) {
-                console.error('Error formatting date:', error);
-                return utcDateString;
-            }
-        }
-        
-        function getStatusIcon(status) {
-            const icons = {
-                completed: '✅',
-                'in-progress': '🚗',
-                upcoming: '📅'
-            };
-            return icons[status] || '📋';
-        }
-        
+
         function showTab(tabName) {
             currentTab = tabName;
             
-            // Update tab buttons
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
+            // Update active tab
+            const tabs = document.querySelectorAll('.filter-tab');
+            tabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabName) {
+                    tab.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-gray-700/80');
+                    tab.classList.add('active', 'bg-blue-600', 'hover:bg-blue-700', 'text-white', 'shadow-lg');
+                } else {
+                    tab.classList.remove('active', 'bg-blue-600', 'hover:bg-blue-700', 'text-white', 'shadow-lg');
+                    tab.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-700/80');
+                }
             });
-            document.getElementById(`${tabName}-tab`).classList.add('active');
             
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-content`).classList.add('active');
+            // Filter trips
+            filterTrips();
         }
-        
-        function updateCounts(data = tripsData) {
-            updateEl('completed-count', data.completed.length.toString());
-            updateEl('in-progress-count', data.inProgress.length.toString());
-            updateEl('upcoming-count', data.upcoming.length.toString());
-            updateEl('personal-tolls-count', data.yourTolls.length.toString());
-            
-            // Update late tolls
-            const lateTolls = data.lateTolls || [];
-            updateEl('late-tolls-count', lateTolls.length.toString());
-            const lateTollsTotal = lateTolls.reduce((sum, trip) => sum + (trip.lateTollTotal || 0), 0);
-            updateEl('late-tolls-amount', `$${lateTollsTotal.toFixed(2)}`);
-            
-            // Update badges
-            updateEl('completed-badge', data.completed.length.toString());
-            updateEl('in-progress-badge', data.inProgress.length.toString());
-            updateEl('upcoming-badge', data.upcoming.length.toString());
-            updateEl('your-tolls-badge', data.yourTolls.length.toString());
-            updateEl('late-tolls-badge', lateTolls.length.toString());
-        }
-        
+
         function filterTrips() {
-            const searchTerm = document.getElementById('search-trips').value.toLowerCase();
-            const dateFilter = document.getElementById('date-filter').value;
-            const vehicleFilter = document.getElementById('vehicle-filter').value;
+            const searchTerm = document.getElementById('search-trips')?.value.toLowerCase() || '';
+            const dateFilter = document.getElementById('date-filter')?.value || 'all';
+            const vehicleFilter = document.getElementById('vehicle-filter')?.value || 'all';
             
-            // Clone original data to filter
-            const filteredData = {
-                completed: filterTripArray(originalTripsData.completed || [], searchTerm, dateFilter, vehicleFilter),
-                inProgress: filterTripArray(originalTripsData.inProgress || [], searchTerm, dateFilter, vehicleFilter),
-                upcoming: filterTripArray(originalTripsData.upcoming || [], searchTerm, dateFilter, vehicleFilter),
-                yourTolls: filterTripArray(originalTripsData.yourTolls || [], searchTerm, dateFilter, vehicleFilter),
-                lateTolls: filterTripArray(originalTripsData.lateTolls || [], searchTerm, dateFilter, vehicleFilter)
-            };
+            let filteredTrips = [...originalTripsData];
             
-            // Update the display with filtered data
-            renderTrips('completed', filteredData.completed);
-            renderTrips('in-progress', filteredData.inProgress);
-            renderTrips('upcoming', filteredData.upcoming);
-            renderPersonalTolls(filteredData.yourTolls);
-            renderLateTolls(filteredData.lateTolls || []);
-            updateCounts(filteredData);
-        }
-        
-        function filterTripArray(trips, searchTerm, dateFilter, vehicleFilter) {
-            return trips.filter(trip => {
-                // Search filter - check renter name, vehicle plate, or trip ID
-                const matchesSearch = !searchTerm || 
-                    (trip.guest && trip.guest.toLowerCase().includes(searchTerm)) ||
-                    (trip.vehicle_plate && trip.vehicle_plate.toLowerCase().includes(searchTerm)) ||
-                    (trip.id && trip.id.toLowerCase().includes(searchTerm));
-                
-                // Vehicle filter
-                const matchesVehicle = vehicleFilter === 'all' || 
-                    (trip.vehicle_plate && trip.vehicle_plate === vehicleFilter);
-                
-                // Date filter
-                const matchesDate = checkDateFilter(trip, dateFilter);
-                
-                
-                return matchesSearch && matchesVehicle && matchesDate;
-            });
-        }
-        
-        function checkDateFilter(trip, dateFilter) {
-            if (dateFilter === 'all') return true;
-            
-            const now = new Date();
-            const tripStart = new Date(trip.start_date);
-            
-            switch (dateFilter) {
-                case 'today':
-                    return isSameDay(tripStart, now);
-                case 'week':
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    return tripStart >= weekAgo;
-                case 'month':
-                    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-                    return tripStart >= monthAgo;
-                case 'quarter':
-                    const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-                    return tripStart >= quarterAgo;
-                default:
-                    return true;
+            // Apply search filter
+            if (searchTerm) {
+                filteredTrips = filteredTrips.filter(trip =>
+                    trip.guest?.toLowerCase().includes(searchTerm) ||
+                    trip.vehicle?.toLowerCase().includes(searchTerm) ||
+                    trip.vehicle_description?.toLowerCase().includes(searchTerm) ||
+                    trip.id.toString().includes(searchTerm)
+                );
             }
+            
+            // Apply date filter
+            const now = new Date();
+            if (dateFilter !== 'all') {
+                filteredTrips = filteredTrips.filter(trip => {
+                    const tripDate = new Date(trip.startDate);
+                    switch (dateFilter) {
+                        case 'today':
+                            return tripDate.toDateString() === now.toDateString();
+                        case 'week':
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            return tripDate >= weekAgo;
+                        case 'month':
+                            return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
+                        case '3months':
+                            const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                            return tripDate >= threeMonthsAgo;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // Apply vehicle filter
+            if (vehicleFilter !== 'all') {
+                filteredTrips = filteredTrips.filter(trip => {
+                    // Compare only against vehicle_description field for exact match
+                    // This matches what's shown in the dropdown options
+                    return trip.vehicle_description === vehicleFilter;
+                });
+            }
+            
+            // Category filtering
+            let categoryTrips = [];
+            switch (currentTab) {
+                case 'completed':
+                    categoryTrips = filteredTrips.filter(trip => trip.status === 'completed');
+                    break;
+                case 'progress':
+                    categoryTrips = filteredTrips.filter(trip => trip.status === 'in-progress');
+                    break;
+                case 'upcoming':
+                    categoryTrips = filteredTrips.filter(trip => trip.status === 'upcoming');
+                    break;
+                case 'personal':
+                    // Personal tolls are not trips - they are toll charges
+                    // We'll handle this separately in renderTrips
+                    categoryTrips = [];
+                    break;
+                case 'late':
+                    categoryTrips = filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0);
+                    break;
+                default:
+                    categoryTrips = filteredTrips;
+            }
+            
+            // Update tab counts
+            document.getElementById('completedTabCount').textContent = filteredTrips.filter(trip => trip.status === 'completed').length;
+            document.getElementById('progressTabCount').textContent = filteredTrips.filter(trip => trip.status === 'in-progress').length;
+            document.getElementById('upcomingTabCount').textContent = filteredTrips.filter(trip => trip.status === 'upcoming').length;
+            document.getElementById('personalTabCount').textContent = tripsData.yourTolls ? tripsData.yourTolls.length : 0;
+            document.getElementById('lateTabCount').textContent = filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0).length;
+            
+            // Update stats cards
+            document.getElementById('completed-count').textContent = filteredTrips.filter(trip => trip.status === 'completed').length;
+            document.getElementById('in-progress-count').textContent = filteredTrips.filter(trip => trip.status === 'in-progress').length;
+            document.getElementById('upcoming-count').textContent = filteredTrips.filter(trip => trip.status === 'upcoming').length;
+            document.getElementById('personal-tolls-count').textContent = tripsData.yourTolls ? tripsData.yourTolls.length : 0;
+            document.getElementById('late-tolls-count').textContent = filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0).length;
+            
+            // Render trips
+            renderTrips(currentTab, categoryTrips);
         }
-        
-        function isSameDay(date1, date2) {
-            return date1.getFullYear() === date2.getFullYear() &&
-                   date1.getMonth() === date2.getMonth() &&
-                   date1.getDate() === date2.getDate();
-        }
-        
+
         async function fetchTransponderVehicles() {
             try {
                 const response = await fetch('/api/transponders', {
                     method: 'GET',
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to fetch transponders');
                 }
                 
-                const data = await response.json();
-                if (data.success) {
-                    transponderVehicles = data.data || [];
-                    console.log('📋 Transponder vehicles loaded:', transponderVehicles);
-                } else {
-                    console.error('❌ Failed to fetch transponder vehicles:', data.error);
-                }
-            } catch (error) {
-                console.error('❌ Error fetching transponder vehicles:', error);
-            }
-        }
-        
-        function populateVehicleFilter() {
-            const vehicleFilter = document.getElementById('vehicle-filter');
-            
-            // Clear existing options
-            vehicleFilter.innerHTML = '<option value="all">All Vehicles</option>';
-            
-            // Get active transponder vehicles
-            const activeVehicles = transponderVehicles.filter(vehicle => vehicle.is_active);
-            
-            // Add transponder vehicles with descriptions
-            activeVehicles
-                .sort((a, b) => (a.vehicle_description || '').localeCompare(b.vehicle_description || ''))
-                .forEach(vehicle => {
+                const transponders = await response.json();
+                const vehicleFilter = document.getElementById('vehicle-filter');
+                
+                // Clear existing options except "All Vehicles"
+                vehicleFilter.innerHTML = '<option value="all">All Vehicles</option>';
+                
+                // Extract unique vehicles from transponder data
+                const uniqueVehicles = new Map();
+                transponders.data?.forEach(transponder => {
+                    if (transponder.vehicle_description && transponder.is_active) {
+                        // Use vehicle_description as both key and display value
+                        uniqueVehicles.set(transponder.vehicle_description, transponder.vehicle_description);
+                    }
+                });
+                
+                // Add vehicle options
+                uniqueVehicles.forEach((vehicleDesc, vehicleKey) => {
                     const option = document.createElement('option');
-                    option.value = vehicle.vehicle_plate;
-                    option.textContent = vehicle.vehicle_description 
-                        ? `${vehicle.vehicle_plate} - ${vehicle.vehicle_description}`
-                        : vehicle.vehicle_plate;
+                    option.value = vehicleDesc;
+                    option.textContent = vehicleDesc;
                     vehicleFilter.appendChild(option);
                 });
+                
+            } catch (error) {
+                console.error('Error fetching transponders:', error);
+            }
         }
-        
-        // Trip actions
+
         async function viewTrip(tripId) {
             try {
-                showLoading();
-                
-                // Fetch detailed trip data
                 const response = await fetch(`/api/trips/${tripId}`, {
                     method: 'GET',
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to fetch trip details');
                 }
                 
-                const data = await response.json();
-                hideLoading();
+                const trip = await response.json();
                 
-                if (data.success) {
-                    showTripDetailsModal(data.data);
-                } else {
-                    throw new Error(data.error || 'Failed to load trip details');
-                }
+                // Create modal content
+                const modalContent = `
+                    <h2>Trip Details - #${trip.id}</h2>
+                    <p><strong>Status:</strong> ${trip.status}</p>
+                    <p><strong>Guest:</strong> ${trip.guest}</p>
+                    <p><strong>Vehicle:</strong> ${trip.vehicle_description || trip.vehicle}</p>
+                    <p><strong>Start Date:</strong> ${new Date(trip.startDate).toLocaleString()}</p>
+                    <p><strong>End Date:</strong> ${new Date(trip.endDate).toLocaleString()}</p>
+                    <p><strong>Toll Amount:</strong> $${trip.tollTotal || '0.00'}</p>
+                    ${trip.tolls && trip.tolls.length > 0 ? 
+                        `<h3>Tolls:</h3><ul>${trip.tolls.map(toll => `<li>${toll.location}: $${toll.amount}</li>`).join('')}</ul>` : ''}
+                `;
+                
+                // Simple alert for now - you can replace with modal later
+                alert(modalContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' '));
                 
             } catch (error) {
-                console.error('❌ Failed to load trip details:', error);
-                hideLoading();
-                
-                showNotification({
-                    type: 'error',
-                    title: 'Error',
-                    message: 'Failed to load trip details. Please try again.'
-                });
+                console.error('Error viewing trip:', error);
+                showNotification({ message: 'Failed to load trip details', type: 'error' });
             }
-        }
-        
-        function showTripDetailsModal(trip) {
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Trip #${trip.id} Details</h2>
-                        <button class="modal-close" onclick="closeTripModal()">&times;</button>
-                    </div>
-                    
-                    <div class="modal-body">
-                        <div class="trip-details-grid">
-                            <!-- Trip Overview -->
-                            <div class="detail-section">
-                                <h3>Trip Information</h3>
-                                <div class="detail-row">
-                                    <span class="label">Guest:</span>
-                                    <span class="value">${trip.guest}</span>
-                                </div>
-                                ${trip.guestEmail ? `
-                                    <div class="detail-row">
-                                        <span class="label">Email:</span>
-                                        <span class="value">${trip.guestEmail}</span>
-                                    </div>
-                                ` : ''}
-                                <div class="detail-row">
-                                    <span class="label">Vehicle:</span>
-                                    <span class="value">${trip.vehicle}</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Duration:</span>
-                                    <span class="value">${trip.duration}</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Status:</span>
-                                    <span class="value status-${trip.status}">${trip.status.charAt(0).toUpperCase() + trip.status.slice(1).replace('-', ' ')}</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Start Date:</span>
-                                    <span class="value">${new Date(trip.startDate).toLocaleString()}</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">End Date:</span>
-                                    <span class="value">${new Date(trip.endDate).toLocaleString()}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Financial Summary -->
-                            <div class="detail-section">
-                                <h3>Financial Summary</h3>
-                                <div class="detail-row">
-                                    <span class="label">Revenue:</span>
-                                    <span class="value amount-positive">$${trip.revenue.toFixed(2)}</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Total Tolls:</span>
-                                    <span class="value amount-negative">$${trip.tollTotal.toFixed(2)}</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="label">Net Profit:</span>
-                                    <span class="value ${(trip.revenue - trip.tollTotal) >= 0 ? 'amount-positive' : 'amount-negative'}">$${(trip.revenue - trip.tollTotal).toFixed(2)}</span>
-                                </div>
-                                ${trip.invoice ? `
-                                    <div class="detail-row">
-                                        <span class="label">Invoice Status:</span>
-                                        <span class="value">${trip.invoice.status || 'Draft'}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                        
-                        <!-- Toll Charges -->
-                        ${trip.tolls && trip.tolls.length > 0 ? `
-                            <div class="detail-section full-width">
-                                <h3>Toll Charges (${trip.tolls.length})</h3>
-                                <div class="tolls-table">
-                                    <div class="table-header">
-                                        <div>Date & Time</div>
-                                        <div>Location</div>
-                                        <div>Provider</div>
-                                        <div>Transponder</div>
-                                        <div>Amount</div>
-                                    </div>
-                                    ${trip.tolls.map(toll => `
-                                        <div class="table-row">
-                                            <div>${toll.time}</div>
-                                            <div>${toll.location}</div>
-                                            <div>${toll.provider}</div>
-                                            <div>${toll.transponder}</div>
-                                            <div class="amount">$${toll.amount.toFixed(2)}</div>
-                                        </div>
-                                    `).join('')}
-                                    <div class="table-footer">
-                                        <div colspan="4">Total:</div>
-                                        <div class="amount-total">$${trip.tollTotal.toFixed(2)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="closeTripModal()">Close</button>
-                        ${trip.status === 'completed' ? `
-                            <button class="btn btn-primary" onclick="generateInvoice('${trip.id}')">Generate Invoice</button>
-                            <button class="btn btn-primary" onclick="sendToGuest('${trip.id}')">Send to Guest</button>
-                        ` : ''}
-                        <button class="btn btn-secondary" onclick="exportTripDetails('${trip.id}')">Export Details</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Add click outside to close
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeTripModal();
-                }
-            });
-        }
-        
-        function closeTripModal() {
-            const modal = document.querySelector('.modal-overlay');
-            if (modal) {
-                modal.remove();
-            }
-        }
-        
-        function exportTripDetails(tripId) {
-            showNotification({
-                type: 'info',
-                title: 'Export Started',
-                message: `Exporting detailed data for trip #${tripId}`
-            });
-        }
-        
-        function generateInvoice(tripId) {
-            showNotification({
-                type: 'success',
-                title: 'Invoice Generated',
-                message: `Invoice created for trip #${tripId}`
-            });
         }
 
         async function submitTrip(tripId) {
             try {
-                showNotification({
-                    type: 'info',
-                    title: 'Submitting Trip',
-                    message: `Submitting trip #${tripId} to Turo...`
-                });
-
+                showNotification({ message: 'Submitting trip...', type: 'info' });
+                
                 const response = await fetch(`/api/trips/${tripId}/submit`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    showNotification({
-                        type: 'success',
-                        title: 'Trip Submitted Successfully',
-                        message: `Trip #${tripId} has been submitted to Turo and invoice #${result.invoice.invoiceNumber} has been created. Click "View Invoice" button to see it.`
-                    });
-
-                    // Refresh the trips data to show the updated status
-                    await loadTrips();
-                } else {
-                    const errorMessage = result.code === 'ALREADY_SUBMITTED' 
-                        ? `Trip #${tripId} was already submitted. Refreshing page to update display.`
-                        : (result.error || 'Failed to submit trip to Turo');
-                        
-                    showNotification({
-                        type: result.code === 'ALREADY_SUBMITTED' ? 'warning' : 'error',
-                        title: result.code === 'ALREADY_SUBMITTED' ? 'Already Submitted' : 'Submission Failed',
-                        message: errorMessage
+                
+                if (!response.ok) {
+                    console.error('Submit trip failed:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        url: response.url,
+                        tripId: tripId
                     });
                     
-                    // If already submitted, refresh to update the display
-                    if (result.code === 'ALREADY_SUBMITTED') {
-                        await loadTrips();
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        showNotification({ message: 'Session expired. Redirecting to login...', type: 'warning' });
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1500);
+                        return;
                     }
+                    
+                    // Try to get error details from response
+                    let errorMessage = `Failed to submit trip (${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error) {
+                            errorMessage = errorData.error;
+                        }
+                    } catch (e) {
+                        console.warn('Could not parse error response');
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
-            } catch (error) {
-                console.error('Error submitting trip:', error);
-                showNotification({
-                    type: 'error',
-                    title: 'Submission Error',
-                    message: 'An error occurred while submitting the trip. Please try again.'
-                });
-            }
-        }
-        
-        function sendToGuest(tripId) {
-            showNotification({
-                type: 'success',
-                title: 'Sent to Guest',
-                message: `Toll invoice sent to guest for trip #${tripId}`
-            });
-        }
-        
-        function expandTolls(tripId) {
-            showNotification({
-                type: 'info',
-                title: 'Toll Details',
-                message: `Showing detailed toll breakdown for trip #${tripId}`
-            });
-        }
-        
-        // Personal toll actions
-        function matchTollToTrip(tollId) {
-            showNotification({
-                type: 'info',
-                title: 'Auto-Matching',
-                message: `Automatically searching for matching trip for toll #${tollId}...`
-            });
-            
-            // TODO: Implement automatic matching logic
-            setTimeout(() => {
-                showNotification({
-                    type: 'info',
-                    title: 'No Match Found',
-                    message: 'No matching trip found automatically. Try manual matching or verify the toll dates.'
-                });
-            }, 2000);
-        }
-        
-        function manualMatchToll(tollId) {
-            showNotification({
-                type: 'info',
-                title: 'Manual Matching',
-                message: `Opening manual matching interface for toll #${tollId}...`
-            });
-            
-            // TODO: Implement manual matching modal
-        }
-        
-        function editPersonalToll(tollId) {
-            showNotification({
-                type: 'info',
-                title: 'Edit Toll Details',
-                message: `Opening edit form for personal toll #${tollId}...`
-            });
-            
-            // TODO: Implement edit toll modal
-        }
-        
-        function deletePersonalToll(tollId) {
-            if (confirm('Are you sure you want to permanently remove this personal toll record? This action cannot be undone.')) {
-                showNotification({
-                    type: 'success',
-                    title: 'Toll Removed',
-                    message: `Personal toll record #${tollId} has been permanently removed.`
-                });
                 
-                // TODO: Implement actual deletion via API
-                // Then refresh the data
+                const result = await response.json();
+                showNotification({ message: 'Trip submitted successfully - redirecting to invoices...', type: 'success' });
+                
+                // Redirect to invoices page after successful submission
                 setTimeout(() => {
-                    loadTrips();
-                }, 1000);
-            }
-        }
-        
-        // Legacy functions for backward compatibility
-        function moveToTrip(tollId) {
-            matchTollToTrip(tollId);
-        }
-        
-        function editToll(tollId) {
-            editPersonalToll(tollId);
-        }
-        
-        function deleteToll(tollId) {
-            deletePersonalToll(tollId);
-        }
-        
-        // Header actions
-        function exportTrips() {
-            showNotification({
-                type: 'success',
-                title: 'Export Started',
-                message: 'Trip data is being exported to CSV'
-            });
-        }
-        
-        function refreshTrips() {
-            showNotification({
-                type: 'success',
-                title: 'Data Refreshed',
-                message: 'Trip data has been updated'
-            });
-            loadTrips();
-        }
-        
-        function bulkActions() {
-            showNotification({
-                type: 'info',
-                title: 'Bulk Actions',
-                message: 'Bulk operation tools coming soon'
-            });
-        }
-        
-        // Enhanced loading and error states
-        function showLoading(target = 'global') {
-            if (target === 'global') {
-                // Show loading overlay
-                showLoadingOverlay();
+                    window.location.href = '/invoices.html';
+                }, 1500);
                 
-                // Update overview cards with loading state
-                updateEl('completed-count', '...');
-                updateEl('in-progress-count', '...');
-                updateEl('upcoming-count', '...');
-                updateEl('personal-tolls-count', '...');
-                
-                // Update tab badges with loading state
-                updateEl('completed-badge', '...');
-                updateEl('in-progress-badge', '...');
-                updateEl('upcoming-badge', '...');
-                updateEl('your-tolls-badge', '...');
-                
-                // Show loading in trip containers
-                showLoadingInContainer('completed-trips');
-                showLoadingInContainer('in-progress-trips');
-                showLoadingInContainer('upcoming-trips');
-                showLoadingInContainer('your-tolls-trips');
-            }
-        }
-        
-        function hideLoading() {
-            // Hide loading overlay
-            hideLoadingOverlay();
-            
-            // Remove loading states from containers
-            hideLoadingInContainer('completed-trips');
-            hideLoadingInContainer('in-progress-trips');
-            hideLoadingInContainer('upcoming-trips');
-            hideLoadingInContainer('your-tolls-trips');
-        }
-        
-        function showLoadingOverlay() {
-            let overlay = document.getElementById('loading-overlay');
-            if (!overlay) {
-                overlay = document.createElement('div');
-                overlay.id = 'loading-overlay';
-                overlay.className = 'loading-overlay';
-                overlay.innerHTML = `
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <div class="loading-text">Loading trip data...</div>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
-            }
-            overlay.style.display = 'flex';
-        }
-        
-        function hideLoadingOverlay() {
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay) {
-                overlay.style.display = 'none';
-            }
-        }
-        
-        function showLoadingInContainer(containerId) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.innerHTML = `
-                    <div class="loading-state">
-                        <div class="loading-spinner-small">
-                            <div class="spinner-small"></div>
-                        </div>
-                        <div class="loading-message">Loading data...</div>
-                    </div>
-                `;
-            }
-        }
-        
-        function hideLoadingInContainer(containerId) {
-            const container = document.getElementById(containerId);
-            if (container && container.querySelector('.loading-state')) {
-                // This will be replaced by actual content
-            }
-        }
-        
-        function showErrorState(containerId, error) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.innerHTML = `
-                    <div class="error-state">
-                        <div class="error-icon">⚠️</div>
-                        <div class="error-title">Failed to Load Data</div>
-                        <div class="error-message">${error}</div>
-                        <button class="btn btn-primary btn-sm" onclick="loadTrips()">
-                            <span>🔄</span>
-                            Try Again
-                        </button>
-                    </div>
-                `;
+            } catch (error) {
+                console.error('Error submitting trip:', {
+                    tripId: tripId,
+                    error: error.message,
+                    stack: error.stack
+                });
+                showNotification({ message: error.message || 'Failed to submit trip', type: 'error' });
             }
         }
 
-        // Late tolls management functions
+        function exportTrips() {
+            try {
+                // Get current filtered trips
+                const container = document.getElementById('trips-container');
+                const tripCards = container.children;
+                
+                if (tripCards.length === 0) {
+                    showNotification({ message: 'No trips to export', type: 'warning' });
+                    return;
+                }
+                
+                // Simple CSV export
+                let csvContent = 'Trip ID,Status,Guest Name,Vehicle,Start Date,End Date,Toll Amount\n';
+                
+                // This is a simplified export - you might want to enhance this
+                originalTripsData.forEach(trip => {
+                    csvContent += `${trip.id},${trip.status},"${trip.guest}","${trip.vehicle_description || trip.vehicle}",${trip.startDate},${trip.endDate},${trip.tollTotal || '0.00'}\n`;
+                });
+                
+                // Create download
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `trips_export_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                showNotification({ message: 'Trips exported successfully', type: 'success' });
+                
+            } catch (error) {
+                console.error('Error exporting trips:', error);
+                showNotification({ message: 'Failed to export trips', type: 'error' });
+            }
+        }
+
         async function loadLateTolls() {
             try {
                 const response = await fetch('/api/trips/late-tolls', {
-                    credentials: 'include'
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to load late tolls: ${response.status}`);
-                }
-
-                const result = await response.json();
                 
-                if (result.success && result.data.length > 0) {
-                    showLateTollsWidget(result.data);
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    return;
+                }
+                
+                const lateTolls = await response.json();
+                
+                if (lateTolls && lateTolls.length > 0) {
+                    const widget = document.getElementById('late-tolls-widget');
+                    const message = document.getElementById('late-tolls-message');
+                    
+                    widget.style.display = 'block';
+                    message.textContent = `${lateTolls.length} new toll(s) found for submitted trips`;
                 }
             } catch (error) {
                 console.error('Error loading late tolls:', error);
-            }
-        }
-
-        function showLateTollsWidget(lateTolls) {
-            const widget = document.getElementById('late-tolls-widget');
-            const message = document.getElementById('late-tolls-message');
-            
-            const newLateTolls = lateTolls.filter(toll => toll.status === 'new');
-            const count = newLateTolls.length;
-            
-            if (count > 0) {
-                message.textContent = `${count} new toll${count === 1 ? '' : 's'} found for already-submitted trips`;
-                widget.style.display = 'block';
-                
-                // Store late tolls data for details view
-                window.lateTollsData = lateTolls;
             }
         }
 
@@ -2370,155 +1110,124 @@
         }
 
         function viewLateTolls() {
-            const lateTolls = window.lateTollsData || [];
-            
-            // Create modal with late tolls details
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>⚠️ Late Tolls Detected</h2>
-                        <button class="modal-close" onclick="closeLateTollsModal()">&times;</button>
-                    </div>
-                    
-                    <div class="modal-body">
-                        <p class="modal-description">
-                            These tolls were detected for trips that were already submitted to Turo. 
-                            This usually happens when toll providers post charges with delays.
-                        </p>
-                        
-                        <div class="late-tolls-list" style="max-height: 400px; overflow-y: auto;">
-                            ${lateTolls.map(toll => `
-                                <div class="late-toll-item" style="border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
-                                    <div class="late-toll-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                        <strong>Trip #${toll.tripId}</strong>
-                                        <span class="late-toll-status" style="background: ${toll.status === 'new' ? '#fbbf24' : '#10b981'}; color: white; padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); font-size: var(--text-xs);">${toll.status}</span>
-                                    </div>
-                                    <div class="late-toll-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                        <div>📍 ${toll.tollLocation}</div>
-                                        <div>💰 $${toll.tollAmount.toFixed(2)}</div>
-                                        <div>📅 ${new Date(toll.tollDate).toLocaleDateString()}</div>
-                                        <div>🚗 ${toll.vehicle}</div>
-                                    </div>
-                                    <div class="late-toll-meta" style="font-size: var(--text-xs); color: var(--ink-muted);">
-                                        <div>Original Invoice: ${toll.originalInvoice} ($${toll.originalInvoiceAmount.toFixed(2)})</div>
-                                        <div>Detected: ${new Date(toll.detectionDate).toLocaleDateString()}</div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <div class="modal-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
-                            <button class="btn btn-secondary" onclick="closeLateTollsModal()">Close</button>
-                            <button class="btn btn-primary" onclick="acknowledgeAllLateTolls()">Acknowledge All</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            setTimeout(() => modal.classList.add('show'), 10);
-        }
-
-        function closeLateTollsModal() {
-            const modal = document.querySelector('.modal-overlay');
-            if (modal) {
-                modal.classList.remove('show');
-                setTimeout(() => modal.remove(), 200);
-            }
+            // Switch to late tolls tab
+            showTab('late');
         }
 
         async function acknowledgeAllLateTolls() {
-            const lateTolls = window.lateTollsData || [];
-            const newLateTolls = lateTolls.filter(toll => toll.status === 'new');
-            
             try {
-                for (const toll of newLateTolls) {
-                    await fetch(`/api/trips/late-tolls/${toll.id}/resolve`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        credentials: 'include',
-                        body: JSON.stringify({
-                            status: 'acknowledged',
-                            notes: 'Bulk acknowledged via trips page'
-                        })
-                    });
-                }
-                
-                showNotification({
-                    type: 'success',
-                    title: 'Success',
-                    message: 'All late tolls acknowledged'
+                const response = await fetch('/api/trips/late-tolls/acknowledge-all', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
                 
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to acknowledge late tolls');
+                }
+                
+                showNotification({ message: 'All late tolls acknowledged', type: 'success' });
                 dismissLateTolls();
-                closeLateTollsModal();
+                await loadTrips();
                 
             } catch (error) {
                 console.error('Error acknowledging late tolls:', error);
-                showNotification({
-                    type: 'error',
-                    title: 'Error', 
-                    message: 'Failed to acknowledge late tolls'
-                });
+                showNotification({ message: 'Failed to acknowledge late tolls', type: 'error' });
             }
         }
 
-        // Late Toll Action Functions
         async function acknowledgeLateToll(tripId) {
             try {
-                // For now, show notification - could call API to acknowledge all tolls for this trip
-                showNotification({
-                    type: 'info',
-                    title: 'Feature Coming Soon',
-                    message: 'Individual trip acknowledgment is coming in a future update. Use the Late Tolls tab to acknowledge all.'
+                const response = await fetch(`/api/trips/late-tolls/${tripId}/resolve`, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'acknowledged', notes: '' })
                 });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to acknowledge late toll');
+                }
+                
+                showNotification({ message: 'Late toll acknowledged', type: 'success' });
+                await loadTrips();
+                
             } catch (error) {
                 console.error('Error acknowledging late toll:', error);
-                showNotification({
-                    type: 'error',
-                    title: 'Error',
-                    message: 'Failed to acknowledge late toll'
-                });
+                showNotification({ message: 'Failed to acknowledge late toll', type: 'error' });
             }
         }
 
         async function createSupplementalInvoice(tripId) {
             try {
-                // For now, show notification - could implement supplemental invoice creation
-                showNotification({
-                    type: 'info',
-                    title: 'Feature Coming Soon',
-                    message: 'Supplemental invoice creation is coming in a future update.'
+                const response = await fetch(`/api/trips/${tripId}/supplemental-invoice`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to create supplemental invoice');
+                }
+                
+                showNotification({ message: 'Supplemental invoice created', type: 'success' });
+                await loadTrips();
+                
             } catch (error) {
                 console.error('Error creating supplemental invoice:', error);
-                showNotification({
-                    type: 'error',
-                    title: 'Error',
-                    message: 'Failed to create supplemental invoice'
-                });
+                showNotification({ message: 'Failed to create supplemental invoice', type: 'error' });
             }
         }
 
         async function viewLateTollDetails(tripId) {
             try {
-                // Show detailed view of late toll trip
-                showNotification({
-                    type: 'info',
-                    title: 'Late Toll Details',
-                    message: `Viewing details for trip ${tripId}. Full details view coming soon.`
+                const response = await fetch(`/api/trips/${tripId}/late-tolls`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.warn('Authentication failed, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to fetch late toll details');
+                }
+                
+                const details = await response.json();
+                
+                // Simple display - you can enhance this with a proper modal
+                let message = `Late Tolls for Trip #${tripId}:\n\n`;
+                details.lateTolls.forEach(toll => {
+                    message += `${toll.location}: $${toll.amount} (${new Date(toll.tollDate).toLocaleDateString()})\n`;
+                });
+                message += `\nTotal: $${details.totalAmount}`;
+                
+                alert(message);
+                
             } catch (error) {
                 console.error('Error viewing late toll details:', error);
-                showNotification({
-                    type: 'error',
-                    title: 'Error',
-                    message: 'Failed to view late toll details'
-                });
+                showNotification({ message: 'Failed to load late toll details', type: 'error' });
             }
         }
     </script>

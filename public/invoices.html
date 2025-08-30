@@ -13,6 +13,7 @@
     <script src="/js/ui-utils.js"></script>
     <script src="/js/xss-utils.js"></script>
     <script src="/js/performance.js"></script>
+    <script src="/js/api-helper.js"></script>
     <script src="/js/auth-check.js"></script>
     
     <style>
@@ -879,6 +880,32 @@
             document.getElementById('date-filter').addEventListener('change', filterInvoices);
         }
         
+        // Authentication helper function
+        function getAuthHeaders() {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Get stored token
+            let storedToken = null;
+            try {
+                if (window.apiHelper && window.apiHelper.tokenStorage) {
+                    storedToken = window.apiHelper.tokenStorage.getToken();
+                } else if (typeof localStorage !== 'undefined') {
+                    storedToken = localStorage.getItem('supabase_token');
+                }
+            } catch (error) {
+                console.warn('Failed to get auth token:', error);
+            }
+            
+            // Add Authorization header if we have a token
+            if (storedToken) {
+                headers['Authorization'] = `Bearer ${storedToken}`;
+            }
+            
+            return headers;
+        }
+        
         async function loadInvoices() {
             try {
                 showLoading();
@@ -888,7 +915,8 @@
                 
                 const response = await fetch('/api/invoices', {
                     method: 'GET',
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: getAuthHeaders()
                 });
                 
                 if (!response.ok) {
@@ -1187,7 +1215,8 @@
                 const response = await fetch(`/api/invoices/${invoiceId}/unsubmit`, {
                     method: 'DELETE',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getAuthHeaders()
                     }
                 });
                 
