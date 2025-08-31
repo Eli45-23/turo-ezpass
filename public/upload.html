@@ -151,6 +151,46 @@
             }
         }
 
+        /* Progress Section Styles */
+        .progress-section {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-title {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            height: 8px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .progress-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
         /* Modal Styles */
         .modal-overlay {
             position: fixed;
@@ -380,7 +420,7 @@
                 <!-- Progress Section -->
                 <div class="progress-section" id="progress-section" style="display: none;">
                     <div class="progress-title">
-                        ⚙️ Processing CSV Files...
+                        ⚙️ Processing CSV Files... ⚠️ Don't leave this page till the Matcher is done Processing
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="progress-fill"></div>
@@ -1223,11 +1263,15 @@
 
         // Progress management
         function showProgress() {
-            document.getElementById('progress-section').classList.add('show');
+            const progressSection = document.getElementById('progress-section');
+            progressSection.style.display = 'block';
+            progressSection.classList.add('show');
         }
 
         function hideProgress() {
-            document.getElementById('progress-section').classList.remove('show');
+            const progressSection = document.getElementById('progress-section');
+            progressSection.style.display = 'none';
+            progressSection.classList.remove('show');
             document.getElementById('progress-fill').style.width = '0%';
         }
 
