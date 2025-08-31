@@ -84,6 +84,58 @@
             border-left: 3px solid #6366f1;
         }
         
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::before {
+            width: 3px;
+        }
+        
+        /* Colorful Navigation Icons */
+        .nav-item .icon-dashboard,
+        .nav-item .icon-dashboard svg {
+            color: #3b82f6 !important; /* Blue for Dashboard/Overview */
+            stroke: #3b82f6 !important;
+        }
+        
+        .nav-item .icon-map,
+        .nav-item .icon-map svg {
+            color: #f59e0b !important; /* Orange for Trips/Map */
+            stroke: #f59e0b !important;
+        }
+        
+        .nav-item .icon-upload,
+        .nav-item .icon-upload svg {
+            color: #8b5cf6 !important; /* Purple for Upload */
+            stroke: #8b5cf6 !important;
+        }
+        
+        .nav-item .icon-analytics,
+        .nav-item .icon-analytics svg {
+            color: #10b981 !important; /* Green for Analytics */
+            stroke: #10b981 !important;
+        }
+        
+        .nav-item .icon-transponders,
+        .nav-item .icon-transponders svg {
+            color: #ef4444 !important; /* Red for Transponders */
+            stroke: #ef4444 !important;
+        }
+        
+        .nav-item .icon-invoices,
+        .nav-item .icon-invoices svg {
+            color: #06b6d4 !important; /* Cyan for Invoices */
+            stroke: #06b6d4 !important;
+        }
+        
         /* Enhanced Button Animations */
         .animated-button {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -227,8 +279,8 @@
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
     <div class="flex h-screen">
-        <!-- Sidebar -->
-        <div class="w-64 sidebar-bg border-r border-gray-600">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 sidebar-bg border-r border-gray-600">
             <div class="p-6">
                 <h1 class="text-white font-mono text-lg font-bold tracking-wide">TURO TOLL TRACKER</h1>
             </div>
@@ -236,32 +288,32 @@
             <!-- Navigation -->
             <nav class="px-4 space-y-1">
                 <a href="/dashboard.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <i data-lucide="layout-dashboard" class="icon-dashboard w-7 h-7"></i>
                     <span class="font-medium">OVERVIEW</span>
                 </a>
                 <a href="/trips.html" class="nav-item active flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white">
-                    <i data-lucide="map" class="w-5 h-5"></i>
+                    <i data-lucide="map" class="icon-map w-7 h-7"></i>
                     <span class="font-medium">TRIPS</span>
                 </a>
                 <a href="/upload.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
-                    <i data-lucide="upload" class="w-5 h-5"></i>
+                    <i data-lucide="upload" class="icon-upload w-7 h-7"></i>
                     <span class="font-medium">UPLOAD CSV</span>
                 </a>
                 <a href="/analytics.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
-                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <i data-lucide="bar-chart-3" class="icon-analytics w-7 h-7"></i>
                     <span class="font-medium">ANALYTICS</span>
                 </a>
                 <a href="/transponders.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
-                    <i data-lucide="radio" class="w-5 h-5"></i>
+                    <i data-lucide="radio" class="icon-transponders w-7 h-7"></i>
                     <span class="font-medium">TRANSPONDERS</span>
                 </a>
                 <a href="/invoices.html" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white/70 hover:text-white">
-                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    <i data-lucide="file-text" class="icon-invoices w-7 h-7"></i>
                     <span class="font-medium">INVOICES</span>
                 </a>
             </nav>
-        </div>
-        
+        </aside>
+
         <!-- Main Content -->
         <div class="flex-1 overflow-auto">
             <!-- Header -->
