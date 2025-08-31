@@ -339,7 +339,7 @@
                             <h4 class="text-white font-semibold mb-2">Drop Turo CSV here</h4>
                             <p class="text-gray-400 text-sm mb-4">or click to browse</p>
                             <input type="file" id="turo-file" class="hidden" accept=".csv" />
-                            <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold" onclick="document.getElementById('turo-file').click()">
+                            <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold">
                                 Choose Turo CSV
                             </button>
                         </div>
@@ -365,7 +365,7 @@
                             <h4 class="text-white font-semibold mb-2">Drop E-ZPass CSV here</h4>
                             <p class="text-gray-400 text-sm mb-4">or click to browse</p>
                             <input type="file" id="ezpass-file" class="hidden" accept=".csv" />
-                            <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold" onclick="document.getElementById('ezpass-file').click()">
+                            <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold">
                                 Choose E-ZPass CSV
                             </button>
                         </div>
@@ -1109,7 +1109,7 @@
                 </div>
                 <h4 class="text-white font-semibold mb-2">Drop ${fileName} here</h4>
                 <p class="text-gray-400 text-sm mb-4">or click to browse</p>
-                <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold" onclick="document.getElementById('${type}-file').click()">
+                <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold">
                     Choose ${fileName}
                 </button>
                 `;
@@ -1147,6 +1147,9 @@
             const turoFileInput = document.getElementById('turo-file');
             const ezpassFileInput = document.getElementById('ezpass-file');
             
+            // Debounce protection to prevent double file picker opens
+            let filePickerOpening = false;
+            
             // Handle drag and drop for both zones
             [turoDropZone, ezpassDropZone].forEach(dropZone => {
                 dropZone.addEventListener('dragover', (e) => {
@@ -1173,7 +1176,19 @@
                 });
                 
                 dropZone.addEventListener('click', (e) => {
+                    // Prevent rapid double-clicks from opening file picker multiple times
+                    if (filePickerOpening) {
+                        return;
+                    }
+                    
+                    filePickerOpening = true;
+                    setTimeout(() => {
+                        filePickerOpening = false;
+                    }, 300);
+                    
                     const fileInput = dropZone.id === 'turo-drop-zone' ? turoFileInput : ezpassFileInput;
+                    // Clear the input value to allow re-selecting the same file
+                    fileInput.value = '';
                     fileInput.click();
                 });
             });
