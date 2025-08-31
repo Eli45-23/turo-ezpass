@@ -215,7 +215,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 400px;
+            height: 280px;
             color: var(--ink-muted);
             font-size: var(--text-lg);
         }
@@ -225,7 +225,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 400px;
+            height: 280px;
             color: var(--error);
             text-align: center;
         }
@@ -247,7 +247,7 @@
             }
             
             .chart-container {
-                height: 500px;
+                height: 280px;
             }
         }
 
@@ -268,7 +268,7 @@
             }
             
             .chart-container {
-                height: 400px;
+                height: 280px;
             }
         }
         
@@ -280,6 +280,92 @@
         .sidebar-bg {
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
+        }
+        
+        /* Analytics Card Styling */
+        .analytics-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .analytics-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        /* Animated Button Styling */
+        .animated-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .animated-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .animated-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .animated-button:hover::before {
+            left: 100%;
+        }
+
+        /* Animation Classes */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .fade-in-delay-1 { animation-delay: 0.2s; }
+        .fade-in-delay-2 { animation-delay: 0.4s; }
+        .fade-in-delay-3 { animation-delay: 0.6s; }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Chart Styling Updates */
+        .chart-container {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+        
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
         }
         
         /* Navigation Animations */
@@ -350,6 +436,24 @@
             color: #06b6d4 !important; /* Cyan for Invoices */
             stroke: #06b6d4 !important;
         }
+        
+        /* Dropdown menu styles */
+        .dropdown-menu {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -392,98 +496,113 @@
         <!-- Main Content -->
         <div class="flex-1 overflow-auto">
             <!-- Header -->
-            <header class="analytics-header">
-                <h1 class="analytics-title">Analytics</h1>
+            <header class="bg-black/20 border-b border-gray-600 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-white font-mono">ANALYTICS</h2>
+                        <p class="text-gray-400 text-sm mt-1">Comprehensive view of your toll data and fleet performance</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" id="userMenu">
+                                <i data-lucide="log-out" class="w-5 h-5"></i>
+                            </button>
+                            <div class="absolute top-12 right-0 bg-gray-700/90 backdrop-blur-lg border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg opacity-0 invisible -translate-y-2 transition-all duration-200 z-50 dropdown-menu" id="userDropdown">
+                                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-white/5" id="signOutBtn">
+                                    <i data-lucide="log-out"></i>
+                                    Sign Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </header>
 
             <!-- Main Content -->
-            <main class="analytics-main">
-            <div class="page-header">
-                <h1 class="page-title">Analytics Dashboard</h1>
-                <p class="page-subtitle">Comprehensive view of your toll data and fleet performance</p>
-            </div>
+            <main class="p-4 space-y-4 max-h-screen overflow-auto">
+                <!-- All Charts in Single Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+                    <!-- Most Used Bridges & Tunnels -->
+                    <div class="fade-in analytics-card p-4 rounded-xl">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-white font-mono mb-1">Most Used Bridges & Tunnels</h3>
+                            <p class="text-gray-400 text-xs">Ranked by total toll costs across all your vehicles</p>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div id="loading-state" class="loading-state">
+                                <span>📊 Loading toll location data...</span>
+                            </div>
+                            <div id="error-state" class="error-state" style="display: none;">
+                                <div class="error-icon">⚠️</div>
+                                <div>Failed to load toll location data</div>
+                                <button onclick="loadTollLocationData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
+                            </div>
+                            <canvas id="tollLocationChart" style="display: none;"></canvas>
+                        </div>
+                    </div>
 
-            <div class="charts-grid">
-                <!-- Most Used Bridges & Tunnels Chart -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="chart-title">Most Used Bridges & Tunnels</h2>
-                        <p class="chart-description">Ranked by total toll costs across all your vehicles</p>
+                    <!-- Vehicle Toll Usage Distribution -->
+                    <div class="fade-in fade-in-delay-1 analytics-card p-4 rounded-xl">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-white font-mono mb-1">Vehicle Toll Usage Distribution</h3>
+                            <p class="text-gray-400 text-xs">Which vehicles incur the most toll costs in your fleet</p>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div id="vehicle-loading-state" class="loading-state">
+                                <span>🚗 Loading vehicle toll data...</span>
+                            </div>
+                            <div id="vehicle-error-state" class="error-state" style="display: none;">
+                                <div class="error-icon">⚠️</div>
+                                <div>Failed to load vehicle toll data</div>
+                                <button onclick="loadVehicleTollData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
+                            </div>
+                            <canvas id="vehicleTollChart" style="display: none;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Toll-Free Trip Champions -->
+                    <div class="fade-in fade-in-delay-2 analytics-card p-4 rounded-xl">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-white font-mono mb-1">Toll-Free Trip Champions</h3>
+                            <p class="text-gray-400 text-xs">Vehicles ranked by trips without any toll charges - the money savers</p>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div id="zero-toll-loading-state" class="loading-state">
+                                <span>💚 Loading toll-free trip data...</span>
+                            </div>
+                            <div id="zero-toll-error-state" class="error-state" style="display: none;">
+                                <div class="error-icon">⚠️</div>
+                                <div>Failed to load toll-free trip data</div>
+                                <button onclick="loadZeroTollTripsData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
+                            </div>
+                            <canvas id="zeroTollChart" style="display: none;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Average Toll Cost Per Trip -->
+                    <div class="fade-in fade-in-delay-3 analytics-card p-4 rounded-xl">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-white font-mono mb-1">Average Toll Cost Per Trip</h3>
+                            <p class="text-gray-400 text-xs">Comparing toll efficiency across your fleet from highest to lowest average cost</p>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div id="avg-cost-loading-state" class="loading-state">
+                                <span>📈 Loading average cost data...</span>
+                            </div>
+                            <div id="avg-cost-error-state" class="error-state" style="display: none;">
+                                <div class="error-icon">⚠️</div>
+                                <div>Failed to load average cost per trip data</div>
+                                <button onclick="loadAvgCostPerTripData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
+                            </div>
+                            <canvas id="avgCostChart" style="display: none;"></canvas>
+                        </div>
                     </div>
                     
-                    <div class="chart-container">
-                        <div id="loading-state" class="loading-state">
-                            <span>📊 Loading toll location data...</span>
-                        </div>
-                        <div id="error-state" class="error-state" style="display: none;">
-                            <div class="error-icon">⚠️</div>
-                            <div>Failed to load toll location data</div>
-                            <button onclick="loadTollLocationData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
-                        </div>
-                        <canvas id="tollLocationChart" style="display: none;"></canvas>
-                    </div>
                 </div>
-
-                <!-- Vehicle Toll Usage Chart -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="chart-title">Vehicle Toll Usage Distribution</h2>
-                        <p class="chart-description">Which vehicles incur the most toll costs in your fleet</p>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <div id="vehicle-loading-state" class="loading-state">
-                            <span>🚗 Loading vehicle toll data...</span>
-                        </div>
-                        <div id="vehicle-error-state" class="error-state" style="display: none;">
-                            <div class="error-icon">⚠️</div>
-                            <div>Failed to load vehicle toll data</div>
-                            <button onclick="loadVehicleTollData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
-                        </div>
-                        <canvas id="vehicleTollChart" style="display: none;"></canvas>
-                    </div>
-                </div>
-
-                <!-- Toll-Free Trip Champions Chart -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="chart-title">Toll-Free Trip Champions</h2>
-                        <p class="chart-description">Vehicles ranked by trips without any toll charges - the money savers</p>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <div id="zero-toll-loading-state" class="loading-state">
-                            <span>💚 Loading toll-free trip data...</span>
-                        </div>
-                        <div id="zero-toll-error-state" class="error-state" style="display: none;">
-                            <div class="error-icon">⚠️</div>
-                            <div>Failed to load toll-free trip data</div>
-                            <button onclick="loadZeroTollTripsData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
-                        </div>
-                        <canvas id="zeroTollChart" style="display: none;"></canvas>
-                    </div>
-                </div>
-
-                <!-- Average Cost Per Trip Chart -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h2 class="chart-title">Average Toll Cost Per Trip</h2>
-                        <p class="chart-description">Comparing toll efficiency across your fleet from highest to lowest average cost</p>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <div id="avg-cost-loading-state" class="loading-state">
-                            <span>📈 Loading average cost data...</span>
-                        </div>
-                        <div id="avg-cost-error-state" class="error-state" style="display: none;">
-                            <div class="error-icon">⚠️</div>
-                            <div>Failed to load average cost per trip data</div>
-                            <button onclick="loadAvgCostPerTripData()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accentA); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;">Retry</button>
-                        </div>
-                        <canvas id="avgCostChart" style="display: none;"></canvas>
-                    </div>
-                </div>
-            </div>
         </main>
         </div>
     </div>
@@ -554,12 +673,14 @@
             const costs = data.map(item => parseFloat(item.total_cost) || 0);
             const usageCounts = data.map(item => parseInt(item.usage_count) || 0);
 
-            // Create gradient colors from high to low usage
+            // Create vibrant gradient colors from high to low usage
             const maxCost = Math.max(...costs);
-            const colors = costs.map((cost, index) => {
-                const intensity = cost / maxCost;
-                return `hsla(${260 - (intensity * 60)}, 70%, ${50 + (intensity * 20)}%, 0.8)`;
-            });
+            const colorPalette = [
+                '#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B',
+                '#EF4444', '#EC4899', '#84CC16', '#F97316', '#6366F1',
+                '#14B8A6', '#F43F5E', '#8B5CF6', '#06B6D4', '#10B981'
+            ];
+            const colors = costs.map((cost, index) => colorPalette[index % colorPalette.length]);
 
             // Destroy existing chart if it exists
             if (tollLocationChart) {
@@ -587,10 +708,10 @@
                     indexAxis: 'y',
                     layout: {
                         padding: {
-                            top: 20,
-                            right: 20,
-                            bottom: 20,
-                            left: 20
+                            top: 10,
+                            right: 10,
+                            bottom: 10,
+                            left: 10
                         }
                     },
                     plugins: {
@@ -748,7 +869,7 @@
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        height: 400px;
+                        height: 280px;
                         color: var(--ink-muted);
                         text-align: center;
                     `;
@@ -811,10 +932,10 @@
                     maintainAspectRatio: false,
                     layout: {
                         padding: {
-                            top: 20,
-                            right: 20,
-                            bottom: 20,
-                            left: 20
+                            top: 10,
+                            right: 10,
+                            bottom: 10,
+                            left: 10
                         }
                     },
                     plugins: {
@@ -959,7 +1080,7 @@
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        height: 400px;
+                        height: 280px;
                         color: var(--ink-muted);
                         text-align: center;
                     `;
@@ -1025,10 +1146,10 @@
                     indexAxis: 'y',
                     layout: {
                         padding: {
-                            top: 20,
-                            right: 20,
-                            bottom: 20,
-                            left: 20
+                            top: 10,
+                            right: 10,
+                            bottom: 10,
+                            left: 10
                         }
                     },
                     plugins: {
@@ -1183,7 +1304,7 @@
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        height: 400px;
+                        height: 280px;
                         color: var(--ink-muted);
                         text-align: center;
                     `;
@@ -1249,10 +1370,10 @@
                     maintainAspectRatio: false,
                     layout: {
                         padding: {
-                            top: 20,
-                            right: 20,
-                            bottom: 20,
-                            left: 20
+                            top: 10,
+                            right: 10,
+                            bottom: 10,
+                            left: 10
                         }
                     },
                     plugins: {
@@ -1342,6 +1463,76 @@
             loadingState.style.display = 'none';
             errorState.style.display = 'flex';
             chartCanvas.style.display = 'none';
+        }
+    </script>
+    
+    <!-- Logout functionality -->
+    <script>
+        // User menu dropdown functionality
+        const userMenu = document.getElementById('userMenu');
+        const userDropdown = document.getElementById('userDropdown');
+        const signOutBtn = document.getElementById('signOutBtn');
+        
+        if (userMenu && userDropdown) {
+            // Toggle dropdown on user menu click
+            userMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                // Check if click is outside both the user menu button and dropdown
+                if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+            
+            // Handle sign out
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', handleSignOut);
+            }
+        }
+        
+        // Sign out function
+        async function handleSignOut() {
+            
+            const signOutBtn = document.getElementById('signOutBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            try {
+                // Show loading state
+                const originalText = signOutBtn.innerHTML;
+                signOutBtn.innerHTML = '<span class="dropdown-icon">⏳</span>Signing out...';
+                signOutBtn.disabled = true;
+                
+                // Clear stored tokens
+                localStorage.removeItem('supabase_token');
+                localStorage.removeItem('supabase_session');
+                
+                // Call logout endpoint
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Logout successful');
+                    window.location.href = '/';
+                } else {
+                    console.error('❌ Logout failed');
+                    // Still redirect on failure as tokens are cleared
+                    window.location.href = '/';
+                }
+                
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                // Still redirect on error as tokens are cleared
+                window.location.href = '/';
+            }
         }
     </script>
     
