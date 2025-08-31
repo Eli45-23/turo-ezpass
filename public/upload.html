@@ -1092,7 +1092,7 @@
                                     `• Total Tolls: ${processedTolls}\n` +
                                     `• Matched to Trips: ${matchedTolls} ($${matchedAmount})\n` +
                                     `• Personal Tolls: ${personalTolls} ($${personalAmount})\n\n` +
-                                    `Redirecting to dashboard to view detailed results...`;
+                                    `Redirecting to trips page to view detailed results...`;
                                 
                                 // Update button to show completion
                                 processBtn.textContent = '✅ Complete!';
@@ -1132,18 +1132,18 @@
                                     const statusEl = document.getElementById('status-message');
                                     if (statusEl) {
                                         statusEl.innerHTML = statusEl.innerHTML.replace(/\n/g, '<br>') + '<br><br>' +
-                                            `<button onclick="window.location.href='/dashboard.html'" ` +
+                                            `<button onclick="window.location.href='/trips.html'" ` +
                                             `class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mr-4">` +
-                                            `View Dashboard</button>` +
-                                            `<button onclick="window.location.href='/trips.html?tab=personal'" ` +
-                                            `class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold">` +
-                                            `View Personal Tolls</button>`;
+                                            `View Trips</button>` +
+                                            `<button onclick="window.location.href='/dashboard.html'" ` +
+                                            `class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">` +
+                                            `View Dashboard</button>`;
                                     }
                                 }, 2000);
                                 
-                                // Auto-redirect to dashboard after 8 seconds
+                                // Auto-redirect to trips page after 8 seconds
                                 setTimeout(() => {
-                                    window.location.href = '/dashboard.html';
+                                    window.location.href = '/trips.html';
                                 }, 8000);
                                 
                                 // Clear files after successful processing
