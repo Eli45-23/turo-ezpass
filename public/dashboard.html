@@ -9,6 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta name="cache-bust" content="v20250831-1525">
     
     <!-- Browser Compatibility Layer - MUST load first -->
     <script src="/js/browser-compatibility.js"></script>
@@ -315,7 +316,8 @@
         }
 
         /* Keep only essential custom styles */
-        .dropdown-menu {
+        .dropdown-menu,
+        #userDropdown {
             position: absolute;
             top: 50px;
             right: 0;
@@ -323,13 +325,27 @@
             visibility: hidden;
             transform: translateY(-10px);
             transition: all 0.2s ease;
-            z-index: 1000;
+            z-index: 99999 !important;
+            background-color: rgb(55, 65, 81) !important;
+            border: 1px solid rgb(75, 85, 99) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            will-change: opacity;
         }
 
-        .dropdown-menu.show {
-            opacity: 1;
+        .dropdown-menu.show,
+        #userDropdown.show {
+            opacity: 1 !important;
             visibility: visible;
             transform: translateY(0);
+        }
+
+        #signOutBtn {
+            background-color: transparent !important;
+        }
+
+        #signOutBtn:hover {
+            background-color: rgb(75, 85, 99) !important;
         }
 
         /* Table animations */
@@ -413,8 +429,9 @@
         }
 
         .guide-step-content.expanded {
-            max-height: 1000px;
+            max-height: none;
             display: block;
+            overflow-y: auto;
         }
 
         .guide-chevron {
@@ -499,6 +516,14 @@
             }
         }
 
+        /* Custom sizing for help-circle icon */
+        [data-lucide="help-circle"] svg,
+        .lucide-help-circle {
+            width: 40px !important;
+            height: 40px !important;
+            stroke-width: 1.5 !important;
+        }
+
         /* Responsive guide styles */
         @media (max-width: 768px) {
             .guide-step-content .ml-11 {
@@ -571,8 +596,8 @@
                         <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" id="userMenu">
                             <i data-lucide="log-out" class="w-5 h-5"></i>
                         </button>
-                        <div class="absolute top-12 right-0 bg-gray-700/90 backdrop-blur-lg border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg opacity-0 invisible -translate-y-2 transition-all duration-200 z-50 dropdown-menu" id="userDropdown">
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-white/5" id="signOutBtn">
+                        <div class="absolute top-12 right-0 border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg -translate-y-2 transition-all duration-200 dropdown-menu" id="userDropdown" style="background-color: rgb(55, 65, 81) !important; z-index: 99999 !important;">
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-gray-600" id="signOutBtn">
                                 <i data-lucide="log-out"></i>
                                 Sign Out
                             </a>
@@ -690,139 +715,134 @@
                     <div class="p-6 border-b border-gray-600">
                         <div class="flex items-center justify-between">
                             <h3 class="text-lg font-bold text-white font-mono flex items-center space-x-2">
-                                <i data-lucide="help-circle" class="w-5 h-5 text-green-400"></i>
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-green-400 text-green-400 text-2xl font-bold">?</span>
                                 <span>HOW TO USE</span>
                             </h3>
                         </div>
-                        <p class="text-gray-300 text-sm mt-2 font-inter">Steps on how to use our software</p>
                     </div>
                     
                     <!-- Guide Content -->
-                    <div class="p-6 space-y-4">
+                    <div class="p-6">
                         
-                        <!-- Step 1 -->
+                        <!-- Single Combined Guide -->
                         <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
-                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="1">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="all">
                                 <div class="flex items-center space-x-3">
-                                    <div class="step-badge w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">1</div>
-                                    <span class="text-white font-semibold font-mono">Get your CSV files</span>
+                                    <div class="step-badge w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">
+                                        <i data-lucide="list" class="w-4 h-4"></i>
+                                    </div>
+                                    <span class="text-white font-semibold font-mono">Steps on how to use our software</span>
                                 </div>
                                 <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
                             </button>
-                            <div class="guide-step-content hidden p-4 pt-0 space-y-4">
-                                <div class="ml-11 space-y-4">
-                                    <div class="bg-gray-600/20 rounded-lg p-4">
-                                        <h4 class="text-yellow-400 font-semibold font-mono text-sm mb-3">A) Turo Trips CSV</h4>
-                                        <ol class="text-gray-300 text-sm space-y-1 font-inter">
-                                            <li>1. Log in to your Turo host account (desktop).</li>
-                                            <li>2. Go to Business → Earnings.</li>
-                                            <li>3. Click Download CSV (top-right).</li>
-                                        </ol>
+                            <div class="guide-step-content hidden p-4 pt-0 space-y-6">
+                                
+                                <!-- Step 1: Get CSV Files -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">1</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Get your CSV files</h4>
                                     </div>
-                                    <div class="bg-gray-600/20 rounded-lg p-4">
-                                        <h4 class="text-yellow-400 font-semibold font-mono text-sm mb-3">B) NY E-ZPass CSV</h4>
-                                        <ol class="text-gray-300 text-sm space-y-1 font-inter">
-                                            <li>1. Log in to your E-ZPass NY account (desktop).</li>
-                                            <li>2. In Recent Transactions, click View all.</li>
-                                            <li>3. Switch to Posted Dates.</li>
-                                            <li>4. Click Export (upper-right) → choose CSV.</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 2 -->
-                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
-                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="2">
-                                <div class="flex items-center space-x-3">
-                                    <div class="step-badge w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">2</div>
-                                    <span class="text-white font-semibold font-mono">Add your Plate & Transponder info</span>
-                                </div>
-                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
-                            </button>
-                            <div class="guide-step-content hidden p-4 pt-0">
-                                <div class="ml-11">
-                                    <div class="bg-gray-600/20 rounded-lg p-4">
-                                        <ol class="text-gray-300 text-sm space-y-1 font-inter">
-                                            <li>1. Go to the <a href="/transponders.html" class="text-red-400 hover:text-red-300 underline transition-colors">Transponders page</a> (Tags)</li>
-                                            <li>2. Click Add Mapping (top right of the page)</li>
-                                            <li>3. Add as many vehicles you have rented with the corresponding Tag/Transponder that goes with that vehicle if any.</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3 -->
-                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
-                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="3">
-                                <div class="flex items-center space-x-3">
-                                    <div class="step-badge w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">3</div>
-                                    <span class="text-white font-semibold font-mono">Upload your CSV files</span>
-                                </div>
-                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
-                            </button>
-                            <div class="guide-step-content hidden p-4 pt-0">
-                                <div class="ml-11">
-                                    <div class="bg-gray-600/20 rounded-lg p-4">
-                                        <ol class="text-gray-300 text-sm space-y-2 font-inter">
-                                            <li>1. Go to the <a href="/upload.html" class="text-amber-400 hover:text-amber-300 underline transition-colors">Uploads CSV page</a>.</li>
-                                            <li>2. Upload files
-                                                <ul class="ml-4 mt-1 space-y-1 text-xs text-gray-400">
-                                                    <li>• <span class="text-white">Turo CSV</span> this file should start with <code class="bg-gray-800 px-1 rounded text-blue-300">trip_earnings_export</code></li>
-                                                    <li>• <span class="text-white">E-ZPass CSV</span> this file should start with <code class="bg-gray-800 px-1 rounded text-blue-300">Transaction_Report</code></li>
-                                                </ul>
-                                            </li>
-                                            <li>3. Press Run Matcher</li>
-                                            <li>4. Wait till the Matcher is done Matching before leaving that page.</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 4 -->
-                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
-                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="4">
-                                <div class="flex items-center space-x-3">
-                                    <div class="step-badge w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">4</div>
-                                    <span class="text-white font-semibold font-mono">Review matched results</span>
-                                </div>
-                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
-                            </button>
-                            <div class="guide-step-content hidden p-4 pt-0">
-                                <div class="ml-11">
-                                    <div class="bg-gray-600/20 rounded-lg p-4 space-y-3">
-                                        <p class="text-gray-300 text-sm font-inter">Here is where you can take a screen shot of the trips with the matched tolls to submit to Turo for your toll reimbursement. All matched tolls to trips are in the "Completed" tab.</p>
-                                        <div>
-                                            <p class="text-white text-sm font-semibold mb-2">1. Go to <a href="/trips.html" class="text-green-400 hover:text-green-300 underline transition-colors">Trips</a>. You'll see trips organized into tabs:</p>
-                                            <ul class="text-gray-300 text-sm space-y-1 ml-4 font-inter">
-                                                <li>• <span class="text-green-400 font-semibold">Completed</span> — Past trips with all matched tolls. Shows total toll amount and match count per trip.</li>
-                                                <li>• <span class="text-blue-400 font-semibold">In Progress</span> — Active trips; toll totals update as new transactions post.</li>
-                                                <li>• <span class="text-yellow-400 font-semibold">Upcoming</span> — Future trips scheduled; matching begins once the trip starts.</li>
-                                                <li>• <span class="text-orange-400 font-semibold">Your Tolls</span> — Personal/unmatched tolls that didn't fit any trip window.</li>
-                                                <li>• <span class="text-red-400 font-semibold">Late Tolls</span> — Newly detected tolls that fall inside a trip window that was already submitted/invoiced.</li>
-                                            </ul>
+                                    <div class="ml-11 space-y-4">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <h5 class="text-yellow-400 font-semibold font-mono text-sm mb-3">A) Turo Trips CSV</h5>
+                                            <ol class="text-gray-300 text-sm space-y-1 font-inter">
+                                                <li>1. Log in to your Turo host account (desktop).</li>
+                                                <li>2. Go to Business → Earnings.</li>
+                                                <li>3. Click Download CSV (top-right).</li>
+                                            </ol>
+                                        </div>
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <h5 class="text-yellow-400 font-semibold font-mono text-sm mb-3">B) NY E-ZPass CSV</h5>
+                                            <ol class="text-gray-300 text-sm space-y-1 font-inter">
+                                                <li>1. Log in to your E-ZPass NY account (desktop).</li>
+                                                <li>2. In Recent Transactions, click View all.</li>
+                                                <li>3. Switch to Posted Dates.</li>
+                                                <li>4. Click Export (upper-right) → choose CSV.</li>
+                                            </ol>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Footer Message -->
-                        <div class="mt-8 p-6 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg border border-indigo-500/30">
-                            <div class="text-center space-y-3">
-                                <p class="text-gray-300 text-sm font-inter">That's it! Don't be afraid to explore the rest of your workspace and get familiar with it.</p>
-                                <p class="text-gray-300 text-sm font-inter">This software was built/designed/developed by a real Turo Host in NYC so all hosts were in mind during the process.</p>
-                                <div class="flex items-center justify-center space-x-2 mt-4">
-                                    <span class="text-gray-400 text-sm font-inter">Questions, issues, or recommendations?</span>
-                                    <button class="email-copy-btn text-indigo-400 hover:text-indigo-300 underline text-sm font-semibold transition-colors cursor-pointer" data-email="turoezpassNY@gmail.com">
-                                        turoezpassNY@gmail.com
-                                    </button>
-                                    <span class="email-copied-msg hidden text-green-400 text-xs font-medium">Copied!</span>
+                                <!-- Step 2: Add Transponder Info -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">2</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Add your Plate & Transponder info</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ol class="text-gray-300 text-sm space-y-1 font-inter">
+                                                <li>1. Go to the <a href="/transponders.html" class="text-red-400 hover:text-red-300 underline transition-colors">Transponders page</a> (Tags)</li>
+                                                <li>2. Click Add Mapping (top right of the page)</li>
+                                                <li>3. Add as many vehicles you have rented with the corresponding Tag/Transponder that goes with that vehicle if any.</li>
+                                            </ol>
+                                        </div>
+                                    </div>
                                 </div>
-                                <p class="text-gray-400 text-xs font-inter mt-2">Thank you.</p>
+
+                                <!-- Step 3: Upload CSV Files -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">3</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Upload your CSV files</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ol class="text-gray-300 text-sm space-y-2 font-inter">
+                                                <li>1. Go to the <a href="/upload.html" class="text-amber-400 hover:text-amber-300 underline transition-colors">Uploads CSV page</a>.</li>
+                                                <li>2. Upload files
+                                                    <ul class="ml-4 mt-1 space-y-1 text-xs text-gray-400">
+                                                        <li>• <span class="text-white">Turo CSV</span> this file should start with <code class="bg-gray-800 px-1 rounded text-blue-300">trip_earnings_export</code></li>
+                                                        <li>• <span class="text-white">E-ZPass CSV</span> this file should start with <code class="bg-gray-800 px-1 rounded text-blue-300">Transaction_Report</code></li>
+                                                    </ul>
+                                                </li>
+                                                <li>3. Press Run Matcher</li>
+                                                <li>4. Wait till the Matcher is done Matching before leaving that page.</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 4: Review Results -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">4</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Review matched results</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4 space-y-3">
+                                            <p class="text-gray-300 text-sm font-inter">Here is where you can take a screen shot of the trips with the matched tolls to submit to Turo for your toll reimbursement. All matched tolls to trips are in the "Completed" tab.</p>
+                                            <div>
+                                                <p class="text-white text-sm font-semibold mb-2">1. Go to <a href="/trips.html" class="text-green-400 hover:text-green-300 underline transition-colors">Trips</a>. You'll see trips organized into tabs:</p>
+                                                <ul class="text-gray-300 text-sm space-y-1 ml-4 font-inter">
+                                                    <li>• <span class="text-green-400 font-semibold">Completed</span> — Past trips with all matched tolls. Shows total toll amount and match count per trip.</li>
+                                                    <li>• <span class="text-blue-400 font-semibold">In Progress</span> — Active trips; toll totals update as new transactions post.</li>
+                                                    <li>• <span class="text-yellow-400 font-semibold">Upcoming</span> — Future trips scheduled; matching begins once the trip starts.</li>
+                                                    <li>• <span class="text-orange-400 font-semibold">Your Tolls</span> — Personal/unmatched tolls that didn't fit any trip window.</li>
+                                                    <li>• <span class="text-red-400 font-semibold">Late Tolls</span> — Newly detected tolls that fall inside a trip window that was already submitted/invoiced.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Footer Message -->
+                                <div class="mt-8 p-6 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg border border-indigo-500/30">
+                                    <div class="text-center space-y-3">
+                                        <p class="text-gray-300 text-sm font-inter">That's it! Don't be afraid to explore the rest of your workspace and get familiar with it.</p>
+                                        <p class="text-gray-300 text-sm font-inter">This software was built/designed/developed by a real Turo Host in NYC so all hosts were in mind during the process.</p>
+                                        <div class="flex items-center justify-center space-x-2 mt-4">
+                                            <span class="text-gray-400 text-sm font-inter">Questions, issues, or recommendations?</span>
+                                            <button class="email-copy-btn text-indigo-400 hover:text-indigo-300 underline text-sm font-semibold transition-colors cursor-pointer" data-email="turoezpassNY@gmail.com">
+                                                turoezpassNY@gmail.com
+                                            </button>
+                                            <span class="email-copied-msg hidden text-green-400 text-xs font-medium">Copied!</span>
+                                        </div>
+                                        <p class="text-gray-400 text-xs font-inter mt-2">Thank you.</p>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
