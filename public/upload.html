@@ -235,6 +235,53 @@
             transform: translateY(0);
         }
 
+        /* Basic date input styles */
+        .custom-date-range {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .date-input-group {
+            margin-bottom: 1rem;
+        }
+
+        .date-input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .date-input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: white;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .date-input {
+            width: 100%;
+            background: #374151;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #4b5563;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .date-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .date-input::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -593,6 +640,8 @@
             display.textContent = text;
         }
 
+        
+        // Initialize date range with default values
         // Date range selector
         function updateDateRangeDisplay() {
             const dateRangeSelect = document.getElementById('date-range-select');
@@ -608,48 +657,112 @@
                 const startDateInput = document.getElementById('start-date');
                 const endDateInput = document.getElementById('end-date');
                 
-                if (!startDateInput.value) {
+                // Set max date to today for both inputs  
+                const todayStr = today.toISOString().split('T')[0];
+                if (startDateInput) startDateInput.max = todayStr;
+                if (endDateInput) endDateInput.max = todayStr;
+                
+                if (startDateInput && !startDateInput.value) {
                     startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
                 }
-                if (!endDateInput.value) {
-                    endDateInput.value = today.toISOString().split('T')[0];
+                if (endDateInput && !endDateInput.value) {
+                    endDateInput.value = todayStr;
                 }
+                
+                // Restore from session storage if available
+                restoreDateRange();
             } else {
                 customDateRange.style.display = 'none';
             }
         }
-
-        // Get current date range settings
-        function getDateRangeSettings() {
-            const dateRangeSelect = document.getElementById('date-range-select');
-            const selectedValue = dateRangeSelect.value;
-            
-            if (selectedValue === 'custom') {
-                const startDate = document.getElementById('start-date').value;
-                const endDate = document.getElementById('end-date').value;
-                
-                if (!startDate || !endDate) {
-                    throw new Error('Please select both start and end dates for custom range');
-                }
-                
-                if (new Date(startDate) > new Date(endDate)) {
-                    throw new Error('Start date cannot be after end date');
-                }
-                
-                return {
-                    type: 'custom',
-                    startDate: startDate,
-                    endDate: endDate,
-                    days: Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24))
-                };
-            } else {
-                return {
-                    type: 'preset',
-                    days: parseInt(selectedValue),
-                    startDate: null,
-                    endDate: null
-                };
+        
+        // Simple date validation (no UI error display - relies on browser validation)
+        function validateDateRange(startDate, endDate) {
+            if (!startDate || !endDate) {
+                return false;
             }
+            
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const today = new Date();
+            today.setHours(23, 59, 59, 999); // End of today
+            
+            // Check if start date is after end date
+            if (start > end) {
+                return false;
+            }
+            
+            // Check if dates are in the future
+            if (start > today || end > today) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        
+        
+        // Persist date range to session storage
+        function persistDateRange() {
+            const dateRangeSelect = document.getElementById('date-range-select');
+            const settings = {
+                startDate: document.getElementById('start-date')?.value || '',
+                endDate: document.getElementById('end-date')?.value || '',
+                selectedRange: dateRangeSelect?.value || '30'
+            };
+            sessionStorage.setItem('dateRangeSettings', JSON.stringify(settings));
+        }
+        
+        // Alias for consistency
+        const saveDateRangeToStorage = persistDateRange;
+        
+        
+        // Restore date range from session storage
+        function restoreDateRange() {
+            try {
+                const stored = sessionStorage.getItem('dateRangeSettings');
+                if (stored) {
+                    const settings = JSON.parse(stored);
+                    const dateRangeSelect = document.getElementById('date-range-select');
+                    
+                    // Restore dropdown selection
+                    if (settings.selectedRange && dateRangeSelect) {
+                        dateRangeSelect.value = settings.selectedRange;
+                        updateDateRangeDisplay();
+                    }
+                    
+                    // Restore custom dates if custom range is selected
+                    if (settings.startDate && document.getElementById('start-date')) {
+                        document.getElementById('start-date').value = settings.startDate;
+                    }
+                    if (settings.endDate && document.getElementById('end-date')) {
+                        document.getElementById('end-date').value = settings.endDate;
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to restore date range settings:', error);
+            }
+        }
+        
+        // Get current date range settings (updated for new format)
+        function getDateRangeSettings() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            if (!startDate || !endDate) {
+                throw new Error('Please select both start and end dates');
+            }
+            
+            if (!validateDateRange(startDate, endDate, true)) {
+                throw new Error('Please fix date range errors');
+            }
+            
+            return {
+                type: 'custom',
+                startDate: startDate,
+                endDate: endDate,
+                days: Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
+            };
         }
 
         // Clear data confirmation
@@ -1274,6 +1387,33 @@
                 if (signOutBtn) {
                     signOutBtn.addEventListener('click', handleSignOut);
                 }
+            }
+            
+            // Initialize date range functionality
+            updateDateRangeDisplay();
+            restoreDateRange();
+            
+            // Add change event listeners for date validation and persistence
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            const dateRangeSelect = document.getElementById('date-range-select');
+            
+            if (startDateInput) {
+                startDateInput.addEventListener('change', function() {
+                    persistDateRange();
+                });
+            }
+            
+            if (endDateInput) {
+                endDateInput.addEventListener('change', function() {
+                    persistDateRange();
+                });
+            }
+            
+            if (dateRangeSelect) {
+                dateRangeSelect.addEventListener('change', function() {
+                    persistDateRange();
+                });
             }
         });
 
