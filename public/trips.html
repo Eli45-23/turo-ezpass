@@ -1141,39 +1141,211 @@
             }
         }
 
+        // Helper function to escape CSV values
+        function escapeCsvValue(value) {
+            if (value == null || value === undefined) return '';
+            const stringValue = String(value);
+            // If the value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+        }
+        
+        // Helper function to get current filtered trips based on active tab and filters
+        function getCurrentFilteredTrips() {
+            const searchTerm = document.getElementById('search-trips')?.value.toLowerCase() || '';
+            const dateFilter = document.getElementById('date-filter')?.value || 'all';
+            const vehicleFilter = document.getElementById('vehicle-filter')?.value || 'all';
+            
+            let filteredTrips = [...originalTripsData];
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredTrips = filteredTrips.filter(trip =>
+                    trip.guest?.toLowerCase().includes(searchTerm) ||
+                    trip.vehicle?.toLowerCase().includes(searchTerm) ||
+                    trip.vehicle_description?.toLowerCase().includes(searchTerm) ||
+                    trip.id.toString().includes(searchTerm)
+                );
+            }
+            
+            // Apply date filter
+            const now = new Date();
+            if (dateFilter !== 'all') {
+                filteredTrips = filteredTrips.filter(trip => {
+                    const tripDate = new Date(trip.startDate);
+                    switch (dateFilter) {
+                        case 'today':
+                            return tripDate.toDateString() === now.toDateString();
+                        case 'week':
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            return tripDate >= weekAgo;
+                        case 'month':
+                            return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
+                        case '3months':
+                            const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                            return tripDate >= threeMonthsAgo;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // Apply vehicle filter
+            if (vehicleFilter !== 'all') {
+                filteredTrips = filteredTrips.filter(trip => {
+                    return trip.vehicle_description === vehicleFilter;
+                });
+            }
+            
+            // Apply tab filter
+            switch (currentTab) {
+                case 'completed':
+                    return filteredTrips.filter(trip => trip.status === 'completed');
+                case 'progress':
+                    return filteredTrips.filter(trip => trip.status === 'in-progress');
+                case 'upcoming':
+                    return filteredTrips.filter(trip => trip.status === 'upcoming');
+                case 'personal':
+                    // Return personal tolls instead of trips
+                    return tripsData.yourTolls || [];
+                case 'late':
+                    return filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0);
+                default:
+                    return filteredTrips;
+            }
+        }
+        
         function exportTrips() {
             try {
-                // Get current filtered trips
-                const container = document.getElementById('trips-container');
-                const tripCards = container.children;
+                // Get current filtered data based on active tab
+                const dataToExport = getCurrentFilteredTrips();
                 
-                if (tripCards.length === 0) {
-                    showNotification({ message: 'No trips to export', type: 'warning' });
+                if (!dataToExport || dataToExport.length === 0) {
+                    showNotification({ 
+                        message: `No ${currentTab === 'personal' ? 'personal tolls' : 'trips'} to export with current filters`, 
+                        type: 'warning' 
+                    });
                     return;
                 }
                 
-                // Simple CSV export
-                let csvContent = 'Trip ID,Status,Guest Name,Vehicle,Start Date,End Date,Toll Amount\n';
+                let csvContent = '';
+                let filename = '';
                 
-                // This is a simplified export - you might want to enhance this
-                originalTripsData.forEach(trip => {
-                    csvContent += `${trip.id},${trip.status},"${trip.guest}","${trip.vehicle_description || trip.vehicle}",${trip.startDate},${trip.endDate},${trip.tollTotal || '0.00'}\n`;
-                });
+                if (currentTab === 'personal') {
+                    // Export personal tolls
+                    csvContent = 'Date,Time,Location,Amount,Vehicle,Transponder,Transaction ID,Type\n';
+                    
+                    dataToExport.forEach(toll => {
+                        const tollDate = new Date(toll.date);
+                        csvContent += [
+                            escapeCsvValue(tollDate.toLocaleDateString()),
+                            escapeCsvValue(toll.time),
+                            escapeCsvValue(toll.location),
+                            escapeCsvValue(`$${toll.amount.toFixed(2)}`),
+                            escapeCsvValue(toll.vehicle),
+                            escapeCsvValue(toll.transponder),
+                            escapeCsvValue(toll.transactionId || ''),
+                            escapeCsvValue(toll.type || 'Personal')
+                        ].join(',') + '\n';
+                    });
+                    
+                    filename = `personal_tolls_export_${new Date().toISOString().split('T')[0]}.csv`;
+                } else {
+                    // Export trips with detailed toll information
+                    csvContent = 'Trip ID,Internal ID,Status,Guest Name,Vehicle Plate,Vehicle Description,Start Date,End Date,Duration,Toll Count,Toll Total,Toll Location,Toll Amount,Toll Date,Toll Time,Transponder,Transaction ID\n';
+                    
+                    dataToExport.forEach(trip => {
+                        if (trip.tolls && trip.tolls.length > 0) {
+                            // Create a row for each toll
+                            trip.tolls.forEach(toll => {
+                                csvContent += [
+                                    escapeCsvValue(trip.id),
+                                    escapeCsvValue(trip.internalId),
+                                    escapeCsvValue(trip.status),
+                                    escapeCsvValue(trip.guest),
+                                    escapeCsvValue(trip.vehicle_plate || trip.vehicle),
+                                    escapeCsvValue(trip.vehicle_description || ''),
+                                    escapeCsvValue(trip.startDate),
+                                    escapeCsvValue(trip.endDate),
+                                    escapeCsvValue(trip.duration),
+                                    escapeCsvValue(trip.tolls.length),
+                                    escapeCsvValue(`$${trip.tollTotal.toFixed(2)}`),
+                                    escapeCsvValue(toll.location),
+                                    escapeCsvValue(`$${toll.amount.toFixed(2)}`),
+                                    escapeCsvValue(toll.tollDate ? new Date(toll.tollDate).toLocaleDateString() : ''),
+                                    escapeCsvValue(toll.time),
+                                    escapeCsvValue(toll.transponder),
+                                    escapeCsvValue(toll.transactionId || '')
+                                ].join(',') + '\n';
+                            });
+                        } else {
+                            // Trip with no tolls - single row
+                            csvContent += [
+                                escapeCsvValue(trip.id),
+                                escapeCsvValue(trip.internalId),
+                                escapeCsvValue(trip.status),
+                                escapeCsvValue(trip.guest),
+                                escapeCsvValue(trip.vehicle_plate || trip.vehicle),
+                                escapeCsvValue(trip.vehicle_description || ''),
+                                escapeCsvValue(trip.startDate),
+                                escapeCsvValue(trip.endDate),
+                                escapeCsvValue(trip.duration),
+                                escapeCsvValue('0'),
+                                escapeCsvValue('$0.00'),
+                                escapeCsvValue(''),
+                                escapeCsvValue(''),
+                                escapeCsvValue(''),
+                                escapeCsvValue(''),
+                                escapeCsvValue(''),
+                                escapeCsvValue('')
+                            ].join(',') + '\n';
+                        }
+                    });
+                    
+                    // Generate filename with context
+                    const tabName = currentTab === 'progress' ? 'in_progress' : currentTab;
+                    const searchTerm = document.getElementById('search-trips')?.value || '';
+                    const dateFilter = document.getElementById('date-filter')?.value || 'all';
+                    const vehicleFilter = document.getElementById('vehicle-filter')?.value || 'all';
+                    
+                    let filenameParts = [tabName, 'trips'];
+                    
+                    if (searchTerm) {
+                        filenameParts.push('search');
+                    }
+                    if (dateFilter !== 'all') {
+                        filenameParts.push(dateFilter);
+                    }
+                    if (vehicleFilter !== 'all') {
+                        filenameParts.push('filtered');
+                    }
+                    
+                    filename = `${filenameParts.join('_')}_${new Date().toISOString().split('T')[0]}.csv`;
+                }
                 
                 // Create download
-                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `trips_export_${new Date().toISOString().split('T')[0]}.csv`;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
                 
-                showNotification({ message: 'Trips exported successfully', type: 'success' });
+                const itemType = currentTab === 'personal' ? 'personal tolls' : 'trips';
+                showNotification({ 
+                    message: `${dataToExport.length} ${itemType} exported successfully as ${filename}`, 
+                    type: 'success' 
+                });
                 
             } catch (error) {
-                console.error('Error exporting trips:', error);
-                showNotification({ message: 'Failed to export trips', type: 'error' });
+                console.error('Error exporting data:', error);
+                showNotification({ message: 'Failed to export data: ' + error.message, type: 'error' });
             }
         }
 
