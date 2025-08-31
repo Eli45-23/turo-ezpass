@@ -293,6 +293,63 @@
             visibility: visible;
             transform: translateY(0);
         }
+        
+        /* Toll expansion styles */
+        .toll-toggle-btn {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .toll-toggle-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.2);
+        }
+        
+        .toll-toggle-btn:active {
+            transform: translateY(0);
+        }
+        
+        .hidden-toll {
+            display: none !important;
+        }
+        
+        .toll-card {
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Smooth expand/collapse animation */
+        @keyframes tollExpand {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes tollCollapse {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+            }
+        }
+        
+        .toll-expanding {
+            animation: tollExpand 0.3s ease forwards;
+        }
+        
+        .toll-collapsing {
+            animation: tollCollapse 0.3s ease forwards;
+        }
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -538,28 +595,39 @@
                 });
             });
             
-            // Wait for authentication before loading data
-            setTimeout(async () => {
+            // Start loading data immediately - show skeleton while checking auth
+            showLoadingSkeleton();
+            
+            // Check authentication and load data immediately
+            (async () => {
                 try {
-                    // Ensure auth check has completed
+                    let isAuthenticated = false;
+                    
+                    // Try immediate auth check
                     if (window.authCheck) {
-                        const isAuthenticated = await window.authCheck();
-                        if (isAuthenticated) {
-                            loadTrips();
-                        }
+                        isAuthenticated = await window.authCheck();
                     } else {
-                        // Fallback: auth-check.js not loaded yet, try again
-                        setTimeout(() => {
-                            if (window.currentUser) {
-                                loadTrips();
-                            }
-                        }, 500);
+                        // If auth-check.js not loaded yet, wait briefly then try again
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        if (window.authCheck) {
+                            isAuthenticated = await window.authCheck();
+                        } else if (window.currentUser) {
+                            isAuthenticated = true;
+                        }
+                    }
+                    
+                    if (isAuthenticated) {
+                        await loadTripsOptimized();
+                    } else {
+                        hideLoadingSkeleton();
+                        window.location.href = '/';
                     }
                 } catch (error) {
                     console.error('Auth check failed:', error);
-                    // Don't load trips if auth fails
+                    hideLoadingSkeleton();
+                    showNotification({ message: 'Authentication failed', type: 'error' });
                 }
-            }, 100);
+            })();
             
             setupEventListeners();
         });
@@ -604,20 +672,56 @@
             return headers;
         }
         
+        // Debounce utility function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Debounced filter function for better performance
+        const debouncedFilterTrips = debounce(() => {
+            const startTime = performance.now();
+            filterTrips();
+            const endTime = performance.now();
+            console.log(`⚡ Filter completed in ${(endTime - startTime).toFixed(2)}ms`);
+        }, 300);
+        
+        const fastFilterTrips = debounce(filterTrips, 100);
+        
         function setupEventListeners() {
-            // Setup search functionality
+            // Setup search functionality with debouncing
             const searchInput = document.getElementById('search-trips');
             const dateFilter = document.getElementById('date-filter');
             const vehicleFilter = document.getElementById('vehicle-filter');
             
             if (searchInput) {
-                searchInput.addEventListener('input', filterTrips);
+                // Use longer debounce for text input to avoid excessive filtering
+                searchInput.addEventListener('input', debouncedFilterTrips);
+                
+                // Show immediate visual feedback while typing
+                searchInput.addEventListener('input', () => {
+                    searchInput.style.borderColor = '#6366f1';
+                    setTimeout(() => {
+                        searchInput.style.borderColor = '';
+                    }, 300);
+                });
             }
+            
             if (dateFilter) {
-                dateFilter.addEventListener('change', filterTrips);
+                // Faster response for dropdown changes
+                dateFilter.addEventListener('change', fastFilterTrips);
             }
+            
             if (vehicleFilter) {
-                vehicleFilter.addEventListener('change', filterTrips);
+                // Faster response for dropdown changes
+                vehicleFilter.addEventListener('change', fastFilterTrips);
             }
             
             // User dropdown functionality
@@ -647,26 +751,86 @@
             }
         }
 
-        async function loadTrips() {
+        // Optimized function to show skeleton loaders
+        function showLoadingSkeleton() {
+            const container = document.getElementById('trips-container');
+            if (!container) return;
+            
+            const skeletonHTML = `
+                <div class="space-y-4">
+                    ${Array(3).fill(0).map((_, i) => `
+                        <div class="trip-card p-6 rounded-xl animate-pulse">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="h-6 bg-gray-700 rounded w-24"></div>
+                                    <div class="h-6 bg-gray-700 rounded w-20"></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="h-6 bg-gray-700 rounded w-16 mb-1"></div>
+                                    <div class="h-4 bg-gray-700 rounded w-12"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="space-y-2">
+                                    <div class="h-4 bg-gray-700 rounded w-16"></div>
+                                    <div class="h-5 bg-gray-700 rounded w-32"></div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="h-4 bg-gray-700 rounded w-12"></div>
+                                    <div class="h-5 bg-gray-700 rounded w-28"></div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="h-4 bg-gray-700 rounded w-20"></div>
+                                    <div class="h-5 bg-gray-700 rounded w-16"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.innerHTML = skeletonHTML;
+        }
+        
+        function hideLoadingSkeleton() {
+            // This will be called when real data is loaded
+        }
+        
+        // Optimized loading with parallel API calls
+        async function loadTripsOptimized() {
             try {
-                showNotification({ message: 'Loading trips...', type: 'info', duration: 2000 });
+                const startTime = performance.now();
+                console.log('🚀 Starting optimized trips loading...');
                 
-                const response = await fetch('/api/trips', {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: getAuthHeaders()
-                });
+                // Load all data in parallel for faster performance
+                const [tripsResponse, transpondersResponse, lateTooltipsResponse] = await Promise.allSettled([
+                    fetch('/api/trips', {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: getAuthHeaders()
+                    }),
+                    fetch('/api/transponders', {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: getAuthHeaders()
+                    }),
+                    fetch('/api/trips/late-tolls', {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: getAuthHeaders()
+                    })
+                ]);
                 
-                if (!response.ok) {
-                    if (response.status === 401) {
+                // Handle main trips data
+                if (tripsResponse.status === 'rejected' || !tripsResponse.value.ok) {
+                    if (tripsResponse.value?.status === 401) {
                         console.warn('Authentication failed, redirecting to login');
                         window.location.href = '/';
                         return;
                     }
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP error! status: ${tripsResponse.value?.status}`);
                 }
                 
-                const data = await response.json();
+                const data = await tripsResponse.value.json();
                 console.log('📊 API Response:', data);
                 
                 // Store trip categories separately 
@@ -689,30 +853,179 @@
                 console.log('📊 Personal tolls:', tripsData.yourTolls.length, 'toll charges');
                 console.log('📊 Unmatched tolls:', tripsData.unmatchedTolls.length, 'toll charges');
                 
-                // Populate vehicle filter
-                await fetchTransponderVehicles();
+                // Process transponders response in parallel
+                if (transpondersResponse.status === 'fulfilled' && transpondersResponse.value.ok) {
+                    try {
+                        const transponders = await transpondersResponse.value.json();
+                        populateVehicleFilterFromData(transponders);
+                    } catch (error) {
+                        console.warn('Failed to load transponders:', error);
+                    }
+                }
                 
-                // Apply initial filters
-                filterTrips();
+                // Show initial trips quickly (first batch)
+                hideLoadingSkeleton();
+                renderTripsOptimized(currentTab, getCurrentFilteredTrips(), true);
                 
-                // Load late tolls
-                await loadLateTolls();
+                // Handle late tolls response
+                if (lateTooltipsResponse.status === 'fulfilled' && lateTooltipsResponse.value.ok) {
+                    try {
+                        const lateTolls = await lateTooltipsResponse.value.json();
+                        if (lateTolls && lateTolls.length > 0) {
+                            const widget = document.getElementById('late-tolls-widget');
+                            const message = document.getElementById('late-tolls-message');
+                            if (widget && message) {
+                                widget.style.display = 'block';
+                                message.textContent = `${lateTolls.length} new toll(s) found for submitted trips`;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Failed to load late tolls:', error);
+                    }
+                }
                 
-                showNotification({ message: `Loaded ${originalTripsData.length} trips`, type: 'success', duration: 2000 });
-                console.log(`📊 Loaded ${originalTripsData.length} trips`);
+                const endTime = performance.now();
+                console.log(`⚡ Optimized loading completed in ${(endTime - startTime).toFixed(2)}ms`);
+                showNotification({ message: `Loaded ${originalTripsData.length} trips`, type: 'success', duration: 1500 });
                 
             } catch (error) {
                 console.error('Error loading trips:', error);
+                hideLoadingSkeleton();
                 showNotification({ message: `Failed to load trips: ${error.message}`, type: 'error' });
             }
         }
+        
+        // Helper function to populate vehicle filter from data
+        function populateVehicleFilterFromData(transponders) {
+            const vehicleFilter = document.getElementById('vehicle-filter');
+            if (!vehicleFilter) return;
+            
+            // Clear existing options except "All Vehicles"
+            vehicleFilter.innerHTML = '<option value="all">All Vehicles</option>';
+            
+            // Extract unique vehicles from transponder data
+            const uniqueVehicles = new Map();
+            transponders.data?.forEach(transponder => {
+                if (transponder.vehicle_description && transponder.is_active) {
+                    uniqueVehicles.set(transponder.vehicle_description, transponder.vehicle_description);
+                }
+            });
+            
+            // Add vehicle options
+            uniqueVehicles.forEach((vehicleDesc, vehicleKey) => {
+                const option = document.createElement('option');
+                option.value = vehicleDesc;
+                option.textContent = vehicleDesc;
+                vehicleFilter.appendChild(option);
+            });
+        }
 
-        function renderTrips(category, trips) {
+        // Cache for rendered trip cards to avoid re-rendering
+        const tripCardCache = new Map();
+        
+        // Track expanded state of toll sections for each trip
+        const expandedTolls = new Map();
+        
+        // Toggle toll section expansion
+        function toggleTolls(tripId) {
+            console.log('🔍 Toggling tolls for trip:', tripId);
+            
+            const isExpanded = expandedTolls.get(tripId) || false;
+            expandedTolls.set(tripId, !isExpanded);
+            
+            console.log('📊 Expansion state changed:', { tripId, wasExpanded: isExpanded, nowExpanded: !isExpanded });
+            
+            // Find the toll section for this trip
+            const tollSection = document.querySelector(`[data-trip-id="${tripId}"] .toll-grid`);
+            const toggleButton = document.querySelector(`[data-trip-id="${tripId}"] .toll-toggle-btn`);
+            
+            console.log('🎯 Found elements:', { 
+                tollSection: !!tollSection, 
+                toggleButton: !!toggleButton,
+                tollSectionClass: tollSection?.className,
+                buttonClass: toggleButton?.className
+            });
+            
+            if (!tollSection || !toggleButton) {
+                console.error('❌ Could not find toll section or button for trip:', tripId);
+                console.log('Available trip cards:', document.querySelectorAll('[data-trip-id]'));
+                return;
+            }
+            
+            // Get all toll elements (both visible and hidden)
+            const allTollElements = tollSection.querySelectorAll('.toll-card, .hidden-toll');
+            const visibleTolls = tollSection.querySelectorAll('.toll-card:not(.hidden-toll)');
+            const hiddenTolls = tollSection.querySelectorAll('.hidden-toll');
+            
+            console.log('📈 Toll counts:', {
+                total: allTollElements.length,
+                visible: visibleTolls.length,
+                hidden: hiddenTolls.length
+            });
+            
+            if (!isExpanded) {
+                // Expanding: show hidden tolls
+                console.log('🔓 Expanding to show', hiddenTolls.length, 'hidden tolls');
+                
+                hiddenTolls.forEach((toll, index) => {
+                    console.log('👁️ Showing toll element:', toll);
+                    
+                    // Remove hidden state
+                    toll.classList.remove('hidden-toll');
+                    toll.style.display = 'block';
+                    toll.style.opacity = '0';
+                    toll.style.transform = 'translateY(10px)';
+                    
+                    // Animate in
+                    requestAnimationFrame(() => {
+                        toll.style.transition = 'all 0.3s ease';
+                        toll.style.opacity = '1';
+                        toll.style.transform = 'translateY(0)';
+                    });
+                });
+                
+                toggleButton.innerHTML = `
+                    <i data-lucide="chevron-up" class="w-4 h-4 inline mr-1"></i>
+                    Show less
+                `;
+            } else {
+                // Collapsing: hide tolls beyond first 4
+                console.log('🔒 Collapsing to hide extra tolls');
+                
+                const allTollElements = tollSection.querySelectorAll('.toll-card, .hidden-toll');
+                for (let i = 4; i < allTollElements.length; i++) {
+                    const toll = allTollElements[i];
+                    console.log('🙈 Hiding toll element:', toll);
+                    
+                    toll.style.transition = 'all 0.3s ease';
+                    toll.style.opacity = '0';
+                    toll.style.transform = 'translateY(-10px)';
+                    
+                    setTimeout(() => {
+                        toll.classList.add('hidden-toll');
+                        toll.style.display = 'none';
+                    }, 300);
+                }
+                
+                const remainingCount = allTollElements.length - 4;
+                toggleButton.innerHTML = `
+                    <i data-lucide="chevron-down" class="w-4 h-4 inline mr-1"></i>
+                    +${remainingCount} more tolls...
+                `;
+            }
+            
+            // Re-initialize Lucide icons for the new icons
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 50);
+        }
+        
+        // Optimized rendering with batching and caching
+        function renderTripsOptimized(category, trips, isInitialLoad = false) {
             const container = document.getElementById('trips-container');
             if (!container) return;
             
-            // Clear existing content
-            container.innerHTML = '';
+            const startTime = performance.now();
             
             // Handle personal tolls differently (they are toll charges, not trips)
             if (category === 'personal') {
@@ -727,63 +1040,126 @@
                 return;
             }
             
-            // Create trip cards
-            trips.forEach((trip, index) => {
-                const tripCard = document.createElement('div');
-                tripCard.className = 'trip-card p-6 rounded-xl';
-                tripCard.style.animationDelay = `${0.3 + (index * 0.1)}s`;
+            // Create document fragment for better performance
+            const fragment = document.createDocumentFragment();
+            const maxInitialRender = isInitialLoad ? Math.min(5, trips.length) : trips.length;
+            
+            // Clear container
+            container.innerHTML = '';
+            
+            // Render first batch immediately
+            for (let i = 0; i < maxInitialRender; i++) {
+                const trip = trips[i];
+                const cacheKey = `${trip.internalId || trip.id}_${trip.status}_${trip.tollTotal || 0}`;
                 
-                // Calculate duration
-                const startDate = new Date(trip.startDate);
-                const endDate = new Date(trip.endDate);
-                const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                let tripCard;
+                if (tripCardCache.has(cacheKey)) {
+                    tripCard = tripCardCache.get(cacheKey).cloneNode(true);
+                } else {
+                    tripCard = createTripCard(trip, i);
+                    tripCardCache.set(cacheKey, tripCard.cloneNode(true));
+                }
                 
-                tripCard.innerHTML = `
+                fragment.appendChild(tripCard);
+            }
+            
+            // Append first batch
+            container.appendChild(fragment);
+            
+            // Render remaining trips in next frame if there are more
+            if (trips.length > maxInitialRender) {
+                requestAnimationFrame(() => {
+                    const remainingFragment = document.createDocumentFragment();
+                    
+                    for (let i = maxInitialRender; i < trips.length; i++) {
+                        const trip = trips[i];
+                        const cacheKey = `${trip.internalId || trip.id}_${trip.status}_${trip.tollTotal || 0}`;
+                        
+                        let tripCard;
+                        if (tripCardCache.has(cacheKey)) {
+                            tripCard = tripCardCache.get(cacheKey).cloneNode(true);
+                        } else {
+                            tripCard = createTripCard(trip, i);
+                            tripCardCache.set(cacheKey, tripCard.cloneNode(true));
+                        }
+                        
+                        remainingFragment.appendChild(tripCard);
+                    }
+                    
+                    container.appendChild(remainingFragment);
+                    
+                    // Initialize icons for all content once
+                    lucide.createIcons();
+                });
+            } else {
+                // Initialize icons immediately if all content is rendered
+                lucide.createIcons();
+            }
+            
+            const endTime = performance.now();
+            console.log(`⚡ Rendered ${trips.length} trips in ${(endTime - startTime).toFixed(2)}ms`);
+        }
+        
+        // Optimized trip card creation
+        function createTripCard(trip, index) {
+            const tripCard = document.createElement('div');
+            tripCard.className = 'trip-card p-6 rounded-xl';
+            tripCard.style.animationDelay = `${0.1 + (index * 0.02)}s`; // Reduced animation delay
+            tripCard.setAttribute('data-trip-id', trip.internalId || trip.id); // Add trip ID for targeting
+            
+            // Calculate duration
+            const startDate = new Date(trip.startDate);
+            const endDate = new Date(trip.endDate);
+            const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+            
+            tripCard.innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-bold text-white font-mono">Trip #${trip.id}</h3>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                            trip.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                            trip.status === 'in-progress' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-blue-500/20 text-blue-400'
+                        }">${trip.status}</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-bold text-white font-mono">$${(trip.tollTotal || 0).toFixed(2)}</div>
+                        <div class="text-sm text-gray-400">TOTAL</div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="space-y-2">
+                        <div class="text-sm text-gray-400">VEHICLE</div>
+                        <div class="text-white font-medium">${trip.vehicle_description || trip.vehicle}</div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="text-sm text-gray-400">GUEST</div>
+                        <div class="text-white font-medium">${trip.guest}</div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="text-sm text-gray-400">DURATION</div>
+                        <div class="text-white font-medium">${duration} day${duration !== 1 ? 's' : ''}</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between text-sm text-gray-400 mb-6">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        <span>${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDate.toLocaleDateString()} ${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ET</span>
+                    </div>
+                </div>
+                
+                ${trip.tolls && trip.tolls.length > 0 ? `
+                <div class="bg-gray-700/50 rounded-lg p-4 mb-4">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center space-x-3">
-                            <h3 class="text-lg font-bold text-white font-mono">Trip #${trip.id}</h3>
-                            <span class="px-3 py-1 rounded-full text-sm font-medium ${
-                                trip.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
-                                trip.status === 'Booked' ? 'bg-yellow-500/20 text-yellow-400' :
-                                'bg-blue-500/20 text-blue-400'
-                            }">${trip.status}</span>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xl font-bold text-white font-mono">$${(trip.tollTotal || 0).toFixed(2)}</div>
-                            <div class="text-sm text-gray-400">TOTAL</div>
-                        </div>
+                        <h4 class="text-white font-medium">Toll Charges (${trip.tolls.length})</h4>
                     </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div class="space-y-2">
-                            <div class="text-sm text-gray-400">VEHICLE</div>
-                            <div class="text-white font-medium">${trip.vehicle_description || trip.vehicle}</div>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="text-sm text-gray-400">GUEST</div>
-                            <div class="text-white font-medium">${trip.guest}</div>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="text-sm text-gray-400">DURATION</div>
-                            <div class="text-white font-medium">${duration} day${duration !== 1 ? 's' : ''}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center justify-between text-sm text-gray-400 mb-6">
-                        <div class="flex items-center space-x-2">
-                            <i data-lucide="calendar" class="w-4 h-4"></i>
-                            <span>${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDate.toLocaleDateString()} ${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ET</span>
-                        </div>
-                    </div>
-                    
-                    ${trip.tolls && trip.tolls.length > 0 ? `
-                    <div class="bg-gray-700/50 rounded-lg p-4 mb-4">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-white font-medium">Toll Charges (${trip.tolls.length})</h4>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            ${trip.tolls.map((toll, tollIndex) => `
-                                <div class="toll-card bg-gray-600/50 p-3 rounded-lg" style="animation-delay: ${0.1 + (tollIndex * 0.05)}s;">
+                    <div class="toll-grid grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${trip.tolls.map((toll, tollIndex) => {
+                            const isHidden = tollIndex >= 4;
+                            return `
+                                <div class="${isHidden ? 'hidden-toll' : 'toll-card'} bg-gray-600/50 p-3 rounded-lg">
                                     <div class="flex justify-between items-start">
                                         <div>
                                             <div class="text-white font-medium">${toll.location}</div>
@@ -793,26 +1169,37 @@
                                         <div class="text-green-400 font-bold">$${toll.amount}</div>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `;
+                        }).join('')}
+                    </div>
+                    ${trip.tolls.length > 4 ? `
+                        <div class="mt-3 text-center">
+                            <button onclick="toggleTolls('${trip.internalId || trip.id}')" 
+                                    class="toll-toggle-btn text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors duration-200 flex items-center justify-center mx-auto px-3 py-1 rounded-md hover:bg-gray-600/30 cursor-pointer">
+                                <i data-lucide="chevron-down" class="w-4 h-4 inline mr-1"></i>
+                                +${trip.tolls.length - 4} more tolls...
+                            </button>
                         </div>
-                    </div>
                     ` : ''}
-                    
-                    <div class="flex justify-center">
-                        ${(trip.tolls && trip.tolls.length > 0) || (trip.tollTotal && trip.tollTotal > 0) ? 
-                            `<button onclick="submitTrip('${trip.internalId}')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                                <span>Submit</span>
-                            </button>` : 
-                            `<span class="text-gray-500 text-sm">No tolls to submit</span>`}
-                    </div>
-                `;
+                </div>
+                ` : ''}
                 
-                container.appendChild(tripCard);
-            });
+                <div class="flex justify-center">
+                    ${(trip.tolls && trip.tolls.length > 0) || (trip.tollTotal && trip.tollTotal > 0) ? 
+                        `<button onclick="submitTrip('${trip.internalId}')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            <span>Submit</span>
+                        </button>` : 
+                        `<span class="text-gray-500 text-sm">No tolls to submit</span>`}
+                </div>
+            `;
             
-            // Re-initialize icons for new content
-            lucide.createIcons();
+            return tripCard;
+        }
+        
+        // Legacy function for compatibility
+        function renderTrips(category, trips) {
+            renderTripsOptimized(category, trips, false);
         }
         
         function renderPersonalTolls(container) {
@@ -996,50 +1383,6 @@
             renderTrips(currentTab, categoryTrips);
         }
 
-        async function fetchTransponderVehicles() {
-            try {
-                const response = await fetch('/api/transponders', {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: getAuthHeaders()
-                });
-                
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        console.warn('Authentication failed, redirecting to login');
-                        window.location.href = '/';
-                        return;
-                    }
-                    throw new Error('Failed to fetch transponders');
-                }
-                
-                const transponders = await response.json();
-                const vehicleFilter = document.getElementById('vehicle-filter');
-                
-                // Clear existing options except "All Vehicles"
-                vehicleFilter.innerHTML = '<option value="all">All Vehicles</option>';
-                
-                // Extract unique vehicles from transponder data
-                const uniqueVehicles = new Map();
-                transponders.data?.forEach(transponder => {
-                    if (transponder.vehicle_description && transponder.is_active) {
-                        // Use vehicle_description as both key and display value
-                        uniqueVehicles.set(transponder.vehicle_description, transponder.vehicle_description);
-                    }
-                });
-                
-                // Add vehicle options
-                uniqueVehicles.forEach((vehicleDesc, vehicleKey) => {
-                    const option = document.createElement('option');
-                    option.value = vehicleDesc;
-                    option.textContent = vehicleDesc;
-                    vehicleFilter.appendChild(option);
-                });
-                
-            } catch (error) {
-                console.error('Error fetching transponders:', error);
-            }
-        }
 
         async function viewTrip(tripId) {
             try {
