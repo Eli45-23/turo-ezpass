@@ -109,6 +109,30 @@
             left: 100%;
         }
         
+        /* Simple loading state for Run Matcher button */
+        .animated-button.btn-loading {
+            cursor: not-allowed;
+            position: relative;
+        }
+        
+        .animated-button.btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin-loader 1s linear infinite;
+        }
+        
+        @keyframes spin-loader {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+        
         /* Page animations */
         .fade-in {
             opacity: 0;
@@ -746,23 +770,38 @@
         
         // Get current date range settings (updated for new format)
         function getDateRangeSettings() {
-            const startDate = document.getElementById('start-date').value;
-            const endDate = document.getElementById('end-date').value;
+            const dateRangeSelect = document.getElementById('date-range-select');
+            const selectedRange = dateRangeSelect.value;
             
-            if (!startDate || !endDate) {
-                throw new Error('Please select both start and end dates');
+            if (selectedRange === 'custom') {
+                // Handle custom date range
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                
+                if (!startDate || !endDate) {
+                    throw new Error('Please select both start and end dates');
+                }
+                
+                if (!validateDateRange(startDate, endDate, true)) {
+                    throw new Error('Please fix date range errors');
+                }
+                
+                return {
+                    type: 'custom',
+                    startDate: startDate,
+                    endDate: endDate,
+                    days: Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
+                };
+            } else {
+                // Handle preset day ranges (30, 60, 90)
+                const days = parseInt(selectedRange);
+                return {
+                    type: 'days',
+                    days: days,
+                    startDate: null,
+                    endDate: null
+                };
             }
-            
-            if (!validateDateRange(startDate, endDate, true)) {
-                throw new Error('Please fix date range errors');
-            }
-            
-            return {
-                type: 'custom',
-                startDate: startDate,
-                endDate: endDate,
-                days: Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
-            };
         }
 
         // Clear data confirmation
@@ -957,6 +996,7 @@
             // Show loading state
             processBtn.classList.add('btn-loading');
             processBtn.disabled = true;
+            processBtn.textContent = '⚙️ Processing...';
             
             // Show progress
             showProgress();
@@ -970,8 +1010,14 @@
                 try {
                     dateRangeSettings = getDateRangeSettings();
                 } catch (dateError) {
+                    // Update button to show date error
+                    processBtn.textContent = '📅 Date Error';
+                    
                     showStatus(`❌ Date range error: ${dateError.message}`, 'error');
                     hideProgress();
+                    
+                    // Reset button after showing error briefly
+                    setTimeout(() => resetButtonState(), 3000);
                     return;
                 }
                 
@@ -1048,6 +1094,9 @@
                                     `• Personal Tolls: ${personalTolls} ($${personalAmount})\n\n` +
                                     `Redirecting to dashboard to view detailed results...`;
                                 
+                                // Update button to show completion
+                                processBtn.textContent = '✅ Complete!';
+                                
                                 showStatus(successMessage, 'success');
                                 
                                 // Mark unmatched tolls as personal after processing
@@ -1107,27 +1156,43 @@
                                 }, 3000);
                                 
                             } else {
+                                // Update button to show error
+                                processBtn.textContent = '❌ Failed';
+                                
                                 showStatus(`❌ Processing failed: ${result.error}`, 'error');
                                 hideProgress();
                                 disconnectProgressStream();
-                                resetButtonState();
+                                
+                                // Reset button after showing error briefly
+                                setTimeout(() => resetButtonState(), 3000);
                             }
                         } else {
                             throw new Error(`HTTP ${xhr.status}: ${xhr.statusText}`);
                         }
                     } catch (error) {
                         console.error('Processing error:', error);
+                        // Update button to show error
+                        processBtn.textContent = '❌ Error';
+                        
                         showStatus(`❌ Processing error: ${error.message}`, 'error');
                         hideProgress();
                         disconnectProgressStream();
+                        
+                        // Reset button after showing error briefly
+                        setTimeout(() => resetButtonState(), 3000);
                     }
                 };
                 
                 xhr.onerror = function() {
+                    // Update button to show network error
+                    processBtn.textContent = '📡 Network Error';
+                    
                     showStatus('❌ Network error during upload', 'error');
                     hideProgress();
                     disconnectProgressStream();
-                    resetButtonState();
+                    
+                    // Reset button after showing error briefly
+                    setTimeout(() => resetButtonState(), 3000);
                 };
                 
                 // Function to reset button state
@@ -1144,10 +1209,15 @@
                 xhr.send(formData);
             } catch (error) {
                 console.error('Processing error:', error);
+                // Update button to show error
+                processBtn.textContent = '❌ Setup Error';
+                
                 showStatus(`❌ Processing error: ${error.message}`, 'error');
                 hideProgress();
                 disconnectProgressStream();
-                resetButtonState();
+                
+                // Reset button after showing error briefly
+                setTimeout(() => resetButtonState(), 3000);
             }
         }
 

@@ -2859,7 +2859,7 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             // Automatically mark unmatched tolls as personal
             console.log('🏠 Marking unmatched tolls as personal...');
             try {
-                const tollAccountIds = tollAccounts.map(account => account.id);
+                const tollAccountIds = [csvTollAccount.id];
                 const { data: unmarkedTolls, error: updateError } = await supabaseAdmin
                     .from('toll_charges')
                     .update({ is_personal: true })
