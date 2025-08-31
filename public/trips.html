@@ -275,6 +275,24 @@
                 opacity: 0;
             }
         }
+
+        /* Dropdown menu styles */
+        .dropdown-menu {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -323,9 +341,17 @@
                     <h2 class="text-xl font-bold text-white font-mono">TRIP MANAGEMENT</h2>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" onclick="window.location.href='/login'">
-                        <i data-lucide="log-out" class="w-5 h-5"></i>
-                    </button>
+                    <div class="relative">
+                        <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" id="userMenu">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                        </button>
+                        <div class="absolute top-12 right-0 bg-gray-700/90 backdrop-blur-lg border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg opacity-0 invisible -translate-y-2 transition-all duration-200 z-50 dropdown-menu" id="userDropdown">
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-white/5" id="signOutBtn">
+                                <i data-lucide="log-out"></i>
+                                Sign Out
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </header>
             
@@ -592,6 +618,32 @@
             }
             if (vehicleFilter) {
                 vehicleFilter.addEventListener('change', filterTrips);
+            }
+            
+            // User dropdown functionality
+            const userMenu = document.getElementById('userMenu');
+            const userDropdown = document.getElementById('userDropdown');
+            const signOutBtn = document.getElementById('signOutBtn');
+            
+            if (userMenu && userDropdown) {
+                // Toggle dropdown on user menu click
+                userMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('show');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    // Check if click is outside both the user menu button and dropdown
+                    if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                });
+                
+                // Handle sign out
+                if (signOutBtn) {
+                    signOutBtn.addEventListener('click', handleSignOut);
+                }
             }
         }
 
@@ -1280,6 +1332,45 @@
             } catch (error) {
                 console.error('Error viewing late toll details:', error);
                 showNotification({ message: 'Failed to load late toll details', type: 'error' });
+            }
+        }
+
+        // Sign out functionality
+        async function handleSignOut() {
+            const signOutBtn = document.getElementById('signOutBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            try {
+                // Show loading state
+                const originalText = signOutBtn.innerHTML;
+                signOutBtn.innerHTML = '<span class="dropdown-icon">⏳</span>Signing out...';
+                signOutBtn.disabled = true;
+                
+                // Clear stored tokens
+                localStorage.removeItem('supabase_token');
+                localStorage.removeItem('supabase_session');
+                
+                // Call logout endpoint
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Logout successful');
+                    window.location.href = '/';
+                } else {
+                    console.error('❌ Logout failed');
+                    // Still redirect on failure as tokens are cleared
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                // Still redirect on error as tokens are cleared
+                window.location.href = '/';
             }
         }
     </script>
