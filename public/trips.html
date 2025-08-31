@@ -887,7 +887,7 @@
                 const endTime = performance.now();
                 console.log(`⚡ Optimized loading completed in ${(endTime - startTime).toFixed(2)}ms`);
                 showNotification({ message: `Loaded ${originalTripsData.length} trips`, type: 'success', duration: 1500 });
-                
+                filterTrips();
             } catch (error) {
                 console.error('Error loading trips:', error);
                 hideLoadingSkeleton();
