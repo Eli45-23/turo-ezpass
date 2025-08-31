@@ -1078,6 +1078,44 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
+
+        // Global clearFile function for Remove File button
+        function clearFile(zoneId, type) {
+            console.log('clearFile called with:', { zoneId, type });
+            
+            const dropZone = document.getElementById(zoneId);
+            const fileInput = document.getElementById(`${type}-file`);
+            
+            console.log('Elements found:', { dropZone, fileInput });
+            
+            const iconName = type === 'turo' ? 'car' : 'map-pin';
+            const fileName = type === 'turo' ? 'Turo CSV' : 'E-ZPass CSV';
+            const color = type === 'turo' ? 'orange' : 'green';
+            
+            selectedFiles[type] = null;
+            
+            // Clear file input if it exists
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            
+            updateProcessButton();
+            
+            // Update drop zone if it exists
+            if (dropZone) {
+                dropZone.innerHTML = `
+                <div class="mb-4">
+                    <i data-lucide="${iconName}" class="w-16 h-16 text-${color}-400 mx-auto mb-3"></i>
+                </div>
+                <h4 class="text-white font-semibold mb-2">Drop ${fileName} here</h4>
+                <p class="text-gray-400 text-sm mb-4">or click to browse</p>
+                <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold" onclick="document.getElementById('${type}-file').click()">
+                    Choose ${fileName}
+                </button>
+                `;
+                lucide.createIcons();
+            }
+        }
         
 
         // File input change handlers
@@ -1184,29 +1222,6 @@
                 }
             }
             
-            window.clearFile = function(zoneId, type) {
-                const dropZone = document.getElementById(zoneId);
-                const fileInput = document.getElementById(`${type}-file`);
-                const iconName = type === 'turo' ? 'car' : 'map-pin';
-                const fileName = type === 'turo' ? 'Turo CSV' : 'E-ZPass CSV';
-                const color = type === 'turo' ? 'orange' : 'green';
-                
-                selectedFiles[type] = null;
-                fileInput.value = '';
-                updateProcessButton();
-                
-                dropZone.innerHTML = `
-                    <div class="mb-4">
-                        <i data-lucide="${iconName}" class="w-16 h-16 text-${color}-400 mx-auto mb-3"></i>
-                    </div>
-                    <h4 class="text-white font-semibold mb-2">Drop ${fileName} here</h4>
-                    <p class="text-gray-400 text-sm mb-4">or click to browse</p>
-                    <button class="upload-button text-white px-6 py-2 rounded-lg font-semibold" onclick="document.getElementById('${type}-file').click()">
-                        Choose ${fileName}
-                    </button>
-                `;
-                lucide.createIcons();
-            };
             
             // Slider update
             const slider = document.getElementById('speed-accuracy-slider');

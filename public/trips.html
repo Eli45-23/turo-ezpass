@@ -1183,8 +1183,10 @@
             renderTripsOptimized(category, trips, false);
         }
         
-        function renderPersonalTolls(container) {
-            const personalTolls = tripsData.yourTolls || [];
+        function renderPersonalTolls(container, tolls) {
+            const personalTolls = tolls || tripsData.yourTolls || [];
+
+            container.innerHTML = '';
             
             if (personalTolls.length === 0) {
                 container.innerHTML = `<div class="trip-card p-6 rounded-xl text-center text-gray-400">
@@ -1221,7 +1223,7 @@
                             </p>
                         </div>
                         <div class="text-right">
-                            <div class="text-2xl font-bold text-purple-400">$${toll.amount.toFixed(2)}</div>
+                            <div class="text-2xl font-bold text-purple-400">${toll.amount.toFixed(2)}</div>
                             <div class="text-xs text-gray-400">${toll.type}</div>
                         </div>
                     </div>
@@ -1278,89 +1280,147 @@
             const searchTerm = document.getElementById('search-trips')?.value.toLowerCase() || '';
             const dateFilter = document.getElementById('date-filter')?.value || 'all';
             const vehicleFilter = document.getElementById('vehicle-filter')?.value || 'all';
-            
-            let filteredTrips = [...originalTripsData];
-            
-            // Apply search filter
-            if (searchTerm) {
-                filteredTrips = filteredTrips.filter(trip =>
-                    trip.guest?.toLowerCase().includes(searchTerm) ||
-                    trip.vehicle?.toLowerCase().includes(searchTerm) ||
-                    trip.vehicle_description?.toLowerCase().includes(searchTerm) ||
-                    trip.id.toString().includes(searchTerm)
-                );
-            }
-            
-            // Apply date filter
-            const now = new Date();
-            if (dateFilter !== 'all') {
-                filteredTrips = filteredTrips.filter(trip => {
-                    const tripDate = new Date(trip.startDate);
-                    switch (dateFilter) {
-                        case 'today':
-                            return tripDate.toDateString() === now.toDateString();
-                        case 'week':
-                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                            return tripDate >= weekAgo;
-                        case 'month':
-                            return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
-                        case '3months':
-                            const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                            return tripDate >= threeMonthsAgo;
-                        default:
-                            return true;
-                    }
-                });
-            }
-            
-            // Apply vehicle filter
-            if (vehicleFilter !== 'all') {
-                filteredTrips = filteredTrips.filter(trip => {
-                    // Compare only against vehicle_description field for exact match
-                    // This matches what's shown in the dropdown options
-                    return trip.vehicle_description === vehicleFilter;
-                });
-            }
-            
-            // Category filtering
+
+            const applyTripFilters = (trips) => {
+                let filtered = [...trips];
+                if (searchTerm) {
+                    filtered = filtered.filter(trip =>
+                        trip.guest?.toLowerCase().includes(searchTerm) ||
+                        trip.vehicle?.toLowerCase().includes(searchTerm) ||
+                        trip.vehicle_description?.toLowerCase().includes(searchTerm) ||
+                        trip.vehicle_plate?.toLowerCase().includes(searchTerm) ||
+                        trip.id.toString().includes(searchTerm) ||
+                        trip.internalId?.toString().includes(searchTerm) ||
+                        trip.pickup_location?.toLowerCase().includes(searchTerm) ||
+                        trip.return_location?.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                const now = new Date();
+                if (dateFilter !== 'all') {
+                    filtered = filtered.filter(trip => {
+                        const tripDate = new Date(trip.startDate);
+                        switch (dateFilter) {
+                            case 'today':
+                                return tripDate.toDateString() === now.toDateString();
+                            case 'week':
+                                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                                return tripDate >= weekAgo;
+                            case 'month':
+                                return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
+                            case '3months':
+                                const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                                return tripDate >= threeMonthsAgo;
+                            default:
+                                return true;
+                        }
+                    });
+                }
+
+                if (vehicleFilter !== 'all') {
+                    filtered = filtered.filter(trip => 
+                        trip.vehicle_description === vehicleFilter || 
+                        trip.vehicle === vehicleFilter
+                    );
+                }
+                return filtered;
+            };
+
+            const applyPersonalTollFilters = (tolls) => {
+                let filtered = [...tolls];
+                if (searchTerm) {
+                    filtered = filtered.filter(toll =>
+                        toll.location?.toLowerCase().includes(searchTerm) ||
+                        toll.vehicle?.toLowerCase().includes(searchTerm) ||
+                        toll.transponder?.toLowerCase().includes(searchTerm) ||
+                        toll.agency?.toLowerCase().includes(searchTerm) ||
+                        toll.transactionId?.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                // Apply date filter to toll transaction date
+                const now = new Date();
+                if (dateFilter !== 'all') {
+                    filtered = filtered.filter(toll => {
+                        const tollDate = new Date(toll.date || toll.tollDate);
+                        switch (dateFilter) {
+                            case 'today':
+                                return tollDate.toDateString() === now.toDateString();
+                            case 'week':
+                                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                                return tollDate >= weekAgo;
+                            case 'month':
+                                return tollDate.getMonth() === now.getMonth() && tollDate.getFullYear() === now.getFullYear();
+                            case '3months':
+                                const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                                return tollDate >= threeMonthsAgo;
+                            default:
+                                return true;
+                        }
+                    });
+                }
+
+                // Apply vehicle filter to toll vehicle/transponder
+                if (vehicleFilter !== 'all') {
+                    filtered = filtered.filter(toll => 
+                        toll.vehicle === vehicleFilter || 
+                        toll.transponder === vehicleFilter ||
+                        toll.vehicle_description === vehicleFilter
+                    );
+                }
+
+                return filtered;
+            };
+
+            const allTrips = [
+                ...tripsData.completed,
+                ...tripsData.inProgress,
+                ...tripsData.upcoming,
+            ];
+
+            const filteredCompleted = applyTripFilters(tripsData.completed);
+            const filteredInProgress = applyTripFilters(tripsData.inProgress);
+            const filteredUpcoming = applyTripFilters(tripsData.upcoming);
+            const filteredLate = applyTripFilters(allTrips).filter(trip => {
+                // For late tolls, we would need to check if this trip has late tolls
+                // For now, return empty array since late tolls structure is not defined in trips data
+                return false;
+            });
+            const filteredPersonalTolls = applyPersonalTollFilters(tripsData.yourTolls);
+
+            document.getElementById('completedTabCount').textContent = filteredCompleted.length;
+            document.getElementById('progressTabCount').textContent = filteredInProgress.length;
+            document.getElementById('upcomingTabCount').textContent = filteredUpcoming.length;
+            document.getElementById('personalTabCount').textContent = filteredPersonalTolls.length;
+            document.getElementById('lateTabCount').textContent = filteredLate.length;
+
+            document.getElementById('completed-count').textContent = filteredCompleted.length;
+            document.getElementById('in-progress-count').textContent = filteredInProgress.length;
+            document.getElementById('upcoming-count').textContent = filteredUpcoming.length;
+            document.getElementById('personal-tolls-count').textContent = filteredPersonalTolls.length;
+            document.getElementById('late-tolls-count').textContent = filteredLate.length;
+
             let categoryTrips = [];
             switch (currentTab) {
                 case 'completed':
-                    categoryTrips = filteredTrips.filter(trip => trip.status === 'completed');
+                    categoryTrips = filteredCompleted;
                     break;
                 case 'progress':
-                    categoryTrips = filteredTrips.filter(trip => trip.status === 'in-progress');
+                    categoryTrips = filteredInProgress;
                     break;
                 case 'upcoming':
-                    categoryTrips = filteredTrips.filter(trip => trip.status === 'upcoming');
+                    categoryTrips = filteredUpcoming;
                     break;
                 case 'personal':
-                    // Personal tolls are not trips - they are toll charges
-                    // We'll handle this separately in renderTrips
-                    categoryTrips = [];
-                    break;
+                    renderPersonalTolls(document.getElementById('trips-container'), filteredPersonalTolls);
+                    return;
                 case 'late':
-                    categoryTrips = filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0);
+                    categoryTrips = filteredLate;
                     break;
                 default:
-                    categoryTrips = filteredTrips;
+                    categoryTrips = applyTripFilters(allTrips);
             }
             
-            // Update tab counts
-            document.getElementById('completedTabCount').textContent = filteredTrips.filter(trip => trip.status === 'completed').length;
-            document.getElementById('progressTabCount').textContent = filteredTrips.filter(trip => trip.status === 'in-progress').length;
-            document.getElementById('upcomingTabCount').textContent = filteredTrips.filter(trip => trip.status === 'upcoming').length;
-            document.getElementById('personalTabCount').textContent = tripsData.yourTolls ? tripsData.yourTolls.length : 0;
-            document.getElementById('lateTabCount').textContent = filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0).length;
-            
-            // Update stats cards
-            document.getElementById('completed-count').textContent = filteredTrips.filter(trip => trip.status === 'completed').length;
-            document.getElementById('in-progress-count').textContent = filteredTrips.filter(trip => trip.status === 'in-progress').length;
-            document.getElementById('upcoming-count').textContent = filteredTrips.filter(trip => trip.status === 'upcoming').length;
-            document.getElementById('personal-tolls-count').textContent = tripsData.yourTolls ? tripsData.yourTolls.length : 0;
-            document.getElementById('late-tolls-count').textContent = filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0).length;
-            
-            // Render trips
             renderTrips(currentTab, categoryTrips);
         }
 
@@ -1392,9 +1452,9 @@
                     <p><strong>Vehicle:</strong> ${trip.vehicle_description || trip.vehicle}</p>
                     <p><strong>Start Date:</strong> ${new Date(trip.startDate).toLocaleString()}</p>
                     <p><strong>End Date:</strong> ${new Date(trip.endDate).toLocaleString()}</p>
-                    <p><strong>Toll Amount:</strong> $${trip.tollTotal || '0.00'}</p>
+                    <p><strong>Toll Amount:</strong> ${trip.tollTotal || '0.00'}</p>
                     ${trip.tolls && trip.tolls.length > 0 ? 
-                        `<h3>Tolls:</h3><ul>${trip.tolls.map(toll => `<li>${toll.location}: $${toll.amount}</li>`).join('')}</ul>` : ''}
+                        `<h3>Tolls:</h3><ul>${trip.tolls.map(toll => `<li>${toll.location}: ${toll.amount}</li>`).join('')}</ul>` : ''}
                 `;
                 
                 // Simple alert for now - you can replace with modal later
@@ -1481,63 +1541,121 @@
             const searchTerm = document.getElementById('search-trips')?.value.toLowerCase() || '';
             const dateFilter = document.getElementById('date-filter')?.value || 'all';
             const vehicleFilter = document.getElementById('vehicle-filter')?.value || 'all';
-            
-            let filteredTrips = [...originalTripsData];
-            
-            // Apply search filter
-            if (searchTerm) {
-                filteredTrips = filteredTrips.filter(trip =>
-                    trip.guest?.toLowerCase().includes(searchTerm) ||
-                    trip.vehicle?.toLowerCase().includes(searchTerm) ||
-                    trip.vehicle_description?.toLowerCase().includes(searchTerm) ||
-                    trip.id.toString().includes(searchTerm)
-                );
-            }
-            
-            // Apply date filter
-            const now = new Date();
-            if (dateFilter !== 'all') {
-                filteredTrips = filteredTrips.filter(trip => {
-                    const tripDate = new Date(trip.startDate);
-                    switch (dateFilter) {
-                        case 'today':
-                            return tripDate.toDateString() === now.toDateString();
-                        case 'week':
-                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                            return tripDate >= weekAgo;
-                        case 'month':
-                            return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
-                        case '3months':
-                            const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                            return tripDate >= threeMonthsAgo;
-                        default:
-                            return true;
-                    }
-                });
-            }
-            
-            // Apply vehicle filter
-            if (vehicleFilter !== 'all') {
-                filteredTrips = filteredTrips.filter(trip => {
-                    return trip.vehicle_description === vehicleFilter;
-                });
-            }
-            
-            // Apply tab filter
+
+            const applyTripFilters = (trips) => {
+                let filtered = [...trips];
+                if (searchTerm) {
+                    filtered = filtered.filter(trip =>
+                        trip.guest?.toLowerCase().includes(searchTerm) ||
+                        trip.vehicle?.toLowerCase().includes(searchTerm) ||
+                        trip.vehicle_description?.toLowerCase().includes(searchTerm) ||
+                        trip.vehicle_plate?.toLowerCase().includes(searchTerm) ||
+                        trip.id.toString().includes(searchTerm) ||
+                        trip.internalId?.toString().includes(searchTerm) ||
+                        trip.pickup_location?.toLowerCase().includes(searchTerm) ||
+                        trip.return_location?.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                const now = new Date();
+                if (dateFilter !== 'all') {
+                    filtered = filtered.filter(trip => {
+                        const tripDate = new Date(trip.startDate);
+                        switch (dateFilter) {
+                            case 'today':
+                                return tripDate.toDateString() === now.toDateString();
+                            case 'week':
+                                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                                return tripDate >= weekAgo;
+                            case 'month':
+                                return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
+                            case '3months':
+                                const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                                return tripDate >= threeMonthsAgo;
+                            default:
+                                return true;
+                        }
+                    });
+                }
+
+                if (vehicleFilter !== 'all') {
+                    filtered = filtered.filter(trip => 
+                        trip.vehicle_description === vehicleFilter || 
+                        trip.vehicle === vehicleFilter
+                    );
+                }
+                return filtered;
+            };
+
+            const applyPersonalTollFilters = (tolls) => {
+                let filtered = [...tolls];
+                if (searchTerm) {
+                    filtered = filtered.filter(toll =>
+                        toll.location?.toLowerCase().includes(searchTerm) ||
+                        toll.vehicle?.toLowerCase().includes(searchTerm) ||
+                        toll.transponder?.toLowerCase().includes(searchTerm) ||
+                        toll.agency?.toLowerCase().includes(searchTerm) ||
+                        toll.transactionId?.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                // Apply date filter to toll transaction date
+                const now = new Date();
+                if (dateFilter !== 'all') {
+                    filtered = filtered.filter(toll => {
+                        const tollDate = new Date(toll.date || toll.tollDate);
+                        switch (dateFilter) {
+                            case 'today':
+                                return tollDate.toDateString() === now.toDateString();
+                            case 'week':
+                                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                                return tollDate >= weekAgo;
+                            case 'month':
+                                return tollDate.getMonth() === now.getMonth() && tollDate.getFullYear() === now.getFullYear();
+                            case '3months':
+                                const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                                return tollDate >= threeMonthsAgo;
+                            default:
+                                return true;
+                        }
+                    });
+                }
+
+                // Apply vehicle filter to toll vehicle/transponder
+                if (vehicleFilter !== 'all') {
+                    filtered = filtered.filter(toll => 
+                        toll.vehicle === vehicleFilter || 
+                        toll.transponder === vehicleFilter ||
+                        toll.vehicle_description === vehicleFilter
+                    );
+                }
+
+                return filtered;
+            };
+
+            const allTrips = [
+                ...tripsData.completed,
+                ...tripsData.inProgress,
+                ...tripsData.upcoming,
+            ];
+
             switch (currentTab) {
                 case 'completed':
-                    return filteredTrips.filter(trip => trip.status === 'completed');
+                    return applyTripFilters(tripsData.completed);
                 case 'progress':
-                    return filteredTrips.filter(trip => trip.status === 'in-progress');
+                    return applyTripFilters(tripsData.inProgress);
                 case 'upcoming':
-                    return filteredTrips.filter(trip => trip.status === 'upcoming');
+                    return applyTripFilters(tripsData.upcoming);
                 case 'personal':
-                    // Return personal tolls instead of trips
-                    return tripsData.yourTolls || [];
+                    return applyPersonalTollFilters(tripsData.yourTolls || []);
                 case 'late':
-                    return filteredTrips.filter(trip => trip.lateTolls && trip.lateTolls.length > 0);
+                    return applyTripFilters(allTrips).filter(trip => {
+                        // For late tolls, we would need to check if this trip has late tolls
+                        // For now, return empty array since late tolls structure is not defined in trips data
+                        return false;
+                    });
                 default:
-                    return filteredTrips;
+                    return applyTripFilters(allTrips);
             }
         }
         
