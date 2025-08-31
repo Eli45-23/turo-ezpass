@@ -939,44 +939,23 @@
             const tollSection = document.querySelector(`[data-trip-id="${tripId}"] .toll-grid`);
             const toggleButton = document.querySelector(`[data-trip-id="${tripId}"] .toll-toggle-btn`);
             
-            console.log('🎯 Found elements:', { 
-                tollSection: !!tollSection, 
-                toggleButton: !!toggleButton,
-                tollSectionClass: tollSection?.className,
-                buttonClass: toggleButton?.className
-            });
-            
             if (!tollSection || !toggleButton) {
                 console.error('❌ Could not find toll section or button for trip:', tripId);
-                console.log('Available trip cards:', document.querySelectorAll('[data-trip-id]'));
                 return;
             }
             
-            // Get all toll elements (both visible and hidden)
-            const allTollElements = tollSection.querySelectorAll('.toll-card, .hidden-toll');
-            const visibleTolls = tollSection.querySelectorAll('.toll-card:not(.hidden-toll)');
-            const hiddenTolls = tollSection.querySelectorAll('.hidden-toll');
-            
-            console.log('📈 Toll counts:', {
-                total: allTollElements.length,
-                visible: visibleTolls.length,
-                hidden: hiddenTolls.length
-            });
-            
             if (!isExpanded) {
                 // Expanding: show hidden tolls
+                const hiddenTolls = tollSection.querySelectorAll('.hidden-toll');
                 console.log('🔓 Expanding to show', hiddenTolls.length, 'hidden tolls');
                 
-                hiddenTolls.forEach((toll, index) => {
-                    console.log('👁️ Showing toll element:', toll);
-                    
-                    // Remove hidden state
+                hiddenTolls.forEach((toll) => {
                     toll.classList.remove('hidden-toll');
+                    toll.classList.add('toll-card');
                     toll.style.display = 'block';
                     toll.style.opacity = '0';
                     toll.style.transform = 'translateY(10px)';
                     
-                    // Animate in
                     requestAnimationFrame(() => {
                         toll.style.transition = 'all 0.3s ease';
                         toll.style.opacity = '1';
@@ -990,28 +969,30 @@
                 `;
             } else {
                 // Collapsing: hide tolls beyond first 4
-                console.log('🔒 Collapsing to hide extra tolls');
+                const allVisibleTolls = Array.from(tollSection.querySelectorAll('.toll-card'));
+                console.log('🔒 Collapsing to hide extra tolls from', allVisibleTolls.length, 'visible tolls');
                 
-                const allTollElements = tollSection.querySelectorAll('.toll-card, .hidden-toll');
-                for (let i = 4; i < allTollElements.length; i++) {
-                    const toll = allTollElements[i];
-                    console.log('🙈 Hiding toll element:', toll);
+                if (allVisibleTolls.length > 4) {
+                    for (let i = 4; i < allVisibleTolls.length; i++) {
+                        const toll = allVisibleTolls[i];
+                        
+                        toll.style.transition = 'all 0.3s ease';
+                        toll.style.opacity = '0';
+                        toll.style.transform = 'translateY(-10px)';
+                        
+                        setTimeout(() => {
+                            toll.classList.remove('toll-card');
+                            toll.classList.add('hidden-toll');
+                            toll.style.display = 'none';
+                        }, 300);
+                    }
                     
-                    toll.style.transition = 'all 0.3s ease';
-                    toll.style.opacity = '0';
-                    toll.style.transform = 'translateY(-10px)';
-                    
-                    setTimeout(() => {
-                        toll.classList.add('hidden-toll');
-                        toll.style.display = 'none';
-                    }, 300);
+                    const remainingCount = allVisibleTolls.length - 4;
+                    toggleButton.innerHTML = `
+                        <i data-lucide="chevron-down" class="w-4 h-4 inline mr-1"></i>
+                        +${remainingCount} more tolls...
+                    `;
                 }
-                
-                const remainingCount = allTollElements.length - 4;
-                toggleButton.innerHTML = `
-                    <i data-lucide="chevron-down" class="w-4 h-4 inline mr-1"></i>
-                    +${remainingCount} more tolls...
-                `;
             }
             
             // Re-initialize Lucide icons for the new icons
