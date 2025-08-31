@@ -2432,6 +2432,28 @@ router.post('/csv/process-both', requireAuth, upload.fields([
         console.log(`🎯 SimpleTollMatcher complete: ${matchingResults.matchedCount || 0} tolls matched out of ${matchingResults.totalTolls || 0} total`);
         console.log('💾 Database storage complete');
         
+        // Automatically mark unmatched tolls as personal
+        console.log('🏠 Marking unmatched tolls as personal...');
+        try {
+            const tollAccountIds = tollAccounts.map(account => account.id);
+            const { data: unmarkedTolls, error: updateError } = await supabaseAdmin
+                .from('toll_charges')
+                .update({ is_personal: true })
+                .in('toll_account_id', tollAccountIds)
+                .eq('is_matched', false)
+                .eq('is_personal', false)
+                .select('id');
+            
+            if (updateError) {
+                console.error('❌ Failed to mark unmatched tolls as personal:', updateError);
+            } else {
+                const markedCount = unmarkedTolls?.length || 0;
+                console.log(`✅ Marked ${markedCount} unmatched tolls as personal`);
+            }
+        } catch (error) {
+            console.error('❌ Error marking unmatched tolls as personal:', error);
+        }
+        
         // Clear dashboard cache to force fresh data load
         console.log('🗑️ Clearing dashboard cache...');
         const cacheKey = CacheKeys.dashboardSummary(hostId);
@@ -2834,6 +2856,28 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
             const matchResult = await simpleMatcher.matchTollsToTrips(hostId, recentTrips, databaseTolls, progressCallback);
             console.log('✅ COMPLETED SimpleTollMatcher.matchTollsToTrips():', matchResult);
             
+            // Automatically mark unmatched tolls as personal
+            console.log('🏠 Marking unmatched tolls as personal...');
+            try {
+                const tollAccountIds = tollAccounts.map(account => account.id);
+                const { data: unmarkedTolls, error: updateError } = await supabaseAdmin
+                    .from('toll_charges')
+                    .update({ is_personal: true })
+                    .in('toll_account_id', tollAccountIds)
+                    .eq('is_matched', false)
+                    .eq('is_personal', false)
+                    .select('id');
+                
+                if (updateError) {
+                    console.error('❌ Failed to mark unmatched tolls as personal:', updateError);
+                } else {
+                    const markedCount = unmarkedTolls?.length || 0;
+                    console.log(`✅ Marked ${markedCount} unmatched tolls as personal`);
+                }
+            } catch (error) {
+                console.error('❌ Error marking unmatched tolls as personal:', error);
+            }
+            
             // Send final completion event
             const sendToHost = req.app.get('sendToHost');
             if (sendToHost) {
@@ -2897,6 +2941,28 @@ router.post('/csv/process-both-smart', requireAuth, upload.fields([
                 console.log('🔄 Fallback Matching progress:', progress);
             });
             console.log(`🎯 Fallback SimpleTollMatcher complete: ${matchingResults.matchedCount || 0} tolls matched`);
+            
+            // Automatically mark unmatched tolls as personal
+            console.log('🏠 Marking unmatched tolls as personal...');
+            try {
+                const tollAccountIds = tollAccounts.map(account => account.id);
+                const { data: unmarkedTolls, error: updateError } = await supabaseAdmin
+                    .from('toll_charges')
+                    .update({ is_personal: true })
+                    .in('toll_account_id', tollAccountIds)
+                    .eq('is_matched', false)
+                    .eq('is_personal', false)
+                    .select('id');
+                
+                if (updateError) {
+                    console.error('❌ Failed to mark unmatched tolls as personal:', updateError);
+                } else {
+                    const markedCount = unmarkedTolls?.length || 0;
+                    console.log(`✅ Marked ${markedCount} unmatched tolls as personal`);
+                }
+            } catch (error) {
+                console.error('❌ Error marking unmatched tolls as personal:', error);
+            }
             
             // Clear cache
             const cacheKey = CacheKeys.dashboardSummary(hostId);

@@ -117,11 +117,28 @@ router.post('/mark-unmatched', requireAuth, async (req, res) => {
     try {
         console.log(`🔄 Marking all unmatched tolls as personal for host: ${hostId}`);
         
+        // First, get all toll accounts for this host
+        const { data: tollAccounts, error: accountsError } = await supabaseAdmin
+            .from('toll_accounts')
+            .select('id')
+            .eq('host_id', hostId)
+            .eq('is_active', true);
+            
+        if (accountsError) {
+            console.error('❌ Error fetching toll accounts:', accountsError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch toll accounts'
+            });
+        }
+        
+        const tollAccountIds = tollAccounts.map(account => account.id);
+        
         // Update all unmatched tolls to be personal for this host
         const { data, error: updateError } = await supabaseAdmin
             .from('toll_charges')
             .update({ is_personal: true })
-            .eq('toll_accounts.host_id', hostId)
+            .in('toll_account_id', tollAccountIds)
             .eq('is_matched', false)
             .eq('is_personal', false)
             .select('id');
