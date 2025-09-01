@@ -18,365 +18,230 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'monospace'],
+                        'inter': ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Transponders Page Specific Styles */
-        :root {
-            --header-height: 72px;
-            --sidebar-width: 280px;
+        .font-mono { font-family: 'JetBrains Mono', monospace !important; }
+        .font-inter { font-family: 'Inter', sans-serif !important; }
+        
+        .dashboard-bg {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #4b5563 100%);
         }
         
-        .transponders-layout {
-            min-height: 100vh;
-            background: var(--bg);
-            color: var(--ink);
-            display: grid;
-            grid-template-rows: var(--header-height) 1fr;
-            grid-template-columns: var(--sidebar-width) 1fr;
-            grid-template-areas: 
-                "sidebar header"
-                "sidebar main";
+        .sidebar-bg {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
         }
         
-        .transponders-header {
-            grid-area: header;
-            background: var(--panel);
-            border-bottom: 1px solid var(--hairline);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2rem;
-            position: sticky;
-            top: 0;
-            z-index: var(--z-sticky);
-        }
-        
-        .transponders-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .transponders-title {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .transponders-main {
-            grid-area: main;
-            padding: 2rem;
-            background: var(--bg);
-        }
-        
-        .transponders-content {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        /* Sidebar */
-        .transponders-sidebar {
-            grid-area: sidebar;
-            background: var(--panel);
-            border-right: 1px solid var(--hairline);
-            display: flex;
-            flex-direction: column;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--hairline);
-            font-family: var(--font-heading);
-            font-size: var(--text-xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-        }
-
-        .sidebar-nav {
-            flex: 1;
-            padding: 1.5rem 0;
-        }
-
         .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            color: var(--muted);
-            text-decoration: none;
-            font-size: var(--text-sm);
-            font-weight: var(--font-medium);
-            transition: all var(--transition-fast);
-            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
+        
         .nav-item:hover {
-            background: var(--hover);
-            color: var(--ink);
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(8px);
         }
-
+        
         .nav-item.active {
-            background: var(--hover);
-            color: var(--accentB);
-            font-weight: var(--font-semibold);
-        }
-
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: linear-gradient(135deg, var(--accentA), var(--accentB), var(--accentC));
-        }
-
-        .nav-icon {
-            font-size: var(--text-lg);
+            background: rgba(99, 102, 241, 0.3);
+            border-left: 3px solid #6366f1;
         }
         
-        .transponders-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: var(--gap-lg);
-            margin-bottom: 2rem;
+        .stats-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
         }
         
-        .overview-card {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            padding: var(--gap-lg);
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        .transponder-list {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .transponder-item {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .transponder-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(4px);
+        }
+        
+        .transponder-item:last-child {
+            border-bottom: none;
+        }
+        
+        .animated-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            transition: all var(--transition-fast);
         }
         
-        .overview-card::before {
+        .animated-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .animated-button::before {
             content: '';
             position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-            pointer-events: none;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
         }
         
-        .overview-card:hover {
-            border-color: var(--accentB);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-base);
+        .animated-button:hover::before {
+            left: 100%;
         }
         
-        .overview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .overview-icon {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: var(--radius-sm);
+        .vehicle-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: var(--text-lg);
+            font-weight: bold;
+            font-size: 14px;
             color: white;
-            box-shadow: var(--shadow-sm);
         }
         
-        .overview-value {
-            font-size: var(--text-3xl);
-            font-weight: var(--font-bold);
-            color: var(--ink);
-            margin-bottom: 0.5rem;
-        }
-        
-        .overview-label {
-            font-size: var(--text-sm);
-            color: var(--muted);
-        }
-        
-        .transponders-controls {
-            display: flex;
-            justify-content: space-between;
+        .status-badge {
+            display: inline-flex;
             align-items: center;
-            margin-bottom: 2rem;
-            gap: 1rem;
-            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
         
-        .search-filters {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex: 1;
+        .status-active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        
+        .status-suspended {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+        
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        /* Page animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .fade-in-delay-1 { animation-delay: 0.1s; }
+        .fade-in-delay-2 { animation-delay: 0.2s; }
+        .fade-in-delay-3 { animation-delay: 0.3s; }
+        .fade-in-delay-4 { animation-delay: 0.4s; }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .search-input {
-            min-width: 300px;
-            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
         }
         
-        .search-input input {
-            padding-left: 2.5rem;
+        .search-input:focus {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
         
-        .search-icon {
-            position: absolute;
-            left: 0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--muted);
-            pointer-events: none;
-        }
-        
-        .transponders-table {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            overflow: hidden;
-        }
-        
-        .table-header {
-            padding: var(--gap-lg);
-            border-bottom: 1px solid var(--hairline);
-            background: var(--hover);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .table-title {
-            font-size: var(--text-lg);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            margin: 0;
-        }
-        
-        .table-actions {
-            display: flex;
-            gap: var(--gap);
-        }
-        
+        /* Preserve essential existing styles for compatibility */
         .transponder-row {
             display: grid;
             grid-template-columns: 1fr 120px 150px 120px 100px 120px;
             align-items: center;
-            padding: 1rem var(--gap-lg);
-            border-bottom: 1px solid var(--hairline);
-            transition: all var(--transition-fast);
+            padding: 1rem 1.5rem;
+            transition: all 0.3s ease;
         }
         
-        .transponder-row:hover {
-            background: var(--hover);
+        @media (max-width: 1024px) {
+            .transponder-row {
+                grid-template-columns: 1fr auto;
+                gap: 1rem;
+            }
+            
+            .transponder-row > *:not(.transponder-info):not(.transponder-actions) {
+                display: none;
+            }
         }
         
-        .transponder-row:last-child {
-            border-bottom: none;
+        /* Colorful Navigation Icons */
+        .nav-item .icon-dashboard,
+        .nav-item .icon-dashboard svg {
+            color: #3b82f6 !important;
+            stroke: #3b82f6 !important;
         }
         
-        .transponder-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        .nav-item .icon-map,
+        .nav-item .icon-map svg {
+            color: #f59e0b !important;
+            stroke: #f59e0b !important;
         }
         
-        .transponder-avatar {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: var(--radius-sm);
-            background: linear-gradient(135deg, var(--accentA), var(--accentB));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: var(--font-bold);
-            font-size: var(--text-sm);
+        .nav-item .icon-upload,
+        .nav-item .icon-upload svg {
+            color: #8b5cf6 !important;
+            stroke: #8b5cf6 !important;
         }
         
-        .transponder-details h4 {
-            font-size: var(--text-base);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
-            margin: 0 0 0.25rem 0;
+        .nav-item .icon-analytics,
+        .nav-item .icon-analytics svg {
+            color: #10b981 !important;
+            stroke: #10b981 !important;
         }
         
-        .transponder-details p {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            margin: 0;
+        .nav-item .icon-transponders,
+        .nav-item .icon-transponders svg {
+            color: #ef4444 !important;
+            stroke: #ef4444 !important;
         }
         
-        .transponder-status {
-            text-align: center;
-        }
-        
-        .status-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: var(--text-xs);
-            font-weight: var(--font-medium);
-        }
-        
-        .status-chip.active {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10B981;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-        
-        .status-chip.inactive {
-            background: rgba(156, 163, 175, 0.1);
-            color: var(--muted);
-            border: 1px solid var(--hairline);
-        }
-        
-        .status-chip.suspended {
-            background: rgba(245, 158, 11, 0.1);
-            color: #F59E0B;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-        
-        .transponder-actions {
-            display: flex;
-            gap: 0.5rem;
-            justify-content: flex-end;
-        }
-        
-        .action-btn {
-            width: 2rem;
-            height: 2rem;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--hairline);
-            background: var(--panel);
-            color: var(--muted);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            font-size: var(--text-sm);
-        }
-        
-        .action-btn:hover {
-            background: var(--hover);
-            color: var(--ink);
-            border-color: var(--accentB);
-        }
-        
-        .action-btn.danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-            color: #EF4444;
-            border-color: #EF4444;
+        .nav-item .icon-invoices,
+        .nav-item .icon-invoices svg {
+            color: #06b6d4 !important;
+            stroke: #06b6d4 !important;
         }
         
         /* Modal Styles */
@@ -578,6 +443,24 @@
             color: #06b6d4 !important; /* Cyan for Invoices */
             stroke: #06b6d4 !important;
         }
+        
+        /* Dropdown menu styles */
+        .dropdown-menu {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -620,103 +503,119 @@
         <!-- Main Content -->
         <div class="flex-1 overflow-auto">
             <!-- Header -->
-            <header class="transponders-header">
-            <h1 class="h2">🏷️ Transponder Management</h1>
-            
-            <div class="nav-actions">
-                <button class="btn btn-secondary btn-sm" onclick="importTransponders()">
-                    <span>📥</span>
-                    Import
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="showAddModal()">
-                    <span>➕</span>
-                    Add Mapping
-                </button>
-            </div>
-        </header>
+            <header class="bg-black/20 border-b border-gray-600 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="radio" class="w-6 h-6 text-yellow-400"></i>
+                        <h2 class="text-xl font-bold text-white font-mono">TRANSPONDER MANAGEMENT</h2>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button class="animated-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2" onclick="importTransponders()">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            <span>Import</span>
+                        </button>
+                        <button class="animated-button bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2" onclick="showAddModal()">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Add Mapping</span>
+                        </button>
+                        <div class="relative">
+                            <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" id="userMenu">
+                                <i data-lucide="log-out" class="w-5 h-5"></i>
+                            </button>
+                            <div class="absolute top-12 right-0 bg-gray-700/90 backdrop-blur-lg border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg opacity-0 invisible -translate-y-2 transition-all duration-200 z-50 dropdown-menu" id="userDropdown">
+                                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-white/5" id="signOutBtn">
+                                    <i data-lucide="log-out"></i>
+                                    Sign Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
         
-        <!-- Main Content -->
-        <main class="transponders-main">
-            <div class="transponders-content">
-                <!-- Overview Cards -->
-            <div class="transponders-overview">
-                <div class="overview-card">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: linear-gradient(135deg, var(--accentA), var(--accentB));">🏷️</div>
-                    </div>
-                    <div class="overview-value" id="total-transponders">0</div>
-                    <div class="overview-label">Total Transponders</div>
-                </div>
-                
-                <div class="overview-card">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #10B981;">✅</div>
-                    </div>
-                    <div class="overview-value" id="active-transponders">0</div>
-                    <div class="overview-label">Active</div>
-                </div>
-                
-                <div class="overview-card">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #F59E0B;">⏸️</div>
-                    </div>
-                    <div class="overview-value" id="suspended-transponders">0</div>
-                    <div class="overview-label">Suspended</div>
-                </div>
-                
-                <div class="overview-card">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: var(--muted);">❌</div>
-                    </div>
-                    <div class="overview-value" id="inactive-transponders">0</div>
-                    <div class="overview-label">Inactive</div>
-                </div>
-            </div>
-            
-            <!-- Controls -->
-            <div class="transponders-controls">
-                <div class="search-filters">
-                    <div class="search-input">
-                        <input type="text" class="form-input" placeholder="Search transponders..." id="search-transponders">
-                        <div class="search-icon">🔍</div>
+            <!-- Transponder Content -->
+            <main class="p-6 space-y-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <!-- Total Transponders -->
+                    <div class="fade-in stats-card p-6 rounded-xl text-center">
+                        <div class="w-12 h-12 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="credit-card" class="w-6 h-6 text-gray-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono" id="total-transponders">0</div>
+                        <div class="text-sm text-gray-400 font-medium">Total Transponders</div>
                     </div>
                     
-                    <select class="form-select" id="status-filter">
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="suspended">Suspended</option>
-                    </select>
+                    <!-- Active -->
+                    <div class="fade-in fade-in-delay-1 stats-card p-6 rounded-xl text-center">
+                        <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-green-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono" id="active-transponders">0</div>
+                        <div class="text-sm text-gray-400 font-medium">Active</div>
+                    </div>
+                    
+                    <!-- Suspended -->
+                    <div class="fade-in fade-in-delay-2 stats-card p-6 rounded-xl text-center">
+                        <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="pause-circle" class="w-6 h-6 text-yellow-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono" id="suspended-transponders">0</div>
+                        <div class="text-sm text-gray-400 font-medium">Suspended</div>
+                    </div>
+                    
+                    <!-- Inactive -->
+                    <div class="fade-in fade-in-delay-3 stats-card p-6 rounded-xl text-center">
+                        <div class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="x-circle" class="w-6 h-6 text-red-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-white font-mono" id="inactive-transponders">0</div>
+                        <div class="text-sm text-gray-400 font-medium">Inactive</div>
+                    </div>
                     
                 </div>
                 
-                <div class="table-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="exportTransponders()">
-                        <span>📤</span>
-                        Export
-                    </button>
-                    <button class="btn btn-ghost btn-sm" onclick="refreshData()">
-                        <span>🔄</span>
-                        Refresh
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Transponders Table -->
-            <div class="transponders-table">
-                <div class="table-header">
-                    <h3 class="table-title">Transponder List</h3>
-                    <div class="table-actions">
-                        <button class="btn btn-ghost btn-sm" onclick="selectAll()">
-                            Select All
+                <!-- Search and Filters -->
+                <div class="fade-in fade-in-delay-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div class="flex items-center space-x-3 flex-1 max-w-md">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                            <input type="text" placeholder="Search transponders..." class="search-input w-full pl-10 pr-4 py-3 rounded-lg text-white placeholder-gray-400 outline-none" id="search-transponders">
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <select class="bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-500 outline-none" id="status-filter">
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                        
+                        <button class="animated-button bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold flex items-center space-x-2" onclick="exportTransponders()">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>Export</span>
+                        </button>
+                        
+                        <button class="animated-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold flex items-center space-x-2" onclick="refreshData()">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            <span>Refresh</span>
                         </button>
                     </div>
                 </div>
                 
-                <div class="table-body" id="transponders-list">
-                    <!-- Transponder rows will be populated here -->
+                <!-- Transponder List -->
+                <div class="transponder-list rounded-xl">
+                    <div class="p-4 border-b border-gray-600/50 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white font-mono">Transponder List</h3>
+                        <button class="text-sm text-blue-400 hover:text-blue-300" onclick="selectAll()">Select All</button>
+                    </div>
+                    
+                    <div class="divide-y divide-gray-600/20" id="transponders-list">
+                        <!-- Transponder rows will be populated here -->
+                    </div>
                 </div>
-            </div>
             </div>
         </main>
         </div>
@@ -855,7 +754,7 @@
             
             if (filteredTransponders.length === 0) {
                 container.innerHTML = `
-                    <div style="padding: 2rem; text-align: center; color: var(--muted);">
+                    <div class="p-8 text-center text-gray-400">
                         No transponders found matching your criteria
                     </div>
                 `;
@@ -866,66 +765,84 @@
                 const row = createTransponderRow(transponder);
                 container.appendChild(row);
             });
+            
+            // Initialize icons after adding all rows
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 100);
         }
         
         function createTransponderRow(transponder) {
             const row = document.createElement('div');
-            row.className = 'transponder-row';
+            row.className = 'transponder-item p-4 flex items-center justify-between';
             
             const status = transponder.isActive ? 
-                { class: 'active', icon: '✅', text: 'Active' } :
-                { class: 'inactive', icon: '❌', text: 'Inactive' };
+                { class: 'status-active', icon: '<div class="w-2 h-2 bg-green-400 rounded-full"></div>', text: 'Active' } :
+                { class: 'status-inactive', icon: '<div class="w-2 h-2 bg-red-400 rounded-full"></div>', text: 'Inactive' };
             
+            // Create vehicle avatar with initials or fallback
             const initials = transponder.vehicleDescription ? 
-                transponder.vehicleDescription.split(' ').map(w => w[0]).join('').toUpperCase() : 
+                transponder.vehicleDescription.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase() : 
                 transponder.vehiclePlate.slice(-2);
             
             const displayName = transponder.vehicleDescription || 
                 `${transponder.transponderNumber} → ${transponder.vehiclePlate}`;
             
+            // Generate a color for the avatar based on the transponder ID
+            const colors = ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600', 'bg-yellow-600', 'bg-indigo-600'];
+            const colorIndex = parseInt(transponder.id) % colors.length;
+            const avatarColor = colors[colorIndex];
+            
             row.innerHTML = `
-                <div class="transponder-info">
-                    <div class="transponder-avatar">${initials}</div>
-                    <div class="transponder-details">
-                        <h4>${displayName}</h4>
-                        <p>Transponder: ${transponder.transponderNumber} • Plate: ${transponder.vehiclePlate}</p>
+                <div class="flex items-center space-x-4">
+                    <div class="vehicle-avatar ${avatarColor}">${initials}</div>
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3 mb-1">
+                            <h4 class="text-white font-semibold">${displayName}</h4>
+                            <span class="status-badge ${status.class}">
+                                ${status.icon}
+                                ${status.text}
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-6 text-sm text-gray-400">
+                            <span>Transponder: ${transponder.transponderNumber}</span>
+                            <span>Plate: ${transponder.vehiclePlate}</span>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="transponder-status">
-                    <div class="status-chip ${status.class}">
-                        <span>${status.icon}</span>
-                        ${status.text}
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <div class="text-white font-semibold">${transponder.vehiclePlate}</div>
+                        <div class="text-sm text-gray-400">Vehicle Plate</div>
                     </div>
-                </div>
-                
-                <div style="text-align: center;">
-                    <div style="color: var(--ink);">${transponder.vehiclePlate}</div>
-                    <div style="font-size: var(--text-xs); color: var(--muted);">Vehicle Plate</div>
-                </div>
-                
-                <div style="text-align: center;">
-                    <div style="color: var(--ink);">${transponder.transponderNumber}</div>
-                    <div style="font-size: var(--text-xs); color: var(--muted);">Transponder ID</div>
-                </div>
-                
-                <div style="text-align: center;">
-                    <div style="color: var(--ink);">${new Date(transponder.createdAt).toLocaleDateString()}</div>
-                    <div style="font-size: var(--text-xs); color: var(--muted);">Added</div>
-                </div>
-                
-                <div class="transponder-actions">
-                    <button class="action-btn" onclick="editTransponder('${transponder.id}')" title="Edit">
-                        ✏️
-                    </button>
-                    <button class="action-btn" onclick="toggleStatus('${transponder.id}')" title="Toggle Status">
-                        ${transponder.isActive ? '⏸️' : '▶️'}
-                    </button>
-                    <button class="action-btn danger" onclick="deleteTransponder('${transponder.id}')" title="Delete">
-                        🗑️
-                    </button>
+                    <div class="text-right">
+                        <div class="text-white font-semibold">${transponder.transponderNumber}</div>
+                        <div class="text-sm text-gray-400">Transponder ID</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-white font-semibold">${new Date(transponder.createdAt).toLocaleDateString()}</div>
+                        <div class="text-sm text-gray-400">Added</div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button class="p-2 hover:bg-gray-700 rounded-lg transition-colors" title="Edit" onclick="editTransponder('${transponder.id}')">
+                            <i data-lucide="edit" class="w-4 h-4 text-gray-400 hover:text-white"></i>
+                        </button>
+                        <button class="p-2 hover:bg-gray-700 rounded-lg transition-colors" title="Toggle Status" onclick="toggleStatus('${transponder.id}')">
+                            <i data-lucide="${transponder.isActive ? 'pause' : 'play'}" class="w-4 h-4 text-gray-400 hover:text-yellow-400"></i>
+                        </button>
+                        <button class="p-2 hover:bg-gray-700 rounded-lg transition-colors" title="Delete" onclick="deleteTransponder('${transponder.id}')">
+                            <i data-lucide="trash-2" class="w-4 h-4 text-gray-400 hover:text-red-400"></i>
+                        </button>
+                    </div>
                 </div>
             `;
+            
+            // Initialize lucide icons for this row
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 0);
             
             return row;
         }
@@ -1197,6 +1114,77 @@
             }
         });
     </script>
+    
+    <!-- Logout functionality -->
+    <script>
+        // User menu dropdown functionality
+        const userMenu = document.getElementById('userMenu');
+        const userDropdown = document.getElementById('userDropdown');
+        const signOutBtn = document.getElementById('signOutBtn');
+        
+        if (userMenu && userDropdown) {
+            // Toggle dropdown on user menu click
+            userMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                // Check if click is outside both the user menu button and dropdown
+                if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+            
+            // Handle sign out
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', handleSignOut);
+            }
+        }
+        
+        // Sign out function
+        async function handleSignOut() {
+            
+            const signOutBtn = document.getElementById('signOutBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            try {
+                // Show loading state
+                const originalText = signOutBtn.innerHTML;
+                signOutBtn.innerHTML = '<span class="dropdown-icon">⏳</span>Signing out...';
+                signOutBtn.disabled = true;
+                
+                // Clear stored tokens
+                localStorage.removeItem('supabase_token');
+                localStorage.removeItem('supabase_session');
+                
+                // Call logout endpoint
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Logout successful');
+                    window.location.href = '/';
+                } else {
+                    console.error('❌ Logout failed');
+                    // Still redirect on failure as tokens are cleared
+                    window.location.href = '/';
+                }
+                
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                // Still redirect on error as tokens are cleared
+                window.location.href = '/';
+            }
+        }
+    </script>
+    
     <!-- Initialize Lucide Icons -->
     <script>
         lucide.createIcons();
