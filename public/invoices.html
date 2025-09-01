@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoices - Turo Toll Tracker</title>
+    <title>Submitted Tolls - Turo Toll Tracker</title>
     
     <!-- Design System -->
     <link rel="stylesheet" href="/css/design-system.css">
@@ -294,7 +294,7 @@
         
         .invoice-row {
             display: grid;
-            grid-template-columns: 1fr 120px 100px 120px 100px 150px;
+            grid-template-columns: 1fr 120px 100px 120px 150px;
             align-items: center;
             padding: 1rem var(--gap-lg);
             border-bottom: 1px solid var(--hairline);
@@ -361,23 +361,7 @@
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
         
-        .status-chip.pending {
-            background: rgba(245, 158, 11, 0.1);
-            color: #F59E0B;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
         
-        .status-chip.overdue {
-            background: rgba(239, 68, 68, 0.1);
-            color: #EF4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-        
-        .status-chip.draft {
-            background: rgba(156, 163, 175, 0.1);
-            color: var(--muted);
-            border: 1px solid var(--hairline);
-        }
         
         .invoice-amount {
             text-align: right;
@@ -741,6 +725,24 @@
             color: #06b6d4 !important; /* Cyan for Invoices */
             stroke: #06b6d4 !important;
         }
+        
+        /* Dropdown menu styles */
+        .dropdown-menu {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="min-h-screen dashboard-bg font-inter text-white">
@@ -775,7 +777,7 @@
                 </a>
                 <a href="/invoices.html" class="nav-item active flex items-center space-x-3 px-4 py-3 rounded-r-lg text-white">
                     <i data-lucide="file-text" class="icon-invoices w-7 h-7"></i>
-                    <span class="font-medium">INVOICES</span>
+                    <span class="font-medium">SUBMITTED TOLLS</span>
                 </a>
             </nav>
         </aside>
@@ -784,17 +786,20 @@
         <div class="flex-1 overflow-auto">
             <!-- Header -->
             <header class="invoices-header">
-            <h1 class="h2">📄 Invoice Management</h1>
+            <h1 class="h2">🚗 SUBMITTED TOLLS</h1>
             
             <div class="nav-actions">
-                <button class="btn btn-secondary btn-sm" onclick="createTemplate()">
-                    <span>📄</span>
-                    Templates
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="createInvoice()">
-                    <span>➕</span>
-                    New Invoice
-                </button>
+                <div class="relative">
+                    <button class="btn btn-secondary btn-sm" title="Sign Out" id="userMenu">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                    <div class="absolute top-12 right-0 bg-gray-700/90 backdrop-blur-lg border border-gray-600 rounded-lg py-2 min-w-40 shadow-lg opacity-0 invisible -translate-y-2 transition-all duration-200 z-50 dropdown-menu" id="userDropdown">
+                        <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-300 no-underline transition-all duration-200 cursor-pointer text-sm hover:text-white hover:bg-white/5" id="signOutBtn">
+                            <i data-lucide="log-out"></i>
+                            Sign Out
+                        </a>
+                    </div>
+                </div>
             </div>
         </header>
         
@@ -808,11 +813,7 @@
                         <div class="overview-icon" style="background: linear-gradient(135deg, var(--accentA), var(--accentB));">📄</div>
                     </div>
                     <div class="overview-value" id="total-invoices">0</div>
-                    <div class="overview-label">Total Invoices</div>
-                    <div class="overview-change positive">
-                        <span>↗</span>
-                        Loading...
-                    </div>
+                    <div class="overview-label">Total Submissions</div>
                 </div>
                 
                 <div class="overview-card">
@@ -821,52 +822,18 @@
                     </div>
                     <div class="overview-value" id="total-revenue">$0.00</div>
                     <div class="overview-label">Total Revenue</div>
-                    <div class="overview-change positive">
-                        <span>↗</span>
-                        Loading...
-                    </div>
                 </div>
                 
-                <div class="overview-card">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #F59E0B;">⏳</div>
-                    </div>
-                    <div class="overview-value" id="pending-invoices">0</div>
-                    <div class="overview-label">Pending Payment</div>
-                    <div class="overview-change negative">
-                        <span>↗</span>
-                        Loading...
-                    </div>
-                </div>
-                
-                <div class="overview-card">
-                    <div class="overview-header">
-                        <div class="overview-icon" style="background: #EF4444;">🚨</div>
-                    </div>
-                    <div class="overview-value" id="overdue-invoices">0</div>
-                    <div class="overview-label">Overdue</div>
-                    <div class="overview-change negative">
-                        <span>↗</span>
-                        Loading...
-                    </div>
-                </div>
             </div>
             
             <!-- Controls -->
             <div class="invoices-controls">
                 <div class="search-filters">
                     <div class="search-input">
-                        <input type="text" class="form-input" placeholder="Search invoices..." id="search-invoices">
+                        <input type="text" class="form-input" placeholder="Search submissions..." id="search-invoices">
                         <div class="search-icon">🔍</div>
                     </div>
                     
-                    <select class="form-select" id="status-filter">
-                        <option value="all">All Status</option>
-                        <option value="paid">Paid</option>
-                        <option value="pending">Pending</option>
-                        <option value="overdue">Overdue</option>
-                        <option value="draft">Draft</option>
-                    </select>
                     
                     <select class="form-select" id="date-filter">
                         <option value="all">All Time</option>
@@ -878,10 +845,6 @@
                 </div>
                 
                 <div class="table-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="exportInvoices()">
-                        <span>📤</span>
-                        Export
-                    </button>
                     <button class="btn btn-ghost btn-sm" onclick="refreshData()">
                         <span>🔄</span>
                         Refresh
@@ -892,7 +855,7 @@
             <!-- Invoices Table -->
             <div class="invoices-table">
                 <div class="table-header">
-                    <h3 class="table-title">Invoice List</h3>
+                    <h3 class="table-title">Submission List</h3>
                     <div class="table-actions">
                         <button class="btn btn-ghost btn-sm" onclick="bulkActions()">
                             <span>☑️</span>
@@ -914,7 +877,7 @@
     <div class="modal-overlay" id="invoice-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title" id="modal-title">Invoice Preview</h3>
+                <h3 class="modal-title" id="modal-title">Submission Details</h3>
                 <button class="modal-close" onclick="hideModal()">&times;</button>
             </div>
             
@@ -926,18 +889,6 @@
             
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="hideModal()">Close</button>
-                <button class="btn btn-secondary" onclick="editInvoice()">
-                    <span>✏️</span>
-                    Edit
-                </button>
-                <button class="btn btn-primary" onclick="downloadInvoice()">
-                    <span>📥</span>
-                    Download PDF
-                </button>
-                <button class="btn btn-primary" onclick="sendInvoice()">
-                    <span>📧</span>
-                    Send to Guest
-                </button>
             </div>
         </div>
     </div>
@@ -961,7 +912,6 @@
             // Use debounced search for better performance
             const debouncedFilter = performanceOptimizer.debounce(filterInvoices, 300, 'invoices-search');
             document.getElementById('search-invoices').addEventListener('input', debouncedFilter);
-            document.getElementById('status-filter').addEventListener('change', filterInvoices);
             document.getElementById('date-filter').addEventListener('change', filterInvoices);
         }
         
@@ -993,7 +943,6 @@
         
         async function loadInvoices() {
             try {
-                showLoading();
                 
                 // Fetch invoices data from API
                 console.log('📡 Fetching invoices data from API...');
@@ -1063,13 +1012,10 @@
         function createInvoiceRow(invoice) {
             const statusMap = {
                 paid: { class: 'paid', icon: '✅', text: 'Paid' },
-                pending: { class: 'pending', icon: '⏳', text: 'Pending' },
-                overdue: { class: 'overdue', icon: '🚨', text: 'Overdue' },
-                draft: { class: 'draft', icon: '📝', text: 'Draft' },
-                sent: { class: 'pending', icon: '📤', text: 'Sent' }
+                sent: { class: 'paid', icon: '📤', text: 'Sent' }
             };
             
-            const status = statusMap[invoice.status] || statusMap['pending'];
+            const status = statusMap[invoice.status] || statusMap['paid'];
             const guestName = invoice.guest || 'Unknown Guest';
             const initials = guestName.split(' ').map(n => n[0]).join('').toUpperCase();
             
@@ -1091,31 +1037,19 @@
                     </div>
                     
                     <div class="invoice-amount">
-                        $${invoice.amount.toFixed(2)}
+                        $${(invoice.amount - (invoice.processingFee || 0)).toFixed(2)}
                     </div>
                     
                     <div style="text-align: center; color: var(--ink); font-size: var(--text-sm);">
                         ${new Date(invoice.issueDate).toLocaleDateString()}
                     </div>
                     
-                    <div style="text-align: center; color: var(--ink); font-size: var(--text-sm);">
-                        ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'No due date'}
-                    </div>
                     
                     <div class="invoice-actions">
-                        <button class="action-btn primary" onclick="previewInvoice('${invoice.id}')" title="Preview">
+                        <button class="action-btn primary" onclick="previewInvoice('${invoice.invoiceId}')" title="View Invoice">
                             👁️
                         </button>
-                        <button class="action-btn" onclick="editInvoice('${invoice.id}')" title="Edit">
-                            ✏️
-                        </button>
-                        <button class="action-btn" onclick="sendInvoice('${invoice.id}')" title="Send">
-                            📧
-                        </button>
-                        <button class="action-btn" onclick="downloadInvoice('${invoice.id}')" title="Download">
-                            📥
-                        </button>
-                        <button class="action-btn" onclick="unsubmitTrip('${invoice.invoiceId}', '${invoice.tripId}')" title="Unsubmit Trip" style="background: var(--warning); color: white;">
+                        <button class="action-btn" onclick="unsubmitTrip('${invoice.invoiceId}', '${invoice.tripId}')" title="Return to Trips" style="background: var(--warning); color: white;">
                             ↩️
                         </button>
                     </div>
@@ -1125,76 +1059,157 @@
         
         function filterInvoices() {
             const searchTerm = document.getElementById('search-invoices').value.toLowerCase();
-            const statusFilter = document.getElementById('status-filter').value;
             const dateFilter = document.getElementById('date-filter').value;
             
-            const filtered = sampleInvoices.filter(invoice => {
+            const filtered = invoicesData.filter(invoice => {
                 const matchesSearch = searchTerm === '' || 
                     invoice.id.toLowerCase().includes(searchTerm) ||
                     invoice.guest.toLowerCase().includes(searchTerm) ||
                     invoice.tripId.toLowerCase().includes(searchTerm);
                 
-                const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-                
                 // Date filter logic would be implemented here
                 const matchesDate = true; // Simplified for demo
                 
-                return matchesSearch && matchesStatus && matchesDate;
+                return matchesSearch && matchesDate;
             });
             
             renderInvoices(filtered);
         }
         
         function previewInvoice(invoiceId) {
-            const invoice = sampleInvoices.find(inv => inv.id === invoiceId);
-            if (!invoice) return;
+            console.log('🔍 previewInvoice called with ID:', invoiceId, typeof invoiceId);
+            console.log('📊 Available invoicesData:', invoicesData);
             
-            currentInvoice = invoice;
-            generateInvoicePreview(invoice);
+            // Debug: Log each invoice to understand the structure
+            invoicesData.forEach((inv, index) => {
+                console.log(`📋 Invoice ${index}:`, {
+                    id: inv.id,
+                    invoiceId: inv.invoiceId,
+                    guest: inv.guest,
+                    amount: inv.amount
+                });
+            });
+            
+            // Find the basic invoice data - try multiple approaches
+            let basicInvoice = null;
+            
+            // First try: match invoiceId (internal database ID)
+            basicInvoice = invoicesData.find(inv => String(inv.invoiceId) === String(invoiceId));
+            
+            // Second try: match id (invoice number)
+            if (!basicInvoice) {
+                basicInvoice = invoicesData.find(inv => String(inv.id) === String(invoiceId));
+            }
+            
+            // Third try: match by converting to numbers
+            if (!basicInvoice && !isNaN(invoiceId)) {
+                basicInvoice = invoicesData.find(inv => 
+                    Number(inv.invoiceId) === Number(invoiceId) || 
+                    Number(inv.id) === Number(invoiceId)
+                );
+            }
+            
+            console.log('📋 Found basicInvoice:', basicInvoice);
+            
+            if (!basicInvoice) {
+                console.error('❌ Invoice not found with ID:', invoiceId);
+                console.error('🔍 Available IDs:', invoicesData.map(inv => ({ id: inv.id, invoiceId: inv.invoiceId })));
+                showNotification({
+                    type: 'error',
+                    title: 'Invoice Not Found',
+                    message: `Cannot find invoice with ID: ${invoiceId}`
+                });
+                return;
+            }
+            
+            // Show basic invoice immediately
+            currentInvoice = basicInvoice;
+            generateInvoicePreview(basicInvoice);
             showModal();
+            
+            // Then enhance with toll charges for this trip
+            loadTripTolls(basicInvoice.tripId, basicInvoice);
+        }
+        
+        async function loadTripTolls(tripId, basicInvoice) {
+            try {
+                console.log('🔄 Loading toll charges for trip:', tripId);
+                
+                // Fetch trip details with toll charges
+                const response = await fetch(`/api/trips/${tripId}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📡 Trip toll data received:', data);
+                
+                if (data.success && data.data && data.data.tolls) {
+                    // Transform toll charges to match expected format
+                    const tollItems = data.data.tolls.map(toll => ({
+                        description: `${toll.location} - ${toll.transponder || 'Toll'} #${toll.transactionId || 'N/A'}`,
+                        amount: parseFloat(toll.amount || 0),
+                        toll_date: toll.date,
+                        toll_location: toll.location,
+                        transaction_id: toll.transactionId,
+                        plate_number: toll.transponder
+                    }));
+                    
+                    // Merge basic invoice data with toll charges
+                    const submissionDetails = {
+                        ...basicInvoice,
+                        items: tollItems,
+                        tripDetails: data.data
+                    };
+                    
+                    console.log('✅ Updating preview with toll charges:', submissionDetails);
+                    currentInvoice = submissionDetails;
+                    generateInvoicePreview(submissionDetails);
+                    
+                    showNotification({
+                        type: 'success',
+                        title: 'Toll Charges Loaded',
+                        message: `Found ${tollItems.length} toll charges for this submission`
+                    });
+                } else {
+                    console.log('ℹ️ No toll charges found for trip, keeping basic view');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading trip toll charges:', error);
+                // Don't show error notification as basic submission view is already displayed
+                console.log('📋 Continuing with basic submission view');
+            }
         }
         
         function generateInvoicePreview(invoice) {
             const preview = document.getElementById('invoice-preview');
-            const subtotal = invoice.items.reduce((sum, item) => sum + item.amount, 0);
-            const tax = 0; // No tax for toll charges
-            const total = subtotal;
+            // Use toll total from trip details if available, otherwise fall back to invoice amount minus processing fee
+            const total = (invoice.tripDetails && invoice.tripDetails.tollTotal) 
+                ? parseFloat(invoice.tripDetails.tollTotal) 
+                : parseFloat(invoice.amount) - parseFloat(invoice.processingFee || 0);
             
             preview.innerHTML = `
                 <div class="invoice-header">
                     <div class="invoice-company">
-                        <div class="company-name">Turo Toll Services</div>
+                        <div class="company-name">Submission Details</div>
                         <div class="company-details">
-                            123 Main Street<br>
-                            San Francisco, CA 94102<br>
-                            Phone: (555) 123-4567<br>
-                            Email: tolls@turotracker.com
+                            Trip: ${invoice.tripId}<br>
+                            Guest: ${invoice.guest || 'Unknown Guest'}<br>
+                            Vehicle: ${invoice.vehicle || 'N/A'}<br>
+                            ${invoice.tripDetails && invoice.tripDetails.startDate ? `Trip Start: ${new Date(invoice.tripDetails.startDate).toLocaleString()}<br>` : ''}
+                            ${invoice.tripDetails && invoice.tripDetails.endDate ? `Trip End: ${new Date(invoice.tripDetails.endDate).toLocaleString()}<br>` : ''}
+                            Submitted: ${new Date(invoice.issueDate).toLocaleDateString()}
                         </div>
                     </div>
                     <div class="invoice-meta">
-                        <div class="invoice-number">Invoice ${invoice.id}</div>
                         <div class="invoice-date">
-                            Issue Date: ${new Date(invoice.issueDate).toLocaleDateString()}<br>
-                            Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'No due date'}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="invoice-parties">
-                    <div class="party-section">
-                        <h4>Bill To:</h4>
-                        <div class="party-details">
-                            ${invoice.guest}<br>
-                            ${invoice.guestEmail}<br>
-                            Trip ID: ${invoice.tripId}
-                        </div>
-                    </div>
-                    <div class="party-section">
-                        <h4>Service Period:</h4>
-                        <div class="party-details">
-                            From: ${new Date(invoice.items[0]?.date || invoice.issueDate).toLocaleDateString()}<br>
-                            To: ${new Date(invoice.items[invoice.items.length - 1]?.date || invoice.issueDate).toLocaleDateString()}<br>
-                            Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                            Total Amount: $${total.toFixed(2)}
                         </div>
                     </div>
                 </div>
@@ -1208,25 +1223,25 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${invoice.items.map(item => `
+                        ${invoice.items && invoice.items.length > 0 ? 
+                            invoice.items.map(item => `
+                                <tr>
+                                    <td>${item.description || `${item.toll_location || 'Toll Charge'} - ${item.plate_number || invoice.vehicle || ''}`}</td>
+                                    <td>${item.toll_date ? new Date(item.toll_date).toLocaleDateString() : 'N/A'}</td>
+                                    <td style="text-align: right;">$${parseFloat(item.amount || 0).toFixed(2)}</td>
+                                </tr>
+                            `).join('') 
+                        : `
                             <tr>
-                                <td>${item.description}</td>
-                                <td>${new Date(item.date).toLocaleDateString()}</td>
-                                <td style="text-align: right;">$${item.amount.toFixed(2)}</td>
+                                <td>Toll Charges for Trip #${invoice.tripId}</td>
+                                <td>${new Date(invoice.issueDate).toLocaleDateString()}</td>
+                                <td style="text-align: right;">$${total.toFixed(2)}</td>
                             </tr>
-                        `).join('')}
+                        `}
                     </tbody>
                 </table>
                 
                 <div class="invoice-totals">
-                    <div class="total-row">
-                        <span>Subtotal:</span>
-                        <span>$${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div class="total-row">
-                        <span>Tax:</span>
-                        <span>$${tax.toFixed(2)}</span>
-                    </div>
                     <div class="total-row final">
                         <span>Total:</span>
                         <span>$${total.toFixed(2)}</span>
@@ -1234,56 +1249,14 @@
                 </div>
                 
                 <div class="invoice-notes">
-                    <div class="notes-title">Payment Terms & Notes:</div>
+                    <div class="notes-title">Submission Notes:</div>
                     <div class="notes-text">
-                        Payment is due within 7 days of the invoice date. This invoice covers toll charges incurred during your Turo rental period. All toll fees are automatically detected and calculated based on your trip route. For questions about specific charges, please contact our support team.
+                        These toll charges were submitted to Turo for collection from the guest. Turo handles all payment processing and collection. Tolls are automatically detected and calculated based on the trip route. The guest will be charged through Turo's platform.
                     </div>
                 </div>
             `;
         }
         
-        function createInvoice() {
-            showNotification({
-                type: 'info',
-                title: 'Create Invoice',
-                message: 'Opening invoice creation wizard'
-            });
-        }
-        
-        function createTemplate() {
-            showNotification({
-                type: 'info',
-                title: 'Invoice Templates',
-                message: 'Template management coming soon'
-            });
-        }
-        
-        function editInvoice(invoiceId = null) {
-            const id = invoiceId || (currentInvoice ? currentInvoice.id : null);
-            showNotification({
-                type: 'info',
-                title: 'Edit Invoice',
-                message: `Opening editor for invoice ${id}`
-            });
-        }
-        
-        function sendInvoice(invoiceId = null) {
-            const id = invoiceId || (currentInvoice ? currentInvoice.id : null);
-            showNotification({
-                type: 'success',
-                title: 'Invoice Sent',
-                message: `Invoice ${id} has been sent to the guest`
-            });
-        }
-        
-        function downloadInvoice(invoiceId = null) {
-            const id = invoiceId || (currentInvoice ? currentInvoice.id : null);
-            showNotification({
-                type: 'success',
-                title: 'Download Started',
-                message: `Generating PDF for invoice ${id}`
-            });
-        }
         
         async function unsubmitTrip(invoiceId, tripId) {
             if (!confirm(`Are you sure you want to unsubmit trip #${tripId}? This will delete the invoice and move the trip back to the trips page.`)) {
@@ -1350,13 +1323,6 @@
             });
         }
         
-        function exportInvoices() {
-            showNotification({
-                type: 'success',
-                title: 'Export Started',
-                message: 'Invoice data is being exported'
-            });
-        }
         
         function refreshData() {
             showNotification({
@@ -1369,27 +1335,12 @@
         
         function updateInvoiceStats() {
             const totalInvoices = invoicesData.length;
-            const totalRevenue = invoicesData.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-            const pendingInvoices = invoicesData.filter(inv => inv.status === 'pending').length;
-            const overdueInvoices = invoicesData.filter(inv => inv.status === 'overdue').length;
+            const totalRevenue = invoicesData.reduce((sum, inv) => sum + ((inv.amount || 0) - (inv.processingFee || 0)), 0);
             
             updateEl('total-invoices', totalInvoices);
             updateEl('total-revenue', `$${totalRevenue.toFixed(2)}`);
-            updateEl('pending-invoices', pendingInvoices);
-            updateEl('overdue-invoices', overdueInvoices);
         }
         
-        // Loading states
-        function showLoading() {
-            updateEl('total-invoices', 'Loading...');
-            updateEl('total-revenue', 'Loading...');
-            updateEl('pending-invoices', 'Loading...');
-            updateEl('overdue-invoices', 'Loading...');
-        }
-        
-        function hideLoading() {
-            // Loading will be replaced by actual values in updateInvoiceStats
-        }
         
         // Close modal when clicking outside
         document.getElementById('invoice-modal').addEventListener('click', (e) => {
@@ -1405,6 +1356,77 @@
             }
         });
     </script>
+    
+    <!-- Logout functionality -->
+    <script>
+        // User menu dropdown functionality
+        const userMenu = document.getElementById('userMenu');
+        const userDropdown = document.getElementById('userDropdown');
+        const signOutBtn = document.getElementById('signOutBtn');
+        
+        if (userMenu && userDropdown) {
+            // Toggle dropdown on user menu click
+            userMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                // Check if click is outside both the user menu button and dropdown
+                if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+            
+            // Handle sign out
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', handleSignOut);
+            }
+        }
+        
+        // Sign out function
+        async function handleSignOut() {
+            
+            const signOutBtn = document.getElementById('signOutBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            try {
+                // Show loading state
+                const originalText = signOutBtn.innerHTML;
+                signOutBtn.innerHTML = '<span class="dropdown-icon">⏳</span>Signing out...';
+                signOutBtn.disabled = true;
+                
+                // Clear stored tokens
+                localStorage.removeItem('supabase_token');
+                localStorage.removeItem('supabase_session');
+                
+                // Call logout endpoint
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Logout successful');
+                    window.location.href = '/';
+                } else {
+                    console.error('❌ Logout failed');
+                    // Still redirect on failure as tokens are cleared
+                    window.location.href = '/';
+                }
+                
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                // Still redirect on error as tokens are cleared
+                window.location.href = '/';
+            }
+        }
+    </script>
+    
     <!-- Initialize Lucide Icons -->
     <script>
         lucide.createIcons();

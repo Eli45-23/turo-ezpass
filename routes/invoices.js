@@ -149,7 +149,30 @@ router.post('/generate/:tripId', requireAuth, async (req, res) => {
         }
         
         const totalAmount = tollTotal + processingFee;
-        const invoiceNumber = 'INV-' + Date.now() + '-' + tripId;
+        
+        // Generate sequential submission number
+        const { data: existingInvoices, error: countError } = await supabaseAdmin
+            .from('invoices')
+            .select('invoice_number')
+            .like('invoice_number', 'SUB-%')
+            .order('created_at', { ascending: false });
+            
+        let nextSubNumber = 1;
+        if (!countError && existingInvoices && existingInvoices.length > 0) {
+            // Find the highest SUB number
+            const subNumbers = existingInvoices
+                .map(inv => {
+                    const match = inv.invoice_number.match(/SUB-(\d+)/);
+                    return match ? parseInt(match[1]) : 0;
+                })
+                .filter(num => num > 0);
+            
+            if (subNumbers.length > 0) {
+                nextSubNumber = Math.max(...subNumbers) + 1;
+            }
+        }
+        
+        const invoiceNumber = `SUB-${nextSubNumber.toString().padStart(4, '0')}`;
         
         // Create invoice
         const { data: newInvoice, error: invoiceError } = await supabaseAdmin
