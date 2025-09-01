@@ -1508,12 +1508,10 @@
                 }
                 
                 const result = await response.json();
-                showNotification({ message: 'Trip submitted successfully - redirecting to invoices...', type: 'success' });
+                showNotification({ message: 'Trip submitted successfully', type: 'success' });
                 
-                // Redirect to invoices page after successful submission
-                setTimeout(() => {
-                    window.location.href = '/invoices.html';
-                }, 1500);
+                // Refresh trips data to show updated status
+                await loadTripsOptimized();
                 
             } catch (error) {
                 console.error('Error submitting trip:', {
@@ -1851,7 +1849,7 @@
                 
                 showNotification({ message: 'All late tolls acknowledged', type: 'success' });
                 dismissLateTolls();
-                await loadTrips();
+                await loadTripsOptimized();
                 
             } catch (error) {
                 console.error('Error acknowledging late tolls:', error);
@@ -1881,7 +1879,7 @@
                 }
                 
                 showNotification({ message: 'Late toll acknowledged', type: 'success' });
-                await loadTrips();
+                await loadTripsOptimized();
                 
             } catch (error) {
                 console.error('Error acknowledging late toll:', error);
@@ -1907,7 +1905,7 @@
                 }
                 
                 showNotification({ message: 'Supplemental invoice created', type: 'success' });
-                await loadTrips();
+                await loadTripsOptimized();
                 
             } catch (error) {
                 console.error('Error creating supplemental invoice:', error);
