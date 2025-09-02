@@ -75,9 +75,15 @@ router.get('/', requireAuth, async (req, res) => {
             });
         }
         
+        // Convert PLATE_ONLY placeholders back to empty strings for frontend
+        const processedMappings = (mappings || []).map(mapping => ({
+            ...mapping,
+            transponder_number: mapping.transponder_number.startsWith('PLATE_ONLY_') ? '' : mapping.transponder_number
+        }));
+
         res.json({
             success: true,
-            data: mappings || []
+            data: processedMappings
         });
     } catch (error) {
         console.error('❌ Exception fetching transponder mappings:', error);
@@ -101,8 +107,12 @@ router.post('/', requireAuth, async (req, res) => {
     }
     
     // Clean up inputs - handle optional transponder number
-    const cleanTransponder = transponderNumber ? transponderNumber.replace(/\s+/g, '').toUpperCase() : '';
     const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
+    
+    // Generate unique placeholder for plate-only entries to avoid unique constraint conflicts
+    const cleanTransponder = transponderNumber 
+        ? transponderNumber.replace(/\s+/g, '').toUpperCase() 
+        : `PLATE_ONLY_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     
     try {
         const { data: newMapping, error } = await supabaseAdmin
@@ -138,7 +148,7 @@ router.post('/', requireAuth, async (req, res) => {
             message: 'Transponder mapping added successfully',
             data: {
                 id: newMapping.id,
-                transponderNumber: cleanTransponder,
+                transponderNumber: transponderNumber ? cleanTransponder : '', // Return empty string for plate-only entries
                 vehiclePlate: cleanPlate,
                 vehicleDescription: vehicleDescription || ''
             }
@@ -166,8 +176,16 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     
     // Clean up inputs - handle optional transponder number
-    const cleanTransponder = transponderNumber ? transponderNumber.replace(/\s+/g, '').toUpperCase() : '';
     const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
+    
+    // For updates, if transponderNumber is empty, generate unique placeholder or keep existing
+    let cleanTransponder;
+    if (transponderNumber) {
+        cleanTransponder = transponderNumber.replace(/\s+/g, '').toUpperCase();
+    } else {
+        // Generate unique placeholder for plate-only entries to avoid unique constraint conflicts
+        cleanTransponder = `PLATE_ONLY_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    }
     
     try {
         // First verify the mapping belongs to this host
