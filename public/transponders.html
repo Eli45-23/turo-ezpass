@@ -632,9 +632,9 @@
             <div class="modal-body">
                 <form id="transponder-form">
                     <div class="form-group">
-                        <label for="transponder-number" class="form-label">Transponder Number</label>
-                        <input type="text" id="transponder-number" class="form-input" placeholder="e.g., 1234567890" required>
-                        <div class="form-help">Enter the unique transponder number (10-11 digits)</div>
+                        <label for="transponder-number" class="form-label">Transponder Number <span class="text-gray-400 font-normal">(Optional)</span></label>
+                        <input type="text" id="transponder-number" class="form-input" placeholder="e.g., 1234567890 (leave empty for plate-only)">
+                        <div class="form-help">Enter the unique transponder number (10-11 digits) or leave empty if using toll-by-plate only</div>
                     </div>
                     
                     <div class="form-group">
@@ -786,7 +786,7 @@
                 transponder.vehiclePlate.slice(-2);
             
             const displayName = transponder.vehicleDescription || 
-                `${transponder.transponderNumber} → ${transponder.vehiclePlate}`;
+                (transponder.transponderNumber ? `${transponder.transponderNumber} → ${transponder.vehiclePlate}` : `${transponder.vehiclePlate} (Plate Only)`);
             
             // Generate a color for the avatar based on the transponder ID
             const colors = ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600', 'bg-yellow-600', 'bg-indigo-600'];
@@ -805,7 +805,7 @@
                             </span>
                         </div>
                         <div class="flex items-center space-x-6 text-sm text-gray-400">
-                            <span>Transponder: ${transponder.transponderNumber}</span>
+                            ${transponder.transponderNumber ? `<span>Transponder: ${transponder.transponderNumber}</span>` : `<span class="text-yellow-400">Toll-by-Plate Only</span>`}
                             <span>Plate: ${transponder.vehiclePlate}</span>
                         </div>
                     </div>
@@ -817,8 +817,8 @@
                         <div class="text-sm text-gray-400">Vehicle Plate</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-white font-semibold">${transponder.transponderNumber}</div>
-                        <div class="text-sm text-gray-400">Transponder ID</div>
+                        <div class="text-white font-semibold">${transponder.transponderNumber || 'N/A'}</div>
+                        <div class="text-sm text-gray-400">${transponder.transponderNumber ? 'Transponder ID' : 'Plate Only'}</div>
                     </div>
                     <div class="text-right">
                         <div class="text-white font-semibold">${new Date(transponder.createdAt).toLocaleDateString()}</div>
@@ -869,9 +869,10 @@
             
             const filtered = transponders.filter(transponder => {
                 const matchesSearch = searchTerm === '' || 
-                    transponder.transponderNumber.toLowerCase().includes(searchTerm) ||
+                    (transponder.transponderNumber && transponder.transponderNumber.toLowerCase().includes(searchTerm)) ||
                     transponder.vehiclePlate.toLowerCase().includes(searchTerm) ||
-                    (transponder.vehicleDescription && transponder.vehicleDescription.toLowerCase().includes(searchTerm));
+                    (transponder.vehicleDescription && transponder.vehicleDescription.toLowerCase().includes(searchTerm)) ||
+                    (!transponder.transponderNumber && 'plate only'.includes(searchTerm));
                 
                 const matchesStatus = statusFilter === 'all' || 
                     (statusFilter === 'active' && transponder.isActive) ||
@@ -905,7 +906,7 @@
             document.getElementById('save-btn-text').textContent = 'Save Changes';
             
             // Populate form
-            document.getElementById('transponder-number').value = transponder.transponderNumber;
+            document.getElementById('transponder-number').value = transponder.transponderNumber || '';
             document.getElementById('vehicle-plate').value = transponder.vehiclePlate;
             document.getElementById('vehicle-description').value = transponder.vehicleDescription || '';
             document.getElementById('is-active').checked = transponder.isActive;

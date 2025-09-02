@@ -848,6 +848,240 @@
                     </div>
                 </div>
 
+                <!-- What is Toll Matcher Info -->
+                <div class="fade-in fade-in-delay-3 bg-gray-800/50 rounded-xl border border-gray-600">
+                    <div class="p-6 border-b border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white font-mono flex items-center space-x-2">
+                                <i data-lucide="zap" class="w-6 h-6 text-purple-400"></i>
+                                <span>WHAT IS TOLL MATCHER?</span>
+                            </h3>
+                        </div>
+                    </div>
+                    
+                    <!-- Info Content -->
+                    <div class="p-6">
+                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="toll-matcher-info">
+                                <div class="flex items-center space-x-3">
+                                    <div class="step-badge w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">
+                                        <i data-lucide="shuffle" class="w-4 h-4"></i>
+                                    </div>
+                                    <span class="text-white font-semibold font-mono">Learn about the Toll Matching algorithm</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
+                            </button>
+                            <div class="guide-step-content hidden p-4 pt-0 space-y-6">
+                                
+                                <!-- What is it? -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">?</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">What is it?</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <p class="text-gray-300 text-sm font-inter leading-relaxed">
+                                                The Toll Matcher is the <span class="text-purple-400 font-semibold">core intelligence</span> of this application. It automatically matches your E-ZPass toll transactions to your Turo trips based on <span class="text-yellow-400 font-semibold">date/time overlaps, license plates, and transponder data</span>.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- How it works -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">⚙</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">How it works</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ol class="text-gray-300 text-sm space-y-2 font-inter">
+                                                <li><span class="text-white font-semibold">1.</span> <span class="text-blue-300">Analyzes trip timeframes</span> from your Turo CSV (start/end dates)</li>
+                                                <li><span class="text-white font-semibold">2.</span> <span class="text-green-300">Cross-references toll timestamps</span> from your E-ZPass CSV</li>
+                                                <li><span class="text-white font-semibold">3.</span> <span class="text-yellow-300">Matches license plates</span> using your transponder mappings</li>
+                                                <li><span class="text-white font-semibold">4.</span> <span class="text-purple-300">Smart detection</span> of tolls that occurred during active trips</li>
+                                                <li><span class="text-white font-semibold">5.</span> <span class="text-cyan-300">Categorizes results</span> as Trip Tolls, Personal Tolls, or Late Tolls</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Matching Logic -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">🧠</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Smart matching logic</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4 space-y-3">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div class="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                                                    <h5 class="text-blue-300 font-semibold text-sm mb-2">✅ Trip Tolls</h5>
+                                                    <p class="text-gray-300 text-xs font-inter">Tolls that occurred during an active Turo trip timeframe with matching plate/transponder</p>
+                                                </div>
+                                                <div class="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
+                                                    <h5 class="text-orange-300 font-semibold text-sm mb-2">👤 Personal Tolls</h5>
+                                                    <p class="text-gray-300 text-xs font-inter">Tolls that occurred outside of any trip timeframe (your personal driving)</p>
+                                                </div>
+                                            </div>
+                                            <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                                                <h5 class="text-red-300 font-semibold text-sm mb-2">⏰ Late Tolls</h5>
+                                                <p class="text-gray-300 text-xs font-inter">Tolls that match a trip timeframe but the trip was already submitted/invoiced</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Benefits -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">💎</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Why it's powerful</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ul class="text-gray-300 text-sm space-y-2 font-inter">
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">100% accuracy:</span> Never manually sort through hundreds of toll transactions again</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Time-saving:</span> What used to take hours now takes seconds</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Multi-vehicle support:</span> Handles multiple cars with different transponders seamlessly</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Smart categorization:</span> Automatically separates business vs. personal tolls</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Late detection:</span> Catches tolls that post after trip completion</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- How to use -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">🚀</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">How to run the matcher</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ol class="text-gray-300 text-sm space-y-2 font-inter mb-3">
+                                                <li><span class="text-white font-semibold">1.</span> Upload your Turo trips CSV and E-ZPass CSV files</li>
+                                                <li><span class="text-white font-semibold">2.</span> Make sure your transponder mappings are set up</li>
+                                                <li><span class="text-white font-semibold">3.</span> Click <span class="text-purple-400 font-semibold">"Run Matcher"</span> on the Upload page</li>
+                                                <li><span class="text-white font-semibold">4.</span> Wait for processing to complete (usually under 30 seconds)</li>
+                                                <li><span class="text-white font-semibold">5.</span> Review results in the <a href="/trips.html" class="text-green-400 hover:text-green-300 underline transition-colors">Trips page</a></li>
+                                            </ol>
+                                            <div class="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
+                                                <p class="text-purple-300 text-xs font-inter">
+                                                    <span class="font-semibold">Pro tip:</span> The matcher gets smarter with more data! Upload regular E-ZPass exports to maintain accuracy and catch late-posting tolls.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- What is Late Toll Detector Info -->
+                <div class="fade-in fade-in-delay-3 bg-gray-800/50 rounded-xl border border-gray-600">
+                    <div class="p-6 border-b border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white font-mono flex items-center space-x-2">
+                                <i data-lucide="info" class="w-6 h-6 text-blue-400"></i>
+                                <span>WHAT IS LATE TOLL DETECTOR?</span>
+                            </h3>
+                        </div>
+                    </div>
+                    
+                    <!-- Info Content -->
+                    <div class="p-6">
+                        <div class="guide-step bg-gray-700/30 rounded-lg border border-gray-600">
+                            <button class="guide-step-header w-full flex items-center justify-between p-4 text-left hover:bg-gray-600/20 transition-all duration-200" data-step="late-toll-info">
+                                <div class="flex items-center space-x-3">
+                                    <div class="step-badge w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                    </div>
+                                    <span class="text-white font-semibold font-mono">Learn about the Late Toll Detection system</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transform transition-transform duration-200 guide-chevron"></i>
+                            </button>
+                            <div class="guide-step-content hidden p-4 pt-0 space-y-6">
+                                
+                                <!-- What is it? -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-cyan-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">?</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">What is it?</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <p class="text-gray-300 text-sm font-inter leading-relaxed">
+                                                The Late Toll Detector is an automated system that continuously monitors for toll transactions that post <span class="text-yellow-400 font-semibold">after you've already submitted an invoice</span> for a trip. This helps prevent you from missing tolls that could have been reimbursed by Turo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- How it works -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">⚙</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">How it works</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ol class="text-gray-300 text-sm space-y-2 font-inter">
+                                                <li><span class="text-white font-semibold">1.</span> When you upload new E-ZPass data, the system checks all transactions</li>
+                                                <li><span class="text-white font-semibold">2.</span> It identifies any tolls that fall within the timeframe of trips you've already submitted invoices for</li>
+                                                <li><span class="text-white font-semibold">3.</span> These "late tolls" are automatically flagged and moved to the <span class="text-red-400 font-semibold">Late Tolls</span> tab</li>
+                                                <li><span class="text-white font-semibold">4.</span> You can then submit these additional tolls to Turo for reimbursement</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Why it matters -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-yellow-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">!</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Why it matters</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <ul class="text-gray-300 text-sm space-y-2 font-inter">
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Maximize reimbursements:</span> Catch tolls that post days or weeks after your trip</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Save money:</span> Avoid paying out-of-pocket for tolls Turo should cover</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Stay organized:</span> All late tolls are clearly separated and easy to find</li>
+                                                <li><span class="text-green-400">•</span> <span class="text-white font-semibold">Peace of mind:</span> Never worry about missing a toll again</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Where to find -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="step-badge w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">📍</div>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Where to find late tolls</h4>
+                                    </div>
+                                    <div class="ml-11">
+                                        <div class="bg-gray-600/20 rounded-lg p-4">
+                                            <p class="text-gray-300 text-sm font-inter mb-3">
+                                                Late tolls are automatically organized for you in the <a href="/trips.html" class="text-red-400 hover:text-red-300 underline transition-colors font-semibold">Trips page</a> under the <span class="text-red-400 font-semibold">"Late Tolls"</span> tab.
+                                            </p>
+                                            <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                                                <p class="text-red-300 text-xs font-inter">
+                                                    <span class="font-semibold">Pro tip:</span> Check the Late Tolls tab regularly after uploading new E-ZPass data to ensure you don't miss any reimbursable tolls!
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>

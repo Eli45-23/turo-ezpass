@@ -93,15 +93,15 @@ router.post('/', requireAuth, async (req, res) => {
     const hostId = req.session.hostId;
     const { transponderNumber, vehiclePlate, vehicleDescription } = req.body;
     
-    if (!transponderNumber || !vehiclePlate) {
+    if (!vehiclePlate) {
         return res.status(400).json({
             success: false,
-            error: 'Transponder number and vehicle plate are required'
+            error: 'Vehicle plate is required'
         });
     }
     
-    // Clean up inputs
-    const cleanTransponder = transponderNumber.replace(/\s+/g, '').toUpperCase();
+    // Clean up inputs - handle optional transponder number
+    const cleanTransponder = transponderNumber ? transponderNumber.replace(/\s+/g, '').toUpperCase() : '';
     const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
     
     try {
@@ -158,15 +158,15 @@ router.put('/:id', requireAuth, async (req, res) => {
     const mappingId = req.params.id;
     const { transponderNumber, vehiclePlate, vehicleDescription, isActive } = req.body;
     
-    if (!transponderNumber || !vehiclePlate) {
+    if (!vehiclePlate) {
         return res.status(400).json({
             success: false,
-            error: 'Transponder number and vehicle plate are required'
+            error: 'Vehicle plate is required'
         });
     }
     
-    // Clean up inputs
-    const cleanTransponder = transponderNumber.replace(/\s+/g, '').toUpperCase();
+    // Clean up inputs - handle optional transponder number
+    const cleanTransponder = transponderNumber ? transponderNumber.replace(/\s+/g, '').toUpperCase() : '';
     const cleanPlate = vehiclePlate.replace(/\s+/g, '').toUpperCase();
     
     try {
