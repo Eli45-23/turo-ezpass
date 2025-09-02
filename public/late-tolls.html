@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Late Toll Management - Turo Toll Tracker</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="/js/modal-system.js"></script>
     <style>
         .late-tolls-container {
             max-width: 1200px;
@@ -558,7 +559,7 @@
             }
         }
 
-        function generateBulkInvoice() {
+        async function generateBulkInvoice() {
             const checkboxes = document.querySelectorAll('.late-toll-checkbox:checked');
             if (checkboxes.length === 0) {
                 showNotification({
@@ -584,7 +585,15 @@
 
             if (invoiceable.length !== selectedIds.length) {
                 const message = `${invoiceable.length} of ${selectedIds.length} selected tolls can be invoiced. Continue?`;
-                if (!confirm(message)) return;
+                const confirmed = await showConfirm(
+                    'Partial Invoice Confirmation',
+                    message,
+                    {
+                        confirmText: 'Continue',
+                        cancelText: 'Cancel'
+                    }
+                );
+                if (!confirmed) return;
             }
 
             generateSupplementalInvoice(invoiceable.map(toll => toll.id));

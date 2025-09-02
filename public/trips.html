@@ -25,6 +25,7 @@
     <script src="/js/performance.js"></script>
     <script src="/js/api-helper.js"></script>
     <script src="/js/auth-check.js"></script>
+    <script src="/js/modal-system.js"></script>
     
     <style>
         .font-mono { font-family: 'JetBrains Mono', monospace !important; }
@@ -1458,8 +1459,9 @@
                         `<h3>Tolls:</h3><ul>${trip.tolls.map(toll => `<li>${toll.location}: ${toll.amount}</li>`).join('')}</ul>` : ''}
                 `;
                 
-                // Simple alert for now - you can replace with modal later
-                alert(modalContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' '));
+                // Use glassmorphism modal instead of browser alert
+                const cleanContent = modalContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+                await showAlert('Trip Details', cleanContent, 'info');
                 
             } catch (error) {
                 console.error('Error viewing trip:', error);
@@ -1940,7 +1942,7 @@
                 });
                 message += `\nTotal: $${details.totalAmount}`;
                 
-                alert(message);
+                await showAlert('Late Tolls Summary', message, 'warning');
                 
             } catch (error) {
                 console.error('Error viewing late toll details:', error);

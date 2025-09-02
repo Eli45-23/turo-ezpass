@@ -12,6 +12,7 @@
     <script src="/js/ui-utils.js"></script>
     <script src="/js/xss-utils.js"></script>
     <script src="/js/auth-check.js"></script>
+    <script src="/js/modal-system.js"></script>
     
     <style>
         .font-mono { font-family: 'JetBrains Mono', monospace !important; }
@@ -861,7 +862,7 @@
             const clearBtn = document.querySelector('.btn-clear');
             if (!clearBtn) {
                 console.error('❌ Clear button not found!');
-                alert('Clear button not found. Please refresh the page.');
+                await showAlert('Clear Button Error', 'Clear button not found. Please refresh the page.', 'error');
                 return;
             }
             
@@ -886,7 +887,7 @@
                 
             } catch (statusError) {
                 console.error('❌ Error showing initial status:', statusError);
-                alert('🔄 Clearing all data... This may take a few moments.');
+                await showAlert('Clearing Data', '🔄 Clearing all data... This may take a few moments.', 'info');
             }
             
             try {
@@ -921,7 +922,7 @@
                         showStatus(successMessage, 'success');
                     } catch (statusError) {
                         console.error('❌ Error showing success status:', statusError);
-                        alert(successMessage);
+                        await showAlert('Data Cleared', successMessage, 'success');
                     }
                     
                     console.log('✅ Clear data operation completed successfully');
@@ -946,7 +947,7 @@
                         showStatus(errorMessage, 'error');
                     } catch (statusError) {
                         console.error('❌ Error showing error status:', statusError);
-                        alert(errorMessage);
+                        await showAlert('Clear Data Error', errorMessage, 'error');
                     }
                 }
             } catch (error) {
@@ -957,7 +958,7 @@
                     showStatus(errorMessage, 'error');
                 } catch (statusError) {
                     console.error('❌ Error showing error status:', statusError);
-                    alert(errorMessage);
+                    await showAlert('Clear Data Error', errorMessage, 'error');
                 }
             } finally {
                 // Reset button state with safety check

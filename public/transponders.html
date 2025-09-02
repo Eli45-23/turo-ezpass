@@ -14,6 +14,7 @@
     <script src="/js/xss-utils.js"></script>
     <script src="/js/performance.js"></script>
     <script src="/js/auth-check.js"></script>
+    <script src="/js/modal-system.js"></script>
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -258,13 +259,36 @@
         
         .modal-overlay.show {
             display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .modal-overlay.show .modal-content {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
         
         .modal-content {
-            background: var(--panel);
-            border: 1px solid var(--hairline);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-xl);
+            background: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important;
             max-width: 500px;
             width: 90vw;
             max-height: 90vh;
@@ -272,49 +296,52 @@
         }
         
         .modal-header {
-            padding: var(--gap-lg);
-            border-bottom: 1px solid var(--hairline);
-            background: var(--hover);
+            padding: 24px !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(0, 0, 0, 0.2) !important;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
         .modal-title {
-            font-size: var(--text-xl);
-            font-weight: var(--font-semibold);
-            color: var(--ink);
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            color: white !important;
             margin: 0;
+            font-family: 'JetBrains Mono', monospace !important;
         }
         
         .modal-close {
-            background: none;
-            border: none;
-            color: var(--muted);
-            font-size: var(--text-xl);
+            background: none !important;
+            border: none !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 1.25rem !important;
             cursor: pointer;
-            padding: 0.5rem;
-            border-radius: var(--radius-sm);
-            transition: all var(--transition-fast);
+            padding: 0.5rem !important;
+            border-radius: 8px !important;
+            transition: all 0.3s ease !important;
         }
         
         .modal-close:hover {
-            background: var(--panel);
-            color: var(--ink);
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: white !important;
         }
         
         .modal-body {
-            padding: var(--gap-lg);
+            padding: 24px !important;
             overflow-y: auto;
+            max-height: 60vh;
+            background: transparent !important;
         }
         
         .modal-footer {
-            padding: var(--gap-lg);
-            border-top: 1px solid var(--hairline);
-            background: var(--hover);
+            padding: 24px !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(0, 0, 0, 0.2) !important;
             display: flex;
             justify-content: flex-end;
-            gap: var(--gap);
+            gap: 12px !important;
         }
         
         @media (max-width: 1024px) {
@@ -1033,7 +1060,17 @@
         }
         
         async function deleteTransponder(id) {
-            if (!confirm('Are you sure you want to permanently delete this transponder mapping?\n\nThis action cannot be undone. The mapping will be completely removed from the system.')) {
+            const confirmed = await showConfirm(
+                'Delete Transponder Mapping',
+                'Are you sure you want to permanently delete this transponder mapping?\n\nThis action cannot be undone. The mapping will be completely removed from the system.',
+                {
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel',
+                    dangerous: true
+                }
+            );
+            
+            if (!confirmed) {
                 return;
             }
             
