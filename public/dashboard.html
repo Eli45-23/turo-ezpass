@@ -764,19 +764,37 @@
                                     </div>
                                 </div>
 
-                                <!-- Step 2: Add Transponder Info -->
+                                <!-- Step 2: Add Vehicle & Toll Payment Info -->
                                 <div class="space-y-4">
                                     <div class="flex items-center space-x-3">
                                         <div class="step-badge w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold font-mono">2</div>
-                                        <h4 class="text-white font-semibold font-mono text-lg">Add your Plate & Transponder info</h4>
+                                        <h4 class="text-white font-semibold font-mono text-lg">Add your Vehicle & Toll Payment Info</h4>
                                     </div>
-                                    <div class="ml-11">
+                                    <div class="ml-11 space-y-4">
                                         <div class="bg-gray-600/20 rounded-lg p-4">
-                                            <ol class="text-gray-300 text-sm space-y-1 font-inter">
-                                                <li>1. Go to the <a href="/transponders.html" class="text-red-400 hover:text-red-300 underline transition-colors">Transponders page</a> (Tags)</li>
-                                                <li>2. Click Add Mapping (top right of the page)</li>
-                                                <li>3. Add as many vehicles you have rented with the corresponding Tag/Transponder that goes with that vehicle if any.</li>
+                                            <ol class="text-gray-300 text-sm space-y-2 font-inter">
+                                                <li>1. Go to the <a href="/transponders.html" class="text-red-400 hover:text-red-300 underline transition-colors">Transponders page</a></li>
+                                                <li>2. Click <strong>Add Mapping</strong> (top right)</li>
+                                                <li>3. For each vehicle, enter:
+                                                    <ul class="ml-4 mt-2 space-y-1 text-xs text-gray-400">
+                                                        <li>• <strong>License Plate</strong> (Required) - e.g., "ABC123"</li>
+                                                        <li>• <strong>Transponder #</strong> (Optional) - Only if you have E-ZPass</li>
+                                                        <li>• <strong>Vehicle Description</strong> - e.g., "2024 Toyota Camry"</li>
+                                                    </ul>
+                                                </li>
                                             </ol>
+                                        </div>
+                                        <div class="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
+                                            <div class="flex items-start space-x-2">
+                                                <i data-lucide="info" class="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"></i>
+                                                <div class="text-xs text-gray-300 font-inter">
+                                                    <strong class="text-blue-400">System supports all configurations:</strong><br>
+                                                    • <strong>Plate-Only</strong> tolling (no transponder needed)<br>
+                                                    • <strong>E-ZPass/Transponder</strong> tolling<br>
+                                                    • <strong>Mixed setup</strong> (some vehicles with transponders, others plate-only)<br>
+                                                    <span class="text-gray-400">All toll charges will display license plate numbers for easy identification.</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
