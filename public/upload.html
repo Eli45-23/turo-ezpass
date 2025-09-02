@@ -1370,6 +1370,18 @@
         
         // Add drag and drop functionality for new design
         document.addEventListener('DOMContentLoaded', function() {
+            // Show clear data reminder popup if not already shown this session
+            if (!sessionStorage.getItem('uploadReminderShown')) {
+                setTimeout(async () => {
+                    await showAlert(
+                        'Important Upload Reminder',
+                        'For best results, please use the "Clear All Data" button before uploading new CSV files. This ensures a clean import without conflicts from previous data.',
+                        'info'
+                    );
+                    sessionStorage.setItem('uploadReminderShown', 'true');
+                }, 500);
+            }
+
             const turoDropZone = document.getElementById('turo-drop-zone');
             const ezpassDropZone = document.getElementById('ezpass-drop-zone');
             const turoFileInput = document.getElementById('turo-file');
