@@ -1013,12 +1013,12 @@
         }
         
         async function deleteTransponder(id) {
-            if (!confirm('Are you sure you want to deactivate this transponder mapping? You can reactivate it later if needed.')) {
+            if (!confirm('Are you sure you want to permanently delete this transponder mapping?\n\nThis action cannot be undone. The mapping will be completely removed from the system.')) {
                 return;
             }
             
             try {
-                const response = await fetch(`/api/transponders/${id}`, {
+                const response = await fetch(`/api/transponders/${id}/permanent`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -1032,8 +1032,8 @@
                 if (data.success) {
                     showNotification({
                         type: 'success',
-                        title: 'Mapping Deactivated',
-                        message: data.message || 'Transponder mapping has been deactivated successfully'
+                        title: 'Mapping Deleted',
+                        message: data.message || 'Transponder mapping has been permanently deleted'
                     });
                     
                     // Reload data to reflect the change
