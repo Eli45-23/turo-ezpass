@@ -70,10 +70,25 @@ class DataIntegrityValidator {
             errors.push(`${fieldName} exceeds maximum allowed value: ${numAmount} > ${this.config.maxTollAmount}`);
         }
         
-        // Decimal precision validation
-        const decimalPlaces = (numAmount.toString().split('.')[1] || '').length;
-        if (decimalPlaces > this.config.decimalPrecision) {
-            errors.push(`${fieldName} has too many decimal places: ${decimalPlaces} > ${this.config.decimalPrecision}`);
+        // Decimal precision validation - handle floating-point precision issues
+        // Round to avoid floating-point precision errors, then check
+        const roundedAmount = Math.round(numAmount * Math.pow(10, this.config.decimalPrecision)) / Math.pow(10, this.config.decimalPrecision);
+        
+        // Only validate if the rounded value differs significantly from the original
+        if (Math.abs(numAmount - roundedAmount) > 1e-10) {
+            // Count actual decimal places in string representation
+            const amountStr = numAmount.toString();
+            let decimalPlaces = 0;
+            
+            if (amountStr.includes('.') && !amountStr.includes('e')) {
+                const decimalPart = amountStr.split('.')[1];
+                // Remove trailing zeros to get actual significant decimal places
+                decimalPlaces = decimalPart.replace(/0+$/, '').length;
+                
+                if (decimalPlaces > this.config.decimalPrecision) {
+                    errors.push(`${fieldName} has too many decimal places: ${decimalPlaces} > ${this.config.decimalPrecision}`);
+                }
+            }
         }
         
         // Infinity/extreme value check

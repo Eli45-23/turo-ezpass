@@ -391,21 +391,20 @@ class LateTollDetector {
                 return;
             }
 
-            // Record the late toll detection
+            // Record the late toll detection using RPC function to bypass RLS
             const { data, error: insertError } = await global.supabaseAdmin
-                .from('late_tolls_detected')
-                .insert({
-                    trip_id: trip.id,
-                    toll_charge_id: toll.id,
-                    original_invoice_id: originalInvoiceId,
-                    amount: toll.toll_amount,
-                    status: 'new'
-                })
-                .select()
-                .single();
+                .rpc('insert_late_toll_detection', {
+                    p_trip_id: trip.id,
+                    p_toll_charge_id: toll.id,
+                    p_amount: parseFloat(toll.toll_amount),
+                    p_host_id: trip.host_id,
+                    p_original_invoice_id: originalInvoiceId,
+                    p_status: 'new'
+                });
 
             if (insertError) {
                 console.error('❌ Error recording late toll detection:', insertError);
+                console.error('❌ Error details - Code:', insertError.code, 'Message:', insertError.message, 'Details:', insertError.details);
                 return;
             }
 

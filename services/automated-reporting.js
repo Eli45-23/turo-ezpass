@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { db } = require('../config/database');
 const analyticsEngine = require('./analytics-engine');
-const emailService = require('./email-service');
+// const emailService = require('./email-service'); // DISABLED - Email service removed
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -9,6 +9,10 @@ class AutomatedReportingService {
     constructor() {
         this.scheduledJobs = new Map();
         this.isInitialized = false;
+        // Stub emailService to prevent errors
+        this.emailService = {
+            sendEmail: () => Promise.resolve({ messageId: 'email-disabled', success: false })
+        };
     }
 
     async initialize() {
@@ -578,7 +582,7 @@ class AutomatedReportingService {
         };
 
         try {
-            await emailService.sendEmail({
+            await this.emailService.sendEmail({
                 to: host.email,
                 subject: subject,
                 template: 'daily-summary',
@@ -600,7 +604,7 @@ class AutomatedReportingService {
         };
 
         try {
-            await emailService.sendEmail({
+            await this.emailService.sendEmail({
                 to: host.email,
                 subject: subject,
                 template: 'weekly-summary',
@@ -627,7 +631,7 @@ class AutomatedReportingService {
         };
 
         try {
-            await emailService.sendEmail({
+            await this.emailService.sendEmail({
                 to: host.email,
                 subject: subject,
                 template: 'monthly-report',
@@ -657,7 +661,7 @@ class AutomatedReportingService {
         };
 
         try {
-            await emailService.sendEmail({
+            await this.emailService.sendEmail({
                 to: host.email,
                 subject: subject,
                 template: 'quarterly-bi',

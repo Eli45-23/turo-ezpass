@@ -447,10 +447,10 @@ automatedReporting.initialize().catch(console.error);
 const { supabaseAdmin } = require('./config/supabase');
 global.supabaseAdmin = supabaseAdmin;
 
-// Initialize late toll detection service
+// Initialize late toll detection service - now runs only during CSV upload
 const LateTollDetector = require('./services/late-toll-detector');
-const lateTollDetector = new LateTollDetector();
-lateTollDetector.start();
+// const lateTollDetector = new LateTollDetector();
+// lateTollDetector.start(); // Disabled - now runs during CSV processing only
 
 // Initialize backup service with automatic scheduling
 // const BackupService = require('./services/backup-service'); // Disabled - using Supabase

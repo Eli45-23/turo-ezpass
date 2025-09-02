@@ -1,4 +1,4 @@
-const EmailService = require('./email-service');
+// const EmailService = require('./email-service'); // DISABLED - Email service removed
 const { db } = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
@@ -6,19 +6,25 @@ const { v4: uuidv4 } = require('uuid');
  * Notification Manager Service
  * 
  * Central hub for all notification handling including:
- * - Email notifications
- * - WebSocket real-time alerts
+ * - WebSocket real-time alerts (email notifications disabled)
  * - Notification preferences management
  * - Event-based notification triggering
  */
 
 class NotificationManager {
     constructor() {
-        this.emailService = new EmailService();
+        // this.emailService = new EmailService(); // DISABLED - Email service removed
+        this.emailService = {
+            // Stub email service methods to prevent errors
+            initialize: () => Promise.resolve(),
+            sendEmail: () => Promise.resolve({ messageId: 'email-disabled', success: false }),
+            processQueue: () => Promise.resolve({ processed: 0 }),
+            getDeliveryStats: () => ({ sent: 0, failed: 0, providers: [], templates: [] })
+        };
         this.initialized = false;
         this.notificationStats = {
             totalSent: 0,
-            emailsSent: 0,
+            emailsSent: 0, // Always 0 - email disabled
             websocketsSent: 0,
             failed: 0
         };
@@ -29,16 +35,17 @@ class NotificationManager {
      */
     async initialize() {
         try {
-            console.log('🔔 Initializing Notification Manager...');
+            console.log('🔔 Initializing Notification Manager (Email disabled)...');
             
-            // Initialize email service
-            await this.emailService.initialize();
+            // Email service initialization disabled
+            // await this.emailService.initialize(); // DISABLED - Email service removed
+            console.log('📧 Email notifications disabled');
             
             // Set up notification event listeners
             this.setupEventListeners();
             
             this.initialized = true;
-            console.log('✅ Notification Manager initialized successfully');
+            console.log('✅ Notification Manager initialized successfully (WebSocket only)');
             
         } catch (error) {
             console.error('❌ Notification Manager initialization failed:', error);
@@ -81,7 +88,7 @@ class NotificationManager {
                 dashboardUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/dashboard`
             };
 
-            // Send email notification
+            // Send email notification (email service disabled - returns stub result)
             const emailResult = await this.emailService.sendEmail({
                 to: trip.renter_email,
                 template: 'toll-notification',

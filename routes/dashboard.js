@@ -124,8 +124,76 @@ async function checkForLateToll(tollCharge, hostId) {
     }
 }
 
-// Import centralized authentication from security middleware
-const { requireAuth } = require('../middleware/security');
+// Use the same less-aggressive requireAuth as trips.js that doesn't destroy sessions
+const requireAuth = async (req, res, next) => {
+    try {
+        // Check for Authorization header (Supabase JWT)
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (token) {
+            // Using Supabase authentication
+            const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+            
+            if (!error && user) {
+                // Get host data from database
+                const { data: hostData, error: hostError } = await supabaseAdmin
+                    .from('hosts')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!hostError && hostData) {
+                    // Set session data for backward compatibility
+                    req.session = req.session || {};
+                    req.session.hostId = hostData.id;
+                    req.session.email = hostData.email;
+                    req.session.fullName = hostData.full_name;
+                    
+                    // Store host info for route handlers
+                    req.host = hostData;
+                    req.user = user;
+                    
+                    return next();
+                }
+            }
+        }
+        
+        // Fallback to session-based authentication
+        if (!req.session || !req.session.hostId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
+        // Verify session is still valid in database using Supabase
+        const { data: hostData, error: hostError } = await supabaseAdmin
+            .from('hosts')
+            .select('*')
+            .eq('id', req.session.hostId)
+            .single();
+        
+        if (hostError || !hostData) {
+            // Don't destroy session - just return 401 (key difference from security.js)
+            return res.status(401).json({
+                success: false,
+                error: 'Session expired'
+            });
+        }
+        
+        // Store host info for use in route handlers
+        req.host = hostData;
+        next();
+        
+    } catch (error) {
+        console.error('❌ Authentication error:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Authentication failed'
+        });
+    }
+};
 
 // Apply performance monitoring to all routes
 router.use(performanceMiddleware);

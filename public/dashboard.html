@@ -1047,7 +1047,7 @@
                 });
                 
                 if (data.success) {
-                    updateDashboardWithRealData(data.data);
+                    updatePerformanceTable(data.data);
                 } else {
                     throw new Error(data.error || 'Failed to load dashboard data');
                 }
