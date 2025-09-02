@@ -525,7 +525,7 @@
                                 <h4 class="text-white font-semibold">Toll Matching Date Range</h4>
                             </div>
                             
-                            <select class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-500 outline-none" id="date-range-select" onchange="updateDateRangeDisplay()">
+                            <select class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-500 outline-none" id="date-range-select">
                                 <option value="30">Last 30 days</option>
                                 <option value="60">Last 60 days</option>
                                 <option value="90">Last 90 days</option>
@@ -708,7 +708,7 @@
         
         // Initialize date range with default values
         // Date range selector
-        function updateDateRangeDisplay() {
+        window.updateDateRangeDisplay = function() {
             const dateRangeSelect = document.getElementById('date-range-select');
             const customDateRange = document.getElementById('custom-date-range');
             
@@ -733,9 +733,6 @@
                 if (endDateInput && !endDateInput.value) {
                     endDateInput.value = todayStr;
                 }
-                
-                // Restore from session storage if available
-                restoreDateRange();
             } else {
                 customDateRange.style.display = 'none';
             }
@@ -793,7 +790,6 @@
                     // Restore dropdown selection
                     if (settings.selectedRange && dateRangeSelect) {
                         dateRangeSelect.value = settings.selectedRange;
-                        updateDateRangeDisplay();
                     }
                     
                     // Restore custom dates if custom range is selected
@@ -1517,8 +1513,8 @@
             }
             
             // Initialize date range functionality
-            updateDateRangeDisplay();
             restoreDateRange();
+            updateDateRangeDisplay();
             
             // Add change event listeners for date validation and persistence
             const startDateInput = document.getElementById('start-date');
@@ -1539,6 +1535,7 @@
             
             if (dateRangeSelect) {
                 dateRangeSelect.addEventListener('change', function() {
+                    updateDateRangeDisplay();
                     persistDateRange();
                 });
             }
