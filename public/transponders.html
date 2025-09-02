@@ -678,9 +678,29 @@
         let editingId = null;
         
         // Initialize page
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTransponders();
-            setupEventListeners();
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('✅ DOM Content Loaded - checking authentication first...');
+            
+            // Wait for authentication before loading data
+            try {
+                // Give auth-check.js a moment to complete if it hasn't already
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // The auth-check.js script should have already run and verified auth
+                // If we reach this point without being redirected, we're authenticated
+                console.log('✅ Auth check passed, initializing transponders page...');
+                
+                await loadTransponders();
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize transponders page:', error);
+                showNotification({
+                    type: 'error',
+                    title: 'Initialization Failed',
+                    message: 'Failed to initialize page. Please refresh and try again.'
+                });
+            }
         });
         
         function setupEventListeners() {
