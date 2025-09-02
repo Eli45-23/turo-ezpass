@@ -45,7 +45,6 @@ class SafariFix {
         this.checkVersionAndClearCache();
         this.forceStyleReload();
         this.registerServiceWorkerWithForceUpdate();
-        this.addForceRefreshButton();
         this.preventCaching();
     }
 
