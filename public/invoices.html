@@ -444,6 +444,27 @@
         
         .modal-overlay.show {
             display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .modal-overlay.show .modal-content {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
         
         .modal-content {
@@ -966,6 +987,50 @@
         </div>
     </div>
     
+    <!-- Unsubmit Confirmation Modal -->
+    <div class="modal-overlay" id="unsubmit-modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Return to Trips</h3>
+                <button class="modal-close" onclick="hideUnsubmitModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 text-orange-400"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-lg font-semibold text-white mb-2">Confirm Action</h4>
+                        <p class="text-gray-300" id="unsubmit-message">
+                            Are you sure you want to return trip #<span id="unsubmit-trip-id"></span> to the trips page?
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <i data-lucide="info" class="w-4 h-4 text-orange-400"></i>
+                        <span class="text-sm font-medium text-orange-400">What will happen:</span>
+                    </div>
+                    <ul class="text-sm text-gray-300 space-y-1">
+                        <li>• The invoice will be permanently deleted</li>
+                        <li>• The trip will return to your trips page</li>
+                        <li>• This action cannot be undone</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="animated-button bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold mr-3" onclick="hideUnsubmitModal()">Cancel</button>
+                <button class="animated-button bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold" onclick="confirmUnsubmit()" id="confirm-unsubmit-btn">
+                    <i data-lucide="undo-2" class="w-4 h-4 mr-2"></i>
+                    Return to Trips
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Notification Container -->
     <div id="notification-container"></div>
     
@@ -1352,12 +1417,45 @@
         }
         
         
-        async function unsubmitTrip(invoiceId, tripId) {
-            if (!confirm(`Are you sure you want to unsubmit trip #${tripId}? This will delete the invoice and move the trip back to the trips page.`)) {
-                return;
-            }
+        // Store the pending unsubmit data
+        let pendingUnsubmit = null;
+
+        function unsubmitTrip(invoiceId, tripId) {
+            // Store the data for when user confirms
+            pendingUnsubmit = { invoiceId, tripId };
+            
+            // Update modal content with trip-specific info
+            document.getElementById('unsubmit-trip-id').textContent = tripId;
+            
+            // Show the custom modal
+            showUnsubmitModal();
+        }
+
+        function showUnsubmitModal() {
+            document.getElementById('unsubmit-modal').style.display = 'flex';
+            // Add fadeIn animation
+            setTimeout(() => {
+                document.getElementById('unsubmit-modal').classList.add('show');
+            }, 10);
+        }
+
+        function hideUnsubmitModal() {
+            document.getElementById('unsubmit-modal').classList.remove('show');
+            setTimeout(() => {
+                document.getElementById('unsubmit-modal').style.display = 'none';
+                pendingUnsubmit = null;
+            }, 300);
+        }
+
+        async function confirmUnsubmit() {
+            if (!pendingUnsubmit) return;
+            
+            const { invoiceId, tripId } = pendingUnsubmit;
             
             try {
+                // Hide modal first
+                hideUnsubmitModal();
+                
                 showNotification({
                     type: 'info',
                     title: 'Unsubmitting Trip',
@@ -1447,6 +1545,16 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && document.getElementById('invoice-modal').classList.contains('show')) {
                 hideModal();
+            }
+            if (e.key === 'Escape' && document.getElementById('unsubmit-modal').classList.contains('show')) {
+                hideUnsubmitModal();
+            }
+        });
+        
+        // Close unsubmit modal when clicking outside
+        document.getElementById('unsubmit-modal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                hideUnsubmitModal();
             }
         });
     </script>
