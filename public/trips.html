@@ -1146,6 +1146,7 @@
                                             <div class="text-white font-medium">${toll.location}</div>
                                             <div class="text-xs text-gray-400">${toll.time}</div>
                                             ${toll.transactionId ? `<div class="text-xs text-gray-500">Txn ID: ${toll.transactionId}</div>` : ''}
+                                            ${toll.plateNumber ? `<div class="text-xs text-blue-400">Plate: ${toll.plateNumber}</div>` : ''}
                                         </div>
                                         <div class="text-green-400 font-bold">$${toll.amount}</div>
                                     </div>

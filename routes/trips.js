@@ -131,7 +131,7 @@ router.get('/', requireAuth, async (req, res) => {
         const transponderResult = await db.withHostContext(hostId, async () => {
             return await supabaseAdmin
                 .from('transponder_mappings')
-                .select('vehicle_plate, vehicle_description')
+                .select('transponder_number, vehicle_plate, vehicle_description')
                 .eq('host_id', hostId)
                 .eq('is_active', true);
         });
@@ -145,16 +145,28 @@ router.get('/', requireAuth, async (req, res) => {
         // Create lookup maps
         const tollsByTrip = {};
         const vehicleDescriptions = {};
+        const transponderToPlate = {};
         
-        // Create vehicle description lookup
+        // Create vehicle description lookup and transponder-to-plate mapping
         (transponderMappings || []).forEach(mapping => {
             vehicleDescriptions[mapping.vehicle_plate] = mapping.vehicle_description;
+            
+            // Handle transponder-to-plate mapping (handle null/empty transponder numbers for plate-only entries)
+            if (mapping.transponder_number && !mapping.transponder_number.startsWith('PLATE_ONLY_')) {
+                transponderToPlate[mapping.transponder_number] = mapping.vehicle_plate;
+            }
         });
         
         // Group tolls by trip
         (tollCharges || []).forEach(toll => {
             if (toll.trip_id) {
                 if (!tollsByTrip[toll.trip_id]) tollsByTrip[toll.trip_id] = [];
+                // Determine plate number from transponder mapping or direct plate
+                let plateNumber = toll.plate_number;
+                if (toll.transponder_id && transponderToPlate[toll.transponder_id]) {
+                    plateNumber = transponderToPlate[toll.transponder_id];
+                }
+                
                 tollsByTrip[toll.trip_id].push({
                     id: toll.id,
                     location: toll.toll_location || 'Unknown Location',
@@ -163,6 +175,8 @@ router.get('/', requireAuth, async (req, res) => {
                     tollDate: new Date(toll.toll_date), // Store original date for sorting
                     provider: toll.toll_accounts?.provider || 'Unknown',
                     transponder: toll.transponder_id || toll.plate_number || 'Unknown',
+                    transponderId: toll.transponder_id || null,
+                    plateNumber: plateNumber || toll.plate_number || 'Unknown',
                     transactionId: toll.transaction_id || null
                 });
             }

@@ -78,7 +78,9 @@ router.get('/', requireAuth, async (req, res) => {
         // Convert PLATE_ONLY placeholders back to empty strings for frontend
         const processedMappings = (mappings || []).map(mapping => ({
             ...mapping,
-            transponder_number: mapping.transponder_number.startsWith('PLATE_ONLY_') ? '' : mapping.transponder_number
+            transponder_number: (mapping.transponder_number && mapping.transponder_number.startsWith('PLATE_ONLY_')) 
+                ? '' 
+                : (mapping.transponder_number || '')
         }));
 
         res.json({
