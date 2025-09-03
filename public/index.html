@@ -979,14 +979,14 @@
                     <div class="cta-social-proof">
                         <div class="cta-header">
                             <p class="cta-title">Start free—no card needed</p>
-                            <p class="cta-subtitle">Simple pricing: $29/month, cancel anytime—no contracts or hidden fees.</p>
+                            <p class="cta-subtitle">Simple pricing: $20/month, cancel anytime—no contracts or hidden fees.</p>
                         </div>
                         
                         <!-- Testimonials -->
                         <div class="testimonials">
                             <div class="testimonial">
                                 <p class="testimonial-text">"Saved me 4 hours a month on toll reconciliation."</p>
-                                <p class="testimonial-author">— Mike, Chicago host</p>
+                                <p class="testimonial-author">— Mike, NY host</p>
                             </div>
                             <div class="testimonial">
                                 <p class="testimonial-text">"Finally caught $180 in late tolls I would have missed."</p>
@@ -1162,9 +1162,9 @@
                         <div class="form-error" id="signup-fullname-error" role="alert"></div>
                     </div>
                     
-                    <!-- Work Email Input -->
+                    <!-- Email Input -->
                     <div class="form-group">
-                        <label for="signup-email" class="form-label">Work Email</label>
+                        <label for="signup-email" class="form-label">Email</label>
                         <div class="input-container">
                             <input 
                                 type="email" 
@@ -1182,48 +1182,6 @@
                         <div class="form-error" id="signup-email-error" role="alert"></div>
                     </div>
                     
-                    <!-- Company Input -->
-                    <div class="form-group">
-                        <label for="signup-company" class="form-label">Company</label>
-                        <div class="input-container">
-                            <input 
-                                type="text" 
-                                id="signup-company"
-                                name="company"
-                                class="form-input"
-                                placeholder="Your company name"
-                                required
-                                autocomplete="organization"
-                                minlength="2"
-                                maxlength="100"
-                            />
-                            <svg class="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                        </div>
-                        <div class="form-error" id="signup-company-error" role="alert"></div>
-                    </div>
-                    
-                    <!-- Turo Host ID Input -->
-                    <div class="form-group">
-                        <label for="signup-turo-host-id" class="form-label">Turo Host ID</label>
-                        <div class="input-container">
-                            <input 
-                                type="text" 
-                                id="signup-turo-host-id"
-                                name="turoHostId"
-                                class="form-input"
-                                placeholder="Your Turo host ID"
-                                required
-                                pattern="[0-9]+"
-                                title="Please enter a valid Turo Host ID (numbers only)"
-                            />
-                            <svg class="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
-                            </svg>
-                        </div>
-                        <div class="form-error" id="signup-turo-host-id-error" role="alert"></div>
-                    </div>
                     
                     <!-- Password Input -->
                     <div class="form-group">
@@ -1496,8 +1454,6 @@
                 const data = {
                     fullName: formData.get('fullName'),
                     email: formData.get('email'),
-                    company: formData.get('company'),
-                    turoHostId: formData.get('turoHostId'),
                     password: formData.get('password'),
                     _token: csrfToken
                 };
@@ -1567,8 +1523,6 @@
             
             const fullName = document.getElementById('signup-fullname').value.trim();
             const email = document.getElementById('signup-email').value.trim();
-            const company = document.getElementById('signup-company').value.trim();
-            const turoHostId = document.getElementById('signup-turo-host-id').value.trim();
             const password = document.getElementById('signup-password').value;
             
             if (!fullName) {
@@ -1584,22 +1538,6 @@
                 isValid = false;
             } else if (!isValidEmail(email)) {
                 showFieldError('signup-email', 'Please enter a valid email');
-                isValid = false;
-            }
-            
-            if (!company) {
-                showFieldError('signup-company', 'Company is required');
-                isValid = false;
-            } else if (company.length < 2) {
-                showFieldError('signup-company', 'Company name must be at least 2 characters');
-                isValid = false;
-            }
-            
-            if (!turoHostId) {
-                showFieldError('signup-turo-host-id', 'Turo Host ID is required');
-                isValid = false;
-            } else if (!/^\d+$/.test(turoHostId)) {
-                showFieldError('signup-turo-host-id', 'Turo Host ID must contain only numbers');
                 isValid = false;
             }
             
