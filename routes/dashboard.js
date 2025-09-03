@@ -934,11 +934,7 @@ router.get('/tolls/personal', requireAuth, (req, res) => {
                 id: toll.id,
                 transaction_id: toll.transaction_id,
                 toll_date: toll.toll_date,
-                toll_time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit',
-                    hour12: true 
-                }),
+                toll_time: formatEasternTime(toll.toll_date, true),
                 location: toll.toll_location || 'Unknown Location',
                 vehicle: toll.vehicle_description || `Vehicle ${toll.plate_number}`,
                 plate_number: toll.plate_number,

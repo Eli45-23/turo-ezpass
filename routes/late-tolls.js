@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
+const { formatEasternTime } = require('../utils/timezone-utils');
 
 // Session-based authentication middleware
 const requireAuth = async (req, res, next) => {
@@ -81,11 +82,7 @@ router.get('/', requireAuth, async (req, res) => {
                 month: 'short',
                 day: 'numeric'
             }),
-            time: new Date(toll.toll_date).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            }),
+            time: formatEasternTime(toll.toll_date, true),
             location: toll.toll_location || 'Unknown Location',
             amount: parseFloat(toll.toll_amount || 0),
             plate: toll.plate_number || 'Unknown',

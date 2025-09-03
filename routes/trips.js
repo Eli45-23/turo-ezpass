@@ -301,11 +301,7 @@ router.get('/', requireAuth, async (req, res) => {
                     id: toll.id,
                     type: 'Personal Driving',
                     date: toll.toll_date,
-                    time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit',
-                        hour12: true 
-                    }),
+                    time: formatEasternTime(toll.toll_date, true),
                     location: toll.toll_location || 'Unknown Location',
                     amount: parseFloat(toll.toll_amount || 0),
                     vehicle: vehicleInfo ? 
@@ -344,11 +340,7 @@ router.get('/', requireAuth, async (req, res) => {
                     id: toll.id,
                     type: 'Unmatched Toll',
                     date: toll.toll_date,
-                    time: new Date(toll.toll_date).toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit',
-                        hour12: true 
-                    }),
+                    time: formatEasternTime(toll.toll_date, true),
                     location: toll.toll_location || 'Unknown Location',
                     amount: parseFloat(toll.toll_amount || 0),
                     vehicle: vehicleInfo ? 
@@ -420,12 +412,7 @@ router.get('/', requireAuth, async (req, res) => {
                     postedDate: lateToll.toll_charges.submission_date, // Posted date from E-ZPass CSV
                     detectionDate: lateToll.detection_date, // Keep for fallback
                     time: lateToll.toll_charges.toll_date ? 
-                        new Date(lateToll.toll_charges.toll_date).toLocaleDateString() + ' ' +
-                        new Date(lateToll.toll_charges.toll_date).toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
-                            minute: '2-digit', 
-                            hour12: true 
-                        }) : 'Unknown'
+                        formatEasternTime(lateToll.toll_charges.toll_date, true) : 'Unknown'
                 };
                 
                 lateTollsByTrip[tripId].lateTolls.push(tollData);
@@ -752,14 +739,7 @@ router.get('/:id', requireAuth, async (req, res) => {
             location: toll.toll_location || 'Unknown Location',
             amount: parseFloat(toll.toll_amount || 0),
             date: toll.toll_date,
-            time: new Date(toll.toll_date).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            }),
+            time: formatEasternTime(toll.toll_date, true),
             provider: toll.toll_accounts?.provider || 'Unknown',
             transponder: toll.transponder_id || toll.plate_number || 'Unknown',
             transactionId: toll.transaction_id
