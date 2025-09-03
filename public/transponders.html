@@ -537,10 +537,6 @@
                         <h2 class="text-xl font-bold text-white font-mono">TRANSPONDER MANAGEMENT</h2>
                     </div>
                     <div class="flex items-center space-x-3">
-                        <button class="animated-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2" onclick="importTransponders()">
-                            <i data-lucide="upload" class="w-4 h-4"></i>
-                            <span>Import</span>
-                        </button>
                         <button class="animated-button bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2" onclick="showAddModal()">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                             <span>Add Mapping</span>
@@ -620,10 +616,6 @@
                             <option value="suspended">Suspended</option>
                         </select>
                         
-                        <button class="animated-button bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold flex items-center space-x-2" onclick="exportTransponders()">
-                            <i data-lucide="download" class="w-4 h-4"></i>
-                            <span>Export</span>
-                        </button>
                         
                         <button class="animated-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold flex items-center space-x-2" onclick="refreshData()">
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
@@ -1126,21 +1118,6 @@
             });
         }
         
-        function importTransponders() {
-            showNotification({
-                type: 'info',
-                title: 'Import Feature',
-                message: 'Transponder import functionality coming soon'
-            });
-        }
-        
-        function exportTransponders() {
-            showNotification({
-                type: 'success',
-                title: 'Export Started',
-                message: 'Transponder data is being exported'
-            });
-        }
         
         async function refreshData() {
             await loadTransponders();

@@ -394,10 +394,6 @@
                     <h2 class="text-xl font-bold text-white font-mono">UPLOAD CSV FILES</h2>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button class="animated-button bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2" onclick="showHelp()">
-                        <i data-lucide="help-circle" class="w-4 h-4"></i>
-                        <span>HELP</span>
-                    </button>
                     <div class="relative">
                         <button class="animated-button bg-gray-600 hover:bg-red-600 text-white p-2 rounded-lg group" title="Sign Out" id="userMenu">
                             <i data-lucide="log-out" class="w-5 h-5"></i>
@@ -1289,10 +1285,6 @@
             statusEl.classList.remove('show');
         }
 
-        // Help functionality
-        function showHelp() {
-            showStatus('💡 Upload both CSV files: 1) Turo trip data 2) E-ZPass toll data. Adjust the speed/accuracy slider, then click "Run Matcher" to process and match tolls to trips.', 'info');
-        }
 
         // Utility functions
         function formatFileSize(bytes) {
