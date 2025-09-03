@@ -544,6 +544,57 @@
     </div>
     
     <script>
+        // Timezone utility functions for consistent Eastern Time display
+        function formatEasternTime(utcDate, includeTime = true) {
+            if (!utcDate) return '';
+            
+            try {
+                const date = new Date(utcDate);
+                const easternOptions = {
+                    timeZone: 'America/New_York',
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                };
+                
+                if (includeTime) {
+                    easternOptions.hour = '2-digit';
+                    easternOptions.minute = '2-digit';
+                    easternOptions.hour12 = true;
+                }
+                
+                const formatter = new Intl.DateTimeFormat('en-US', easternOptions);
+                const formatted = formatter.format(date);
+                
+                return includeTime ? formatted + ' ET' : formatted;
+            } catch (error) {
+                console.error('Error formatting Eastern time:', error);
+                return utcDate.toString();
+            }
+        }
+        
+        function formatTripDateTime(utcDate) {
+            if (!utcDate) return '';
+            
+            try {
+                const date = new Date(utcDate);
+                const easternOptions = {
+                    timeZone: 'America/New_York',
+                    month: 'numeric',
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                };
+                
+                return new Intl.DateTimeFormat('en-US', easternOptions).format(date);
+            } catch (error) {
+                console.error('Error formatting trip date:', error);
+                return utcDate.toString();
+            }
+        }
+
         // Add filter tab click handlers
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize icons
@@ -1128,7 +1179,7 @@
                 <div class="flex items-center justify-between text-sm text-gray-400 mb-6">
                     <div class="flex items-center space-x-2">
                         <i data-lucide="calendar" class="w-4 h-4"></i>
-                        <span>${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDate.toLocaleDateString()} ${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ET</span>
+                        <span>${formatTripDateTime(trip.startDate)} - ${formatTripDateTime(trip.endDate)} ET</span>
                     </div>
                 </div>
                 
@@ -1221,7 +1272,7 @@
                         <div>
                             <h3 class="text-lg font-medium text-white">${toll.location}</h3>
                             <p class="text-gray-400 text-sm">
-                                ${new Date(toll.date).toLocaleDateString()} at ${toll.time}
+                                ${formatEasternTime(toll.date, false)} at ${toll.time}
                             </p>
                         </div>
                         <div class="text-right">
@@ -1452,8 +1503,8 @@
                     <p><strong>Status:</strong> ${trip.status}</p>
                     <p><strong>Guest:</strong> ${trip.guest}</p>
                     <p><strong>Vehicle:</strong> ${trip.vehicle_description || trip.vehicle}</p>
-                    <p><strong>Start Date:</strong> ${new Date(trip.startDate).toLocaleString()}</p>
-                    <p><strong>End Date:</strong> ${new Date(trip.endDate).toLocaleString()}</p>
+                    <p><strong>Start Date:</strong> ${formatEasternTime(trip.startDate)}</p>
+                    <p><strong>End Date:</strong> ${formatEasternTime(trip.endDate)}</p>
                     <p><strong>Toll Amount:</strong> ${trip.tollTotal || '0.00'}</p>
                     ${trip.tolls && trip.tolls.length > 0 ? 
                         `<h3>Tolls:</h3><ul>${trip.tolls.map(toll => `<li>${toll.location}: ${toll.amount}</li>`).join('')}</ul>` : ''}
@@ -1681,9 +1732,8 @@
                     csvContent = 'Date,Time,Location,Amount,Vehicle,Transponder,Transaction ID,Type\n';
                     
                     dataToExport.forEach(toll => {
-                        const tollDate = new Date(toll.date);
                         csvContent += [
-                            escapeCsvValue(tollDate.toLocaleDateString()),
+                            escapeCsvValue(formatEasternTime(toll.date, false)),
                             escapeCsvValue(toll.time),
                             escapeCsvValue(toll.location),
                             escapeCsvValue(`$${toll.amount.toFixed(2)}`),
@@ -1717,7 +1767,7 @@
                                     escapeCsvValue(`$${trip.tollTotal.toFixed(2)}`),
                                     escapeCsvValue(toll.location),
                                     escapeCsvValue(`$${toll.amount.toFixed(2)}`),
-                                    escapeCsvValue(toll.tollDate ? new Date(toll.tollDate).toLocaleDateString() : ''),
+                                    escapeCsvValue(toll.tollDate ? formatEasternTime(toll.tollDate, false) : ''),
                                     escapeCsvValue(toll.time),
                                     escapeCsvValue(toll.transponder),
                                     escapeCsvValue(toll.transactionId || '')
@@ -1938,7 +1988,7 @@
                 // Simple display - you can enhance this with a proper modal
                 let message = `Late Tolls for Trip #${tripId}:\n\n`;
                 details.lateTolls.forEach(toll => {
-                    message += `${toll.location}: $${toll.amount} (${new Date(toll.tollDate).toLocaleDateString()})\n`;
+                    message += `${toll.location}: $${toll.amount} (${formatEasternTime(toll.tollDate, false)})\n`;
                 });
                 message += `\nTotal: $${details.totalAmount}`;
                 
