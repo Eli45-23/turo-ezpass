@@ -14,7 +14,7 @@ This dashboard replaces manual spreadsheet work with a powerful, visual, and eff
 
 ##  Dashboard Preview
 
-![Turo Toll Tracker Dashboard Preview](https://raw.githubusercontent.com/Eli45-23/turo-ezpass/main/dashboard_preview.jpg)
+![Turo Toll Tracker Dashboard Preview](https://raw.githubusercontent.com/Eli45-23/turo-ezpass/main/dashboard-preview.png)
 
 
 
